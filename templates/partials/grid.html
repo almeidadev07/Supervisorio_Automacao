@@ -3,8 +3,8 @@
     <!-- Botões com velocímetros -->
     <button class="draggable-btn" draggable="true">
         <div class="velocimetro-container">
-            <img src="{{ url_for('static', filename='images/velocimeters/medida_velocimentro_verde.png') }}" class="velocimetro-imagem" id="imgVelocimetroReal">
-            <img src="{{ url_for('static', filename='images/velocimeters/ponteiro_velocimentro_verde.png') }}"class="ponteiro" id="ponteiroReal" data-tipo="real">
+            <img src="{{ url_for('static', filename='images/grid/status/00_Medida_Velocimentro_Verde.png') }}" class="velocimetro-imagem" id="imgVelocimetroReal">
+            <img src="{{ url_for('static', filename='images/grid/status/00_Ponteiro_Velocimentro_Verde.png') }}"class="ponteiro" id="ponteiroReal" data-tipo="real">
             <div id="valorReal" class="velocimetro-texto">
                 <span class="valor">0</span>
                 <span class="unidade">Cx/h</span>
@@ -13,8 +13,8 @@
     </button>
     <button class="draggable-btn" draggable="true">
         <div class="velocimetro-container">
-            <img src="{{ url_for('static', filename='images/velocimeters/medida_velocimentro_amarelo.png') }}" class="velocimetro-imagem" id="imgVelocimetroProg">
-            <img src="{{ url_for('static', filename='images/velocimeters/ponteiro_velocimentro_amarelo.png') }}" class="ponteiro" id="ponteiroProg">
+            <img src="{{ url_for('static', filename='images/grid/status/00_Medida_Velocimentro_Amarelo.png') }}" class="velocimetro-imagem" id="imgVelocimetroProg">
+            <img src="{{ url_for('static', filename='images/grid/status/00_Ponteiro_Velocimentro_Amarelo.png') }}" class="ponteiro" id="ponteiroProg">
             <input type="text" id="velocidadeInput" class="velocimetro-input" value="50" readonly onclick="abrirTeclado(event)">
             <span class="unidade-programada">Cx/h</span>
         </div>
