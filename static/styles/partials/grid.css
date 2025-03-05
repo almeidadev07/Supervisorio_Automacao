@@ -1,0 +1,165 @@
+/* ========== Estilos da Grid ========== */
+body {
+    margin: 0;
+    padding: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #f0f0f0;
+}
+
+#grid-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 10px;
+    width: 100vw;
+    height: calc(100vh - 95px);
+    padding: 20px;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ========== Componentes da Grid ========== */
+.draggable-btn {
+    position: relative;
+    overflow: visible;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(114, 114, 114);
+    color: white;
+    border: none;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border-radius: 5px;
+    transition: transform 0.2s;
+    pointer-events: all;
+}
+
+.draggable-btn:active {
+    cursor: grabbing;
+}
+
+.draggable-btn.inactive {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* ========== Velocímetros ========== */
+.velocimetro-container {
+    position: relative;
+    width: 90%;
+    height: 80%;
+    padding-top: 0px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.velocimetro-imagem {
+    width: 52%;
+    height: 130px;
+    margin-top: -75px;
+    max-height: 60%;
+    pointer-events: none;
+}
+
+.ponteiro {
+    position: absolute;
+    width: 17%;
+    height: auto;
+    bottom: 36%;
+    left: 50%;
+    transform-origin: 31% 78%;
+    transform: translateX(-50%) rotate(-90deg);
+    transition: transform 0.3s ease-out;
+    pointer-events: none;
+}
+
+.velocimetro-programado {
+    position: absolute;
+    bottom: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: baseline;
+}
+
+.unidade-programada {
+    position: absolute;
+    right: 95px;
+    top: 90%;
+    transform: translateY(-50%);
+    font-size: 27px;
+    font-weight: bold;
+    color: yellow;
+    pointer-events: none; /* Permite clicar através da unidade */
+
+}
+
+.velocimetro-input {
+    position: absolute;
+    bottom: -5%; /* Ajuste conforme necessário */
+    left: 45%;
+    transform: translateX(-50%);
+    width: 125px;
+    height: 65px;
+    font-size: 68px; /* Reduzido para caber melhor */
+    font-weight: bold;
+    text-align: center;
+    color: yellow;
+    background: transparent;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    pointer-events: auto !important; /* Habilita eventos apenas no input */
+    z-index: 2; /* Garante que fique acima de outros elementos */
+}
+.velocimetro-input:focus {
+    background: rgba(82, 82, 82, 0.5) !important;
+    border-radius: 5px;
+    outline: none;
+}
+.velocimetro-texto {
+    position: absolute;
+    bottom: -8%; /* Ajuste conforme necessário */
+    width: 300px;
+    left: 45%;
+    transform: translateX(-50%);
+    font-size: 68px; /* Reduzido para caber melhor */
+    font-weight: bold;
+    color: rgb(51, 255, 0);
+    text-align: center;
+}
+
+
+/* ========== Elementos de Controle ========== */
+#teclado-virtual {
+    display: none;
+    grid-template-columns: repeat(3, minmax(50px, 1fr));
+    gap: 5px;
+    position: absolute;
+    background: white;
+    border: 2px solid #333;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+#botoes-ajuste {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000;
+}
+

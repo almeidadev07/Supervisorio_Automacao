@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Supervisório</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
+</head>
+<body>
+    <main>
+        <!-- Grid de componentes arrastáveis -->
+        {% include 'partials/grid.html' %}
+        
+        <!-- Componentes de interface -->
+        {% include 'partials/virtual_keyboard.html' %}
+        {% include 'partials/adjustment_button.html' %}
+    </main>
+
+    <header>
+        <!-- Menu principal -->
+        {% include 'partials/menu.html' %}
+    </header>
+
+    <script src="{{ url_for('static', filename='scripts/main.js') }}" defer></script>
+</body>
+</html>

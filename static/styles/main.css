@@ -1,0 +1,57 @@
+/* ========== Importação de Parciais ========== */
+@import url('partials/menu.css');
+@import url('partials/grid.css');
+
+/* ========== Estilos Globais ========== */
+.valor {
+    display: inline-block;
+    font-size: 68px;
+    color: rgb(51, 255, 0);
+    width: 100%;
+    text-align: center;
+    padding-right: 40px;
+}
+
+.unidade {
+    position: absolute;
+    right: 22px;
+    top: 57%;
+    transform: translateY(-50%);
+    font-size: 27px;
+    color: rgb(51, 255, 0);
+}
+
+.tecla {
+    width: 50px;
+    height: 50px;
+    margin: 5px;
+    font-size: 20px;
+    text-align: center;
+    line-height: 50px;
+    background: lightgray;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    display: inline-block;
+}
+
+.tecla.ok {
+    background: green;
+    color: white;
+    grid-column: 2 / span 2; /* Começa na coluna 2 e ocupa 2 colunas */
+    width: calc(92% ); /* Compensa o gap do grid */
+    margin-left: 5px; /* Alinhamento preciso */
+}
+
+.ajuste-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+    font-weight: bold;
+    background: #333;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    pointer-events: auto;
+}
