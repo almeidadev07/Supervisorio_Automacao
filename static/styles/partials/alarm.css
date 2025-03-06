@@ -1,0 +1,178 @@
+/* Configuração do container principal para ocupar toda a altura disponível */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* O alarmScreen ocupa toda a tela disponível abaixo do menu */
+#alarmScreen {
+    display: flex;
+    height: calc(100vh - var(--menu-height, 60px)); /* Ajuste --menu-height para altura do seu menu */
+    padding: 0;
+    margin: 0;
+    background-color: #f9f9f9;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Container que mantém os dois painéis lado a lado com altura total */
+.alarm-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    gap: 20px;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+/* Container da lista de alarmes */
+.alarm-list-container {
+    flex: 0 0 80%; /* Largura fixa de 80% sem crescer */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Container dos controles */
+.alarm-controls {
+    flex: 0 0 20%; /* Largura fixa de 20% sem crescer */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    height: 100%;
+}
+
+/* Abas de filtro no topo */
+.filter-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap; /* Permite quebra de linha se necessário */
+    flex: 0 0 auto; /* Não cresce ou encolhe */
+}
+
+/* Lista de alarmes - ocupa todo o espaço vertical disponível */
+.alarm-list {
+    flex: 1 1 auto; /* Permite crescer e encolher para preencher o espaço */
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 0;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Garante que ocupe a altura total disponível */
+}
+
+/* Cabeçalho da lista - fixa no topo */
+.alarm-header {
+    display: flex;
+    font-weight: bold;
+    background-color: #ddd;
+    padding: 10px;
+    border-radius: 5px 5px 0 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Ajuste nos botões de alternância */
+.view-buttons {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+    flex: 0 0 auto; /* Não cresce ou encolhe */
+}
+
+/* Legenda de prioridades */
+.priority-legend {
+    width: 100%;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 15px;
+    flex: 1 1 auto; /* Permite crescer para preencher o espaço */
+    overflow-y: auto;
+}
+
+/* Itens da legenda */
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+/* Estilos dos botões */
+.filtro-btn, .view-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #eee;
+    color: #333;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+    text-align: center;
+}
+
+.filtro-btn.active, .view-btn.active {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Itens da lista - garante que preencham a largura total */
+.alarme-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    flex: 0 0 auto; /* Não cresce ou encolhe */
+}
+
+/* Ajuste para colunas */
+.alarm-time {
+    width: 30%;
+    font-weight: bold;
+}
+
+.alarm-description {
+    width: 70%;
+}
+
+/* Cores da legenda */
+.color-box {
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.emergency { background-color: #ff4444; }
+.drives { background-color: #ff9900; }
+.thermal { background-color: #ffdd00; }
+.hardware { background-color: #aa66cc; }
+.process { background-color: #4285f4; }
+
+/* Para casos de telas pequenas */
+@media (max-width: 768px) {
+    .alarm-container {
+        flex-direction: column;
+    }
+    
+    .alarm-list-container, .alarm-controls {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+    
+    .alarm-list-container {
+        height: 70%;
+    }
+    
+    .alarm-controls {
+        height: 30%;
+    }
+}

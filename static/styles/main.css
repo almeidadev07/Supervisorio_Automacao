@@ -1,6 +1,8 @@
 /* ========== Importação de Parciais ========== */
 @import url('partials/menu.css');
 @import url('partials/grid.css');
+@import url('partials/alarm.css');
+
 
 /* ========== Estilos Globais ========== */
 .valor {
@@ -54,4 +56,61 @@
     border-radius: 50%;
     cursor: pointer;
     pointer-events: auto;
+}
+
+/* Estilos para a tela de alarmes */
+#alarmScreen {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 20px;
+}
+
+.filter-tabs, .view-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.filtro-btn, .view-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #eee;
+    color: #333;
+    font-weight: bold;
+}
+
+.filtro-btn.active, .view-btn.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.alarm-list {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 10px;
+}
+
+.alarme-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.alarme-item:last-child {
+    border-bottom: none;
+}
+
+.alarme-hora {
+    font-weight: bold;
+    color: #555;
+}
+
+.alarme-descricao {
+    color: #333;
 }

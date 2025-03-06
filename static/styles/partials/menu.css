@@ -12,7 +12,7 @@
 #menu {
     display: flex;
     justify-content: center;
-    position: relative;
+    position: fixed;  /* Mantém o menu fixo na tela */
     left: 0;
     overflow: hidden;
     width: 100%;

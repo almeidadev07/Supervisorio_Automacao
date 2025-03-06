@@ -42,3 +42,8 @@ function zoomButton(clickedButton) {
         ? currentTransform.replace(/scale\(1\.4\)/, '') 
         : `${currentTransform} scale(1.4)`;
 }
+
+// Adicionar navegação para a tela de alarmes
+document.querySelector('.menu-btn[onclick*="Alarme"]').addEventListener('click', () => {
+    window.location.href = '/alarm';
+});

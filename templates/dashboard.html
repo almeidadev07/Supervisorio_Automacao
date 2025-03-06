@@ -5,12 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema Supervisório</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
+
 </head>
 <body>
     <main>
-        <!-- Grid de componentes arrastáveis -->
-        {% include 'partials/grid.html' %}
-        
+        <!-- Grid de componentes arrastáveis (visível inicialmente) -->
+        <div id="grid-container">
+            {% include 'partials/grid.html' %}
+        </div>
+
+        <!-- Contêiner para o conteúdo do alarme (inicialmente oculto) -->
+        <div id="alarm-container" style="display: none;">
+            {% include 'partials/alarm.html' %}
+        </div>
+
         <!-- Componentes de interface -->
         {% include 'partials/virtual_keyboard.html' %}
         {% include 'partials/adjustment_button.html' %}

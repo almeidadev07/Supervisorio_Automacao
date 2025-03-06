@@ -1,0 +1,80 @@
+<div id="alarmScreen">
+    <div class="alarm-container">
+        <!-- Container principal da lista (80%) -->
+        <div class="alarm-list-container">
+            <!-- Abas de filtro -->
+            <div class="filter-tabs">
+                <button class="filtro-btn active" data-prioridade="todas">Todos</button>
+                <button class="filtro-btn" data-prioridade="emergencia">Emergência</button>
+                <button class="filtro-btn" data-prioridade="drives">Drives</button>
+                <button class="filtro-btn" data-prioridade="thermal">Térmicos</button>
+                <button class="filtro-btn" data-prioridade="hardware">Hardware</button>
+                <button class="filtro-btn" data-prioridade="process">Processo</button>
+            </div>
+            
+            <!-- Lista de alarmes -->
+            <div id="alarmList" class="alarm-list">
+                <!-- Cabeçalho da tabela -->
+                <div class="alarm-header">
+                    <span class="alarm-time">Hora de Ativação</span>
+                    <span class="alarm-description">Descrição do Alarme</span>
+                </div>
+                
+                <!-- Alarmes simulados -->
+                <div class="alarme-item">
+                    <span class="alarm-time">14:32</span>
+                    <span class="alarm-description">Falha no Motor Principal</span>
+                </div>
+                
+                <div class="alarme-item">
+                    <span class="alarm-time">14:35</span>
+                    <span class="alarm-description">Temperatura Alta no Inversor</span>
+                </div>
+                
+                <div class="alarme-item">
+                    <span class="alarm-time">14:38</span>
+                    <span class="alarm-description">Pressão Baixa no Sistema Hidráulico</span>
+                </div>
+                
+                <div class="alarme-item">
+                    <span class="alarm-time">14:40</span>
+                    <span class="alarm-description">Erro de Comunicação com PLC</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Container de controles (20%) -->
+        <div class="alarm-controls">
+            <!-- Botões de alternância -->
+            <div class="view-buttons">
+                <button class="view-btn active" data-view="instantaneos">Alarme Instantâneo</button>
+                <button class="view-btn" data-view="historicos">Histórico</button>
+            </div>
+            
+            <!-- Legenda de prioridades -->
+            <div class="priority-legend">
+                <h3>Legenda de Prioridades</h3>
+                <div class="legend-item" data-prioridade="emergencia">
+                    <span class="color-box emergency"></span>
+                    <span class="legend-text">Emergência</span>
+                </div>
+                <div class="legend-item" data-prioridade="drives">
+                    <span class="color-box drives"></span>
+                    <span class="legend-text">Drives</span>
+                </div>
+                <div class="legend-item" data-prioridade="thermal">
+                    <span class="color-box thermal"></span>
+                    <span class="legend-text">Térmicos</span>
+                </div>
+                <div class="legend-item" data-prioridade="hardware">
+                    <span class="color-box hardware"></span>
+                    <span class="legend-text">Hardware</span>
+                </div>
+                <div class="legend-item" data-prioridade="process">
+                    <span class="color-box process"></span>
+                    <span class="legend-text">Processo</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
