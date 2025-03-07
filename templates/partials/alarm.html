@@ -4,14 +4,30 @@
         <div class="alarm-list-container">
             <!-- Abas de filtro -->
             <div class="filter-tabs">
-                <button class="filtro-btn active" data-prioridade="todas">Todos</button>
-                <button class="filtro-btn" data-prioridade="emergencia">Emergência</button>
-                <button class="filtro-btn" data-prioridade="drives">Drives</button>
-                <button class="filtro-btn" data-prioridade="thermal">Térmicos</button>
-                <button class="filtro-btn" data-prioridade="hardware">Hardware</button>
-                <button class="filtro-btn" data-prioridade="process">Processo</button>
+                <button class="filtro-btn active" data-prioridade="todas">
+                    <span class="btn-text">Todos</span>
+                </button>
+                <button class="filtro-btn" data-prioridade="emergency">
+                    <span class="color-indicator emergency"></span>
+                    <span class="btn-text">Emergência</span>
+                </button>
+                <button class="filtro-btn" data-prioridade="drives">
+                    <span class="color-indicator drives"></span>
+                    <span class="btn-text">Drives</span>
+                </button>
+                <button class="filtro-btn" data-prioridade="thermal">
+                    <span class="color-indicator thermal"></span>
+                    <span class="btn-text">Térmicos</span>
+                </button>
+                <button class="filtro-btn" data-prioridade="hardware">
+                    <span class="color-indicator hardware"></span>
+                    <span class="btn-text">Hardware</span>
+                </button>
+                <button class="filtro-btn" data-prioridade="process">
+                    <span class="color-indicator process"></span>
+                    <span class="btn-text">Processo</span>
+                </button>
             </div>
-            
             <!-- Lista de alarmes -->
             <div id="alarmList" class="alarm-list">
                 <!-- Cabeçalho da tabela -->
@@ -47,14 +63,16 @@
         <div class="alarm-controls">
             <!-- Botões de alternância -->
             <div class="view-buttons">
-                <button class="view-btn active" data-view="instantaneos">Alarme Instantâneo</button>
-                <button class="view-btn" data-view="historicos">Histórico</button>
+                <button class="toggle-view-btn" data-state="instantaneos" onclick="toggleAlarmView(this)">
+                    <span class="toggle-text">Instantâneo</span>
+                    <div class="toggle-slider"></div>
+                </button>
             </div>
             
             <!-- Legenda de prioridades -->
             <div class="priority-legend">
                 <h3>Legenda de Prioridades</h3>
-                <div class="legend-item" data-prioridade="emergencia">
+                <div class="legend-item" data-prioridade="emergency">
                     <span class="color-box emergency"></span>
                     <span class="legend-text">Emergência</span>
                 </div>

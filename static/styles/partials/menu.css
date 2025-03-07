@@ -1,22 +1,25 @@
 /* ========== Estilos do Menu ========== */
 #menu-container {
     position: relative;
-    width: 110vw;
-    height: 95px;
+    width: 100vw;
+    height: var(--menu-height, 95px);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 10;
 }
-
 #menu {
     display: flex;
     justify-content: center;
     position: fixed;  /* Mantém o menu fixo na tela */
     left: 0;
+    bottom: 0;       /* Fixa o menu na base da tela */
     overflow: hidden;
     width: 100%;
     transition: transform 0.8s ease-in-out;
+    background-color: #fff; /* Garante que o fundo do menu seja visível */
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1); /* Adiciona sombra sutil na parte superior */
+    z-index: 1000;   /* Garante que o menu fique sobre outros elementos */
 }
 
 .menu-btn {

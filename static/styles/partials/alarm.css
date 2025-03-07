@@ -9,12 +9,13 @@ html, body {
 /* O alarmScreen ocupa toda a tela disponível abaixo do menu */
 #alarmScreen {
     display: flex;
-    height: calc(100vh - var(--menu-height, 60px)); /* Ajuste --menu-height para altura do seu menu */
+    height: calc(100vh - var(--menu-height, 60px));
     padding: 0;
     margin: 0;
     background-color: #f9f9f9;
     position: relative;
     overflow: hidden;
+    padding-bottom: var(--menu-height, 60px); /* Adiciona padding para o menu fixo */
 }
 
 /* Container que mantém os dois painéis lado a lado com altura total */
@@ -55,20 +56,23 @@ html, body {
 
 /* Lista de alarmes - ocupa todo o espaço vertical disponível */
 .alarm-list {
-    flex: 1 1 auto; /* Permite crescer e encolher para preencher o espaço */
+    flex: 1 1 auto;
     overflow-y: auto;
     border: 1px solid #ddd;
     border-radius: 5px;
     padding: 0;
     background-color: white;
-    display: flex;
-    flex-direction: column;
-    height: 100%; /* Garante que ocupe a altura total disponível */
+    display: grid;
+    grid-auto-rows: minmax(50px, auto);
+    grid-template-columns: 1fr;
+    gap: 1px;
+    height: 100%;
 }
 
 /* Cabeçalho da lista - fixa no topo */
 .alarm-header {
-    display: flex;
+    display: grid;
+    grid-template-columns: 30% 70%;
     font-weight: bold;
     background-color: #ddd;
     padding: 10px;
@@ -76,8 +80,8 @@ html, body {
     position: sticky;
     top: 0;
     z-index: 10;
+    margin-bottom: 1px;
 }
-
 /* Ajuste nos botões de alternância */
 .view-buttons {
     display: flex;
@@ -106,30 +110,57 @@ html, body {
 }
 
 /* Estilos dos botões */
-.filtro-btn, .view-btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
+.filtro-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
     cursor: pointer;
-    background-color: #eee;
-    color: #333;
-    font-weight: bold;
-    transition: background-color 0.3s ease;
-    text-align: center;
+    transition: all 0.3s ease;
 }
 
-.filtro-btn.active, .view-btn.active {
-    background-color: #007bff;
-    color: white;
+.filtro-btn .color-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
 }
+
+.filtro-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filtro-btn.active {
+    border-color: #ff0000;
+    background-color: #f0f8ff;
+}
+
+/* Cores para os indicadores */
+.color-indicator.emergency { background-color: #ff4444; }
+.color-indicator.drives { background-color: #ff9900; }
+.color-indicator.thermal { background-color: #ffdd00; }
+.color-indicator.hardware { background-color: #aa66cc; }
+.color-indicator.process { background-color: #4285f4; }
 
 /* Itens da lista - garante que preencham a largura total */
 .alarme-item {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 30% 70%;
     padding: 10px;
     border-bottom: 1px solid #ddd;
-    flex: 0 0 auto; /* Não cresce ou encolhe */
+    background-color: white;
+    min-height: 50px;
+    align-items: center;
+}
+
+/* Empty rows styling */
+.alarme-item:nth-last-child(n+1):empty {
+    background-color: hsl(0, 0%, 98%);
+    border-bottom: 1px solid #eee;
 }
 
 /* Ajuste para colunas */
@@ -157,12 +188,61 @@ html, body {
 .hardware { background-color: #aa66cc; }
 .process { background-color: #4285f4; }
 
+/* Estilo do botão de alternância */
+.toggle-view-btn {
+    position: relative;
+    width: 100%;
+    padding: 15px 20px;
+    border: 2px solid #ff0000;
+    border-radius: 8px;
+    background-color: white;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.toggle-text {
+    position: relative;
+    z-index: 2;
+    color: #ff0000;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+
+.toggle-slider {
+    position: absolute;
+    left: -100%;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #ff0000;
+    transition: left 0.3s ease;
+}
+
+/* Estado ativo do botão */
+.toggle-view-btn[data-state="historicos"] {
+    color: white;
+}
+
+.toggle-view-btn[data-state="historicos"] .toggle-text {
+    color: white;
+}
+
+.toggle-view-btn[data-state="historicos"] .toggle-slider {
+    left: 0;
+}
+
+
 /* Para casos de telas pequenas */
 @media (max-width: 768px) {
     .alarm-container {
         flex-direction: column;
     }
     
+    #alarmScreen {
+        padding-bottom: var(--menu-height, 60px); /* Mantém o padding para o menu fixo */
+    }
+
     .alarm-list-container, .alarm-controls {
         flex: 1 1 auto;
         width: 100%;
