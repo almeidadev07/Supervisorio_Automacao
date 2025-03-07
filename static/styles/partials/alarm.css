@@ -21,8 +21,8 @@ html, body {
 /* Container que mantém os dois painéis lado a lado com altura total */
 .alarm-container {
     display: flex;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: calc(100vh - var(--menu-height, 60px));
     gap: 20px;
     padding: 15px;
     box-sizing: border-box;
@@ -30,19 +30,23 @@ html, body {
 
 /* Container da lista de alarmes */
 .alarm-list-container {
-    flex: 0 0 80%; /* Largura fixa de 80% sem crescer */
+    flex: 0 0 80%;
     display: flex;
     flex-direction: column;
     height: 100%;
+    min-width: 0; /* Previne overflow */
 }
 
 /* Container dos controles */
 .alarm-controls {
-    flex: 0 0 20%; /* Largura fixa de 20% sem crescer */
+    flex: 0 0 20%;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    padding: 80px;
+    
     height: 100%;
+    min-width: 150px;
+    max-width: 200px; /* Adiciona largura máxima */
 }
 
 /* Abas de filtro no topo */
@@ -56,32 +60,19 @@ html, body {
 
 /* Lista de alarmes - ocupa todo o espaço vertical disponível */
 .alarm-list {
-    flex: 1 1 auto;
+    flex: 1;
     overflow-y: auto;
     border: 1px solid #ddd;
     border-radius: 5px;
     padding: 0;
-    background-color: white;
-    display: grid;
-    grid-auto-rows: minmax(50px, auto);
-    grid-template-columns: 1fr;
-    gap: 1px;
+    background-color: rgb(255, 255, 255);
+    display: flex;
+    flex-direction: column;
+    width: 100%;
     height: 100%;
 }
 
-/* Cabeçalho da lista - fixa no topo */
-.alarm-header {
-    display: grid;
-    grid-template-columns: 30% 70%;
-    font-weight: bold;
-    background-color: #ddd;
-    padding: 10px;
-    border-radius: 5px 5px 0 0;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    margin-bottom: 1px;
-}
+
 /* Ajuste nos botões de alternância */
 .view-buttons {
     display: flex;
@@ -94,19 +85,24 @@ html, body {
 /* Legenda de prioridades */
 .priority-legend {
     width: 100%;
+    flex: 1;
     background-color: white;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    padding: 15px;
-    flex: 1 1 auto; /* Permite crescer para preencher o espaço */
+   /* border: 1px solid #ddd;*/
+   /*  border-radius: 5px;*/
+
+    font-size: 18px;
+    white-space: nowrap; /* Previne quebra de linha */
+    padding-right: 40px; /* Espaço para não colar no próximo elemento */
+    box-sizing: border-box;
     overflow-y: auto;
 }
+
 
 /* Itens da legenda */
 .legend-item {
     display: flex;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
 }
 
 /* Estilos dos botões */
@@ -114,6 +110,8 @@ html, body {
     display: flex;
     align-items: center;
     gap: 8px;
+    font-size: 20px;
+
     padding: 8px 16px;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -132,45 +130,114 @@ html, body {
 .filtro-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background-color: rgb(148, 148, 148);
 }
 
 .filtro-btn.active {
     border-color: #ff0000;
-    background-color: #f0f8ff;
+    background-color: rgb(255, 0, 0); /* Vermelho com transparência */
+}
+/* Estado ativo específico para cada tipo de botão */
+.filtro-btn[data-prioridade="emergency"].active {
+    border-color: #ff4444;
+    background-color: rgb(255, 68, 68);
+}
+
+.filtro-btn[data-prioridade="drives"].active {
+    border-color: #ff9900;
+    background-color: rgb(255, 153, 0);
+}
+
+.filtro-btn[data-prioridade="thermal"].active {
+    border-color: #ffdd00;
+    background-color: rgb(255, 221, 0);
+}
+
+.filtro-btn[data-prioridade="hardware"].active {
+    border-color: #aa66cc;
+    background-color: rgb(170, 102, 204);
+}
+
+.filtro-btn[data-prioridade="process"].active {
+    border-color: #4285f4;
+    background-color: rgb(66, 134, 244);
+}
+
+/* Botão 'Todos' */
+.filtro-btn[data-prioridade="todas"].active {
+    border-color: #666666;
+    background-color: rgb(102, 102, 102);
 }
 
 /* Cores para os indicadores */
-.color-indicator.emergency { background-color: #ff4444; }
-.color-indicator.drives { background-color: #ff9900; }
-.color-indicator.thermal { background-color: #ffdd00; }
-.color-indicator.hardware { background-color: #aa66cc; }
-.color-indicator.process { background-color: #4285f4; }
+.color-indicator.emergency { background-color: #ff4444 }
+.color-indicator.drives { background-color: #ff9900 }
+.color-indicator.thermal { background-color: #ffdd00 }
+.color-indicator.hardware { background-color: #aa66cc }
+.color-indicator.process { background-color: #4285f4 }
 
-/* Itens da lista - garante que preencham a largura total */
-.alarme-item {
+
+/* Cabeçalho da lista - fixa no topo */
+.alarm-header {
     display: grid;
-    grid-template-columns: 30% 70%;
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
-    background-color: white;
-    min-height: 50px;
+    grid-template-columns: 20% 80%;
+    font-weight: bold;
+    background-color: rgb(87, 87, 87);
+    padding: 6px 10px;
+    height: 50px;
+    border-radius: 5px 5px 0 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
     align-items: center;
+    color: white;
+
 }
 
-/* Empty rows styling */
-.alarme-item:nth-last-child(n+1):empty {
-    background-color: hsl(0, 0%, 98%);
-    border-bottom: 1px solid #eee;
+
+/* Itens da lista */
+.alarme-item {
+    display: grid;
+    grid-template-columns: 20% 80%;
+    padding: 0 10px;
+    border-bottom: 1px solid #ddd;
+    background-color: white;
+    align-items: center;
+    height: 30px; /* Altura fixa para cada item */
+    overflow: hidden; /* Previne overflow do conteúdo */
+}
+
+/* Ajuste para texto dentro dos itens */
+.alarm-time {
+    width: 20%;
+    font-weight: bold;
+    white-space: nowrap; /* Previne quebra de linha */
+   /* text-overflow: ellipsis; /* Adiciona ... se necessário */
+    padding-right: 10px; /* Espaço para não colar no próximo elemento */
+}
+
+.alarm-description {
+    width: 80%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Ajuste para texto dentro dos itens */
+.alarm-time, .alarm-description {
+    font-size: 20px; /* Reduz tamanho da fonte */
+    line-height: 1.2; /* Reduz espaçamento entre linhas */
+
 }
 
 /* Ajuste para colunas */
 .alarm-time {
-    width: 30%;
+    width: 20%;
     font-weight: bold;
 }
 
 .alarm-description {
-    width: 70%;
+    width: 80%;
 }
 
 /* Cores da legenda */
@@ -192,13 +259,15 @@ html, body {
 .toggle-view-btn {
     position: relative;
     width: 100%;
-    padding: 15px 20px;
+    max-width: 100%; /* Garante que não ultrapasse o container */
+    padding: 15px;
     border: 2px solid #ff0000;
     border-radius: 8px;
     background-color: white;
     cursor: pointer;
     overflow: hidden;
     transition: all 0.3s ease;
+    box-sizing: border-box; /* Inclui padding e border na largura total */
 }
 
 .toggle-text {
@@ -206,7 +275,10 @@ html, body {
     z-index: 2;
     color: #ff0000;
     font-weight: bold;
+    font-size: 18px; /* Reduz um pouco o tamanho da fonte */
     transition: color 0.3s ease;
+    white-space: nowrap; /* Evita quebra de linha */
+    text-align: center; /* Centraliza o texto */
 }
 
 .toggle-slider {
@@ -230,6 +302,15 @@ html, body {
 
 .toggle-view-btn[data-state="historicos"] .toggle-slider {
     left: 0;
+}
+
+
+/* Ajuste para telas grandes */
+@media (min-width: 1200px) {
+    .alarm-container {
+        max-width: 1920px;
+        margin: 0 auto;
+    }
 }
 
 
