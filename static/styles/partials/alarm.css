@@ -9,23 +9,20 @@ html, body {
 /* O alarmScreen ocupa toda a tela disponível abaixo do menu */
 #alarmScreen {
     display: flex;
-    height: calc(100vh - var(--menu-height, 60px));
+    height: calc(100vh - var(--menu-height, 100px));
     padding: 0;
     margin: 0;
     background-color: #f9f9f9;
     position: relative;
     overflow: hidden;
-    padding-bottom: var(--menu-height, 60px); /* Adiciona padding para o menu fixo */
+    padding-bottom: var(--menu-height, 100px); /* Adiciona padding para o menu fixo */
 }
 
 /* Container que mantém os dois painéis lado a lado com altura total */
 .alarm-container {
     display: flex;
-    width: 100vw;
-    height: calc(100vh - var(--menu-height, 60px));
     gap: 20px;
-    padding: 15px;
-    box-sizing: border-box;
+    height: 100%;
 }
 
 /* Container da lista de alarmes */
@@ -49,6 +46,16 @@ html, body {
     max-width: 200px; /* Adiciona largura máxima */
 }
 
+
+/* Container para botão e legenda */
+.control-box {
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
 /* Abas de filtro no topo */
 .filter-tabs {
     display: flex;
@@ -79,24 +86,21 @@ html, body {
     flex-direction: column;
     width: 100%;
     gap: 10px;
-    flex: 0 0 auto; /* Não cresce ou encolhe */
+    flex: 0 0 auto;
+    margin-bottom: 20px;
 }
 
 /* Legenda de prioridades */
 .priority-legend {
     width: 100%;
     flex: 1;
-    background-color: white;
-   /* border: 1px solid #ddd;*/
-   /*  border-radius: 5px;*/
-
+    background-color: transparent;
     font-size: 18px;
-    white-space: nowrap; /* Previne quebra de linha */
-    padding-right: 40px; /* Espaço para não colar no próximo elemento */
+    white-space: nowrap;
+    padding-right: 20px;
     box-sizing: border-box;
     overflow-y: auto;
 }
-
 
 /* Itens da legenda */
 .legend-item {
@@ -110,7 +114,7 @@ html, body {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 20px;
+    font-size: 40px;
 
     padding: 8px 16px;
     border: 1px solid #ddd;
@@ -121,8 +125,8 @@ html, body {
 }
 
 .filtro-btn .color-indicator {
-    width: 12px;
-    height: 12px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     display: inline-block;
 }
@@ -135,38 +139,46 @@ html, body {
 
 .filtro-btn.active {
     border-color: #ff0000;
-    background-color: rgb(255, 0, 0); /* Vermelho com transparência */
+    background-color: rgb(255, 0, 0);
+    color: white; /* Added white text color */
 }
+
 /* Estado ativo específico para cada tipo de botão */
 .filtro-btn[data-prioridade="emergency"].active {
     border-color: #ff4444;
     background-color: rgb(255, 68, 68);
+    color: white;
 }
 
 .filtro-btn[data-prioridade="drives"].active {
     border-color: #ff9900;
     background-color: rgb(255, 153, 0);
+    color: white;
 }
 
 .filtro-btn[data-prioridade="thermal"].active {
     border-color: #ffdd00;
     background-color: rgb(255, 221, 0);
+    color: white;
 }
 
 .filtro-btn[data-prioridade="hardware"].active {
     border-color: #aa66cc;
     background-color: rgb(170, 102, 204);
+    color: white;
 }
 
 .filtro-btn[data-prioridade="process"].active {
     border-color: #4285f4;
     background-color: rgb(66, 134, 244);
+    color: white;
 }
 
 /* Botão 'Todos' */
 .filtro-btn[data-prioridade="todas"].active {
     border-color: #666666;
     background-color: rgb(102, 102, 102);
+    color: white;
 }
 
 /* Cores para os indicadores */
@@ -305,35 +317,161 @@ html, body {
 }
 
 
-/* Ajuste para telas grandes */
-@media (min-width: 1200px) {
+/* ...existing code... */
+
+/* Estilos responsivos */
+@media screen and (max-width: 1024px) {
     .alarm-container {
-        max-width: 1920px;
-        margin: 0 auto;
+        gap: 10px;
+        padding: 10px;
+    }
+
+    .alarm-controls {
+        padding: 40px;
+        min-width: 120px;
+        max-width: 180px;
+    }
+
+    .filtro-btn {
+        font-size: 16px;
+        padding: 6px 12px;
+    }
+
+    .alarm-time, .alarm-description {
+        font-size: 16px;
     }
 }
 
-
-/* Para casos de telas pequenas */
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
     .alarm-container {
         flex-direction: column;
-    }
-    
-    #alarmScreen {
-        padding-bottom: var(--menu-height, 60px); /* Mantém o padding para o menu fixo */
+        height: auto;
     }
 
-    .alarm-list-container, .alarm-controls {
-        flex: 1 1 auto;
-        width: 100%;
-    }
-    
     .alarm-list-container {
-        height: 70%;
+        flex: 0 0 70%;
+        height: 70vh;
     }
-    
+
     .alarm-controls {
-        height: 30%;
+        flex: 0 0 30%;
+        padding: 20px;
+        max-width: 100%;
+        height: auto;
+    }
+
+    .filter-tabs {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .filtro-btn {
+        font-size: 14px;
+        padding: 4px 8px;
+    }
+
+    .toggle-text {
+        font-size: 16px;
+    }
+
+    .alarm-header {
+        height: 40px;
+        padding: 4px 8px;
+    }
+
+    .alarme-item {
+        height: 25px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .alarm-container {
+        padding: 5px;
+        gap: 5px;
+    }
+
+    .alarm-list-container {
+        height: 65vh;
+    }
+
+    .alarm-controls {
+        padding: 10px;
+    }
+
+    .filtro-btn {
+        font-size: 12px;
+        padding: 3px 6px;
+    }
+
+    .color-indicator {
+        width: 8px;
+        height: 8px;
+    }
+
+    .alarm-time, .alarm-description {
+        font-size: 14px;
+    }
+
+    .toggle-text {
+        font-size: 14px;
+    }
+}
+
+/* Ajuste para orientação landscape em dispositivos móveis */
+@media screen and (max-height: 480px) and (orientation: landscape) {
+    .alarm-container {
+        flex-direction: row;
+    }
+
+    .alarm-list-container {
+        flex: 0 0 75%;
+        height: calc(100vh - var(--menu-height, 60px) - 20px);
+    }
+
+    .alarm-controls {
+        flex: 0 0 25%;
+        padding: 10px;
+        height: calc(100vh - var(--menu-height, 60px) - 20px);
+    }
+
+    .filter-tabs {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .alarme-item {
+        height: 20px;
+    }
+}
+
+/* Ajuste para telas muito pequenas */
+@media screen and (max-width: 320px) {
+    .alarm-time, .alarm-description {
+        font-size: 12px;
+    }
+
+    .filtro-btn {
+        font-size: 11px;
+        padding: 2px 4px;
+    }
+
+    .toggle-text {
+        font-size: 12px;
+    }
+
+    .alarm-header {
+        height: 35px;
+    }
+
+    .alarme-item {
+        height: 22px;
+    }
+}
+
+/* Responsividade para o novo container */
+@media screen and (max-width: 768px) {
+    .control-box {
+        padding: 10px;
+        margin-bottom: 10px;
     }
 }

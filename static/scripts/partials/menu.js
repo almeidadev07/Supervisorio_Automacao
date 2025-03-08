@@ -1,29 +1,39 @@
 let isMenuOpen = false;
 let menu = document.getElementById('menu');
 
+// Adiciona listener para clicks em toda a página
+document.addEventListener('mousedown', function(event) {
+    // Verifica se o menu está aberto e se o clique foi fora do menu
+    if (isMenuOpen && !menu.contains(event.target) && !event.target.classList.contains('menu-btn')) {
+        toggleMenu();
+    }
+});
+
+
 function toggleMenu() {
     const buttons = document.querySelectorAll('.menu-btn');
-    console.log("Botões encontrados:", buttons.length);
-    
-    if (buttons.length === 0) {
-        console.error("Nenhum botão encontrado com a classe .menu-btn");
-        return;
-    }
+    const logoBtn = document.querySelector('.logo-btn');
     
     const totalButtons = buttons.length;
     const baseOffset = 20;
 
-    buttons.forEach((button, index) => {
-        if (!isMenuOpen) {
+    if (!isMenuOpen) {
+        // Aplica zoom ao abrir o menu
+        logoBtn.style.transform = 'scale(1.2)';
+        buttons.forEach((button, index) => {
             const offset = (index - Math.floor(totalButtons / 2)) * baseOffset;
             button.style.opacity = 1;
             button.style.transform = `translateX(${offset}px)`;
-        } else {
+        });
+    } else {
+        // Remove zoom ao fechar o menu
+        logoBtn.style.transform = 'scale(1)';
+        buttons.forEach((button, index) => {
             button.style.opacity = 0;
             button.style.setProperty('--delay', `${index * 0.03}s`);
             button.style.transform = 'translateX(0)';
-        }
-    });
+        });
+    }
     
     isMenuOpen = !isMenuOpen;
 }

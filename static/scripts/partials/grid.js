@@ -45,11 +45,24 @@ function atualizarPonteiro(ponteiroElement, valor) {
     ponteiroElement.style.transform = `translateX(-50%) rotate(${angulo}deg)`;
 }
 
+
+
 // Funções do teclado virtual
 let valorDigitado = "";
 let deveSubstituir = false;
 const teclado = document.getElementById("teclado-virtual");
 let intervaloAjuste;
+
+// Adiciona listener para clicks em toda a página
+document.addEventListener('mousedown', function(event) {
+    // Verifica se o teclado está visível e se o clique foi fora dele
+    if (teclado.style.display === "grid" && 
+        !teclado.contains(event.target) && 
+        !event.target.classList.contains('velocimetro-input')) {
+        fecharTeclado();
+    }
+});
+
 
 function abrirTeclado(e) {
     const input = e.target.closest('.velocimetro-input');
@@ -62,6 +75,8 @@ function abrirTeclado(e) {
         teclado.dataset.target = input.id;
         deveSubstituir = true;
         valorDigitado = "";
+        e.stopPropagation();
+
     }
 }
 

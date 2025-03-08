@@ -60,6 +60,10 @@ Promise.all([
 })
 .catch(error => console.error('Erro ao carregar scripts:', error));
 
+
+document.addEventListener('DOMContentLoaded', function() {
+    showGrid(); // Ensure the grid is displayed correctly on initial load
+});
 // Exporta funções para o escopo global
 window.showGrid = showGrid;
 window.showAlarm = showAlarm;

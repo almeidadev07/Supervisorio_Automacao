@@ -9,21 +9,26 @@
 </head>
 <body>
     <main>
-        <div class="version-display">v1.0.0</div>
+        <div class="main-container">
+            <div class="content-wrapper">
+                <div class="version-display">v1.0.0</div>
 
-        <!-- Grid de componentes arrastáveis (visível inicialmente) -->
-        <div id="grid-container">
-            {% include 'partials/grid.html' %}
+                <!-- Grid de componentes arrastáveis (visível inicialmente) -->
+                <div id="grid-container">
+                    {% include 'partials/grid.html' %}
+                </div>
+
+                <!-- Contêiner para o conteúdo do alarme (inicialmente oculto) -->
+                <div id="alarm-container" style="display: none;">
+                    {% include 'partials/alarm.html' %}
+                </div>
+
+                <!-- Componentes de interface -->
+                {% include 'partials/virtual_keyboard.html' %}
+            {% include 'partials/adjustment_button.html' %}
+            </div>
         </div>
 
-        <!-- Contêiner para o conteúdo do alarme (inicialmente oculto) -->
-        <div id="alarm-container" style="display: none;">
-            {% include 'partials/alarm.html' %}
-        </div>
-
-        <!-- Componentes de interface -->
-        {% include 'partials/virtual_keyboard.html' %}
-        {% include 'partials/adjustment_button.html' %}
     </main>
 
     <header>
