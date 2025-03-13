@@ -6,21 +6,17 @@
     grid-template-rows: repeat(3, 1fr);
     gap: 10px;
     width: 100%;
-    max-width: 1920px;
-    height: calc(100vh - var(--menu-height, 100px) - 40px); /* Adjusted height */
-    padding: 20px;
+    height: 100%;
     box-sizing: border-box;
     position: relative;
-    overflow: hidden;
     margin: 0 auto;
 }
 
 .draggable-btn {
     position: relative;
-    overflow: visible;
     width: 100%;
-    height: 250px; /* Fixed height instead of 100% */
-    background-color: rgb(114, 114, 114);
+    height: 100%;
+    background-color: rgb(150, 150, 150);
     color: white;
     border: none;
     cursor: grab;
