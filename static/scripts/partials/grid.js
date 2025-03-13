@@ -122,9 +122,36 @@ function pararAjuste() {
     clearInterval(intervaloAjuste);
 }
 
-function inicializarVelocimetro() {
-    console.log("Velocímetro inicializado.");
+// Função para atualizar contadores de alarme
+function atualizarContadoresAlarme() {
+    // Simulação de contadores (substitua com dados reais)
+    const contadores = {
+        emergency: Math.floor(Math.random() * 100),
+        drives: Math.floor(Math.random() * 100),
+        thermal: Math.floor(Math.random() * 100),
+        hardware: Math.floor(Math.random() * 100),
+        process: Math.floor(Math.random() * 100),
+        total: 0
+    };
 
+    // Calcula total
+    contadores.total = Object.values(contadores)
+        .reduce((acc, val) => acc + val, 0) - contadores.total;
+
+    // Atualiza os valores na interface
+    Object.keys(contadores).forEach(tipo => {
+        const elemento = document.querySelector(`.alarm-count-circle.${tipo} .count-value`);
+        if (elemento) {
+            elemento.textContent = contadores[tipo].toString().padStart(3, '0');
+        }
+    });
+}
+
+// Modificar a função inicializarVelocimetro para incluir a atualização dos contadores
+function inicializarVelocimetro() {
+    console.log("Velocímetro e contadores inicializados.");
+
+    // Inicialização dos velocímetros
     document.querySelectorAll('.draggable-btn').forEach(btn => {
         const ponteiro = btn.querySelector('.ponteiro[data-tipo="real"]');
         if (ponteiro) {
@@ -133,7 +160,9 @@ function inicializarVelocimetro() {
         }
     });
 
+    // Atualização periódica dos velocímetros e contadores
     setInterval(() => {
+        // Atualiza velocímetros
         document.querySelectorAll('.velocimetro-texto').forEach(texto => {
             const valorAleatorio = Math.floor(Math.random() * 400);
             const ponteiro = texto.closest('.draggable-btn').querySelector('.ponteiro[data-tipo="real"]');
@@ -143,6 +172,9 @@ function inicializarVelocimetro() {
                 atualizarPonteiro(ponteiro, valorAleatorio);
             }
         });
+
+        // Atualiza contadores de alarme
+        atualizarContadoresAlarme();
     }, 2000);
 }
 
