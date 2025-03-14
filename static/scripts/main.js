@@ -12,11 +12,49 @@ function loadScript(src) {
     });
 }
 
+function showWeightRange() {
+    console.log('Mostrando tela de faixa de peso...'); // Debug
+    
+    // Oculta outros containers
+    document.getElementById('grid-container').style.display = 'none';
+    document.getElementById('alarm-container').style.display = 'none';
+    
+    // Mostra o container de faixa de peso
+    const weightContainer = document.getElementById('weight-range-container');
+    if (weightContainer) {
+        weightContainer.style.display = 'block';
+    } else {
+        console.error('Container weight-range-container não encontrado!');
+    }
+    
+    // Atualiza botão ativo no menu
+    document.querySelectorAll('.menu-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+
+    // Inicializa se necessário
+    if (typeof inicializarWeightRange === 'function') {
+        inicializarWeightRange();
+    } else {
+        console.error('Função inicializarWeightRange não encontrada!');
+    }
+}
+
 // Função para exibir o grid
 function showGrid() {
     // Exibe o grid e oculta o conteúdo do alarme
     document.getElementById('grid-container').style.display = 'block';
     document.getElementById('alarm-container').style.display = 'none';
+    document.getElementById('weight-range-container').style.display = 'none';
+    
+    // Update active menu button state
+    document.querySelectorAll('.menu-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
 }
 
 // Função para exibir o conteúdo do alarme
@@ -38,7 +76,8 @@ function showAlarm() {
 Promise.all([
     loadScript('/static/scripts/partials/menu.js'),
     loadScript('/static/scripts/partials/grid.js'),
-    loadScript('/static/scripts/partials/alarm.js') // Carrega o alarm.js
+    loadScript('/static/scripts/partials/alarm.js'), // Carrega o alarm.js
+    loadScript('/static/scripts/partials/weight_range.js') // Add weight range script
 ])
 .then(() => {
     console.log('Todos os scripts carregados com sucesso!');
@@ -57,6 +96,11 @@ Promise.all([
     } else {
         console.error('Função inicializarAlarmes não disponível após carregamento!');
     }
+
+    // Initialize weight range if function exists
+    if (typeof inicializarWeightRange === 'function') {
+        inicializarWeightRange();
+    }
 })
 .catch(error => console.error('Erro ao carregar scripts:', error));
 
@@ -67,3 +111,4 @@ document.addEventListener('DOMContentLoaded', function() {
 // Exporta funções para o escopo global
 window.showGrid = showGrid;
 window.showAlarm = showAlarm;
+window.showWeightRange = showWeightRange;

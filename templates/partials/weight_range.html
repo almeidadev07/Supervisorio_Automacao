@@ -1,0 +1,103 @@
+<div class="container">
+    <div class="setup-container">
+        <div class="setup-option">
+            <input type="radio" id="setup-0" name="setup" value="0">
+            <label for="setup-0">Setup 0:</label>
+            <div class="setup-bar inactive"></div>
+        </div>
+        
+        <div class="setup-option">
+            <input type="radio" id="setup-1" name="setup" value="1" checked>
+            <label for="setup-1">Setup 1:</label>
+            <div class="setup-bar active" id="main-bar">
+                <div class="segment" data-index="0" style="background-color: #FF1493; width: 25%;"></div>
+                <div class="segment" data-index="1" style="background-color: #FFFF00; width: 10%;"></div>
+                <div class="segment" data-index="2" style="background-color: #0000FF; width: 15%;"></div>
+                <div class="segment" data-index="3" style="background-color: #00FF00; width: 15%;"></div>
+                <div class="segment" data-index="4" style="background-color: #FF4500; width: 10%;"></div>
+                <div class="segment" data-index="5" style="background-color: #00BFFF; width: 15%;"></div>
+                <div class="segment" data-index="6" style="background-color: #00FFBF; width: 10%;"></div>
+            </div>
+        </div>
+        
+        <div class="setup-option">
+            <input type="radio" id="setup-2" name="setup" value="2">
+            <label for="setup-2">Setup 2:</label>
+            <div class="setup-bar inactive"></div>
+        </div>
+        
+        <div class="setup-option">
+            <input type="radio" id="setup-3" name="setup" value="3">
+            <label for="setup-3">Setup 3:</label>
+            <div class="setup-bar inactive"></div>
+        </div>
+    </div>
+    
+    <div class="weight-inputs">
+        <div class="weight-range">
+            <div class="range-value">
+                <span id="range-0">25</span> g
+            </div>
+            <div class="color-box" style="background-color: #FF1493;"></div>
+            <input type="number" id="input-0" value="25" min="0" max="150" class="weight-input">
+        </div>
+        
+        <div class="weight-range">
+            <div class="range-value">
+                <span id="range-1">10</span> g
+            </div>
+            <div class="color-box" style="background-color: #FFFF00;"></div>
+            <input type="number" id="input-1" value="10" min="0" max="150" class="weight-input">
+        </div>
+        
+        <div class="weight-range">
+            <div class="range-value">
+                <span id="range-2">15</span> g
+            </div>
+            <div class="color-box" style="background-color: #0000FF;"></div>
+            <input type="number" id="input-2" value="15" min="0" max="150" class="weight-input">
+        </div>
+        
+        <div class="weight-range">
+            <div class="range-value">
+                <span id="range-3">15</span> g
+            </div>
+            <div class="color-box" style="background-color: #00FF00;"></div>
+            <input type="number" id="input-3" value="15" min="0" max="150" class="weight-input">
+        </div>
+        
+        <div class="weight-range">
+            <div class="range-value">
+                <span id="range-4">10</span> g
+            </div>
+            <div class="color-box" style="background-color: #FF4500;"></div>
+            <input type="number" id="input-4" value="10" min="0" max="150" class="weight-input">
+        </div>
+        
+        <div class="weight-range">
+            <div class="range-value">
+                <span id="range-5">15</span> g
+            </div>
+            <div class="color-box" style="background-color: #00BFFF;"></div>
+            <input type="number" id="input-5" value="15" min="0" max="150" class="weight-input">
+        </div>
+        
+        <div class="weight-range">
+            <div class="range-value">
+                <span id="range-6">10</span> g
+            </div>
+            <div class="color-box" style="background-color: #00FFBF;"></div>
+            <input type="number" id="input-6" value="10" min="0" max="150" class="weight-input">
+        </div>
+    </div>
+    
+    <div class="actions">
+        <button id="save-button">Salvar Setup</button>
+        <button id="export-button">Exportar</button>
+        <button id="import-button">Importar</button>
+    </div>
+
+    <div class="total-display">
+        <span>Total: <span id="total-weight">100</span>/150 g</span>
+    </div>
+</div>
