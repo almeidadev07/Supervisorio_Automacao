@@ -1,173 +1,181 @@
 function inicializarWeightRange() {
-    console.log('Inicializando Weight Range...'); 
+    console.log('Inicializando Weight Range...');
 
-    // Configuração inicial
+    // Configurações
     const MAX_TOTAL = 150;
     const colors = ['#FF1493', '#FFFF00', '#0000FF', '#00FF00', '#FF4500', '#00BFFF', '#00FFBF'];
     let activeSetup = 1;
     
-    // Armazenamento de configurações
-    const setups = {
-        0: [],
+    // Estado inicial
+    let setups = {
+        0: [25, 10, 15, 15, 10, 15, 10],
         1: [25, 10, 15, 15, 10, 15, 10],
-        2: [],
-        3: []
+        2: [25, 10, 15, 15, 10, 15, 10],
+        3: [25, 10, 15, 15, 10, 15, 10]
     };
 
-    // Criar estrutura HTML
-    const container = document.getElementById('weight-range-container');
-    if (!container) {
-        console.error('Container weight-range-container não encontrado!');
-        return;
-    }
-
-    container.innerHTML = `
-        <div class="weight-range-content">
-            <div class="setup-selection">
-                <div class="setup-radios">
-                    <input type="radio" name="setup" value="0" id="setup0">
-                    <input type="radio" name="setup" value="1" id="setup1" checked>
-                    <input type="radio" name="setup" value="2" id="setup2">
-                    <input type="radio" name="setup" value="3" id="setup3">
-                </div>
-            </div>
-            
-            <div id="main-bar" class="weight-bar">
-                ${Array(7).fill(0).map((_, i) => `
-                    <div class="segment" style="width: ${(100/7)}%; background-color: ${colors[i]}"></div>
-                `).join('')}
-            </div>
-            
-            <div class="weight-inputs">
-                ${Array(7).fill(0).map((_, i) => `
-                    <div class="input-group">
-                        <input type="number" class="weight-input" value="0" min="0" max="${MAX_TOTAL}">
-                        <div class="range-value"><span>0</span>g</div>
-                    </div>
-                `).join('')}
-            </div>
-            
-            <div class="total-weight">
-                Total: <span id="total-weight">0</span>g
-            </div>
-            
-            <div class="buttons">
-                <button id="save-button">Salvar</button>
-                <button id="export-button">Exportar</button>
-                <button id="import-button">Importar</button>
-            </div>
-        </div>
-    `;
-
     // Elementos DOM
+    const container = document.getElementById('weight-range-container');
     const mainBar = document.getElementById('main-bar');
     const segments = document.querySelectorAll('.segment');
     const inputs = Array.from(document.querySelectorAll('.weight-input'));
-    const rangeValues = Array.from(document.querySelectorAll('.range-value span'));
-    const totalWeightDisplay = document.getElementById('total-weight');
-    const setupRadios = document.querySelectorAll('input[name="setup"]');
-    const saveButton = document.getElementById('save-button');
-    const exportButton = document.getElementById('export-button');
-    const importButton = document.getElementById('import-button');
+    const saveBtn = document.getElementById('save-button');
+    const exportBtn = document.getElementById('export-button');
+    const importBtn = document.getElementById('import-button');
 
-    // Inicializar eventos
-    setupDragEvents();
-    setupInputEvents();
-    setupSetupEvents();
-    setupButtonEvents();
-    loadSetupsFromAPI();
-    updateAllSegments();
-    updateTotalWeight();
-
-    // Funções auxiliares
-    function setupDragEvents() {
-        let isDragging = false;
-        let currentSegment = null;
-        let startX, startWidth, nextSegment, nextStartWidth;
-        
+    // Inicializa eventos de arrastar
+    function initializeDragEvents() {
         segments.forEach((segment, index) => {
-            segment.addEventListener('mousedown', initDrag);
-            segment.addEventListener('touchstart', initDrag);
-        });
+            let isDragging = false;
+            let startX;
+            let startWidth;
 
-        function initDrag(e) {
-            e.preventDefault();
-            isDragging = true;
-            currentSegment = Array.from(segments).indexOf(this);
-            
-            startX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
-            startWidth = parseFloat(this.style.width);
-            
-            if (currentSegment < segments.length - 1) {
-                nextSegment = segments[currentSegment + 1];
-                nextStartWidth = parseFloat(nextSegment.style.width);
-            }
-            
-            document.addEventListener(e.type === 'mousedown' ? 'mousemove' : 'touchmove', onMove);
-            document.addEventListener(e.type === 'mousedown' ? 'mouseup' : 'touchend', onEnd);
-        }
-
-        function onMove(e) {
-            if (!isDragging) return;
-            
-            const x = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX;
-            const barWidth = mainBar.clientWidth;
-            const diffX = x - startX;
-            const diffPercentage = (diffX / barWidth) * 100;
-            
-            updateSegmentsOnDrag(diffPercentage);
-        }
-
-        function onEnd() {
-            isDragging = false;
-            document.removeEventListener('mousemove', onMove);
-            document.removeEventListener('touchmove', onMove);
-            document.removeEventListener('mouseup', onEnd);
-            document.removeEventListener('touchend', onEnd);
-        }
-    }
-
-    function setupInputEvents() {
-        inputs.forEach((input, index) => {
-            input.addEventListener('change', function() {
-                const value = Math.min(Math.max(0, parseInt(this.value) || 0), MAX_TOTAL);
-                this.value = value;
-                setups[activeSetup][index] = value;
-                updateAllSegments();
-                updateTotalWeight();
+            segment.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                startWidth = segment.offsetWidth;
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
             });
-        });
-    }
 
-    function updateAllSegments() {
-        const currentSetupValues = setups[activeSetup];
-        
-        currentSetupValues.forEach((value, index) => {
-            if (index < inputs.length) {
-                inputs[index].value = value;
-                rangeValues[index].textContent = value;
-                segments[index].style.width = ((value / MAX_TOTAL) * 100) + '%';
+            function onMouseMove(e) {
+                if (!isDragging) return;
+                
+                const delta = e.clientX - startX;
+                const newWidth = Math.max(10, Math.min(90, startWidth + delta));
+                const percentage = (newWidth / mainBar.offsetWidth) * 100;
+                
+                segment.style.width = `${percentage}%`;
+                updateInputValue(index, Math.round((percentage / 100) * MAX_TOTAL));
+            }
+
+            function onMouseUp() {
+                isDragging = false;
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
             }
         });
     }
 
-    function updateTotalWeight() {
-        const total = setups[activeSetup].reduce((sum, val) => sum + val, 0);
-        totalWeightDisplay.textContent = total;
-        totalWeightDisplay.style.color = total > MAX_TOTAL ? 'red' : 'black';
+    // Atualiza valor do input
+    function updateInputValue(index, value) {
+        if (inputs[index]) {
+            inputs[index].value = value;
+            setups[activeSetup][index] = value;
+            updateTotal();
+        }
     }
 
-    function loadSetupsFromAPI() {
+    // Atualiza total
+    function updateTotal() {
+        const total = setups[activeSetup].reduce((sum, val) => sum + val, 0);
+        const totalDisplay = document.getElementById('total-weight');
+        if (totalDisplay) {
+            totalDisplay.textContent = total;
+            totalDisplay.style.color = total > MAX_TOTAL ? 'red' : 'black';
+        }
+    }
+
+    // Salvar configurações
+    function saveSetups() {
+        fetch('/api/setups', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(setups)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Configurações salvas com sucesso!');
+            } else {
+                throw new Error(data.error || 'Erro ao salvar');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao salvar configurações: ' + error.message);
+        });
+    }
+
+    // Exportar configurações
+    function exportSetups() {
+        window.location.href = '/api/export';
+    }
+
+    // Importar configurações
+    function importSetups() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        
+        input.onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/api/import', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Configurações importadas com sucesso!');
+                    loadSetups(); // Recarrega as configurações
+                } else {
+                    throw new Error(data.error || 'Erro ao importar');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao importar configurações: ' + error.message);
+            });
+        };
+        
+        input.click();
+    }
+
+    // Carrega configurações do servidor
+    function loadSetups() {
         fetch('/api/setups')
             .then(response => response.json())
             .then(data => {
-                Object.assign(setups, data);
-                updateAllSegments();
-                updateTotalWeight();
+                setups = data;
+                updateDisplay();
             })
-            .catch(error => console.error('Erro ao carregar setups:', error));
+            .catch(error => {
+                console.error('Erro ao carregar configurações:', error);
+            });
     }
+
+    // Atualiza display
+    function updateDisplay() {
+        const values = setups[activeSetup];
+        values.forEach((value, index) => {
+            if (segments[index]) {
+                const percentage = (value / MAX_TOTAL) * 100;
+                segments[index].style.width = `${percentage}%`;
+            }
+            if (inputs[index]) {
+                inputs[index].value = value;
+            }
+        });
+        updateTotal();
+    }
+
+    // Inicialização
+    if (saveBtn) saveBtn.addEventListener('click', saveSetups);
+    if (exportBtn) exportBtn.addEventListener('click', exportSetups);
+    if (importBtn) importBtn.addEventListener('click', importSetups);
+    
+    initializeDragEvents();
+    loadSetups();
 }
 
-// Exportar função para o escopo global
+// Exporta função para escopo global
 window.inicializarWeightRange = inicializarWeightRange;

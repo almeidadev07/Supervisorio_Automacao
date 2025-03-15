@@ -1,17 +1,8 @@
-.weight-range-content {
+.weight-range-wrapper {
     padding: 20px;
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.setup-selection {
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.setup-radios input[type="radio"] {
-    margin: 0 10px;
 }
 
 .weight-bar {
@@ -19,37 +10,54 @@
     background: #f0f0f0;
     border-radius: 4px;
     display: flex;
+    margin: 20px 0;
     overflow: hidden;
-    margin-bottom: 20px;
 }
 
 .segment {
     height: 100%;
-    transition: width 0.3s ease;
     cursor: ew-resize;
+    transition: width 0.1s ease;
     border-right: 1px solid rgba(255,255,255,0.3);
 }
 
 .weight-inputs {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 20px;
+    margin: 20px 0;
 }
 
 .input-group {
-    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .weight-input {
     width: 60px;
     padding: 5px;
     text-align: center;
-    margin-bottom: 5px;
 }
 
-.range-value {
-    font-size: 12px;
-    color: #666;
+.buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.buttons button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.buttons button:hover {
+    background: #0056b3;
 }
 
 .total-weight {
@@ -57,24 +65,4 @@
     font-size: 18px;
     font-weight: bold;
     margin: 20px 0;
-}
-
-.buttons {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-}
-
-.buttons button {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    background: #007bff;
-    color: white;
-    transition: background 0.3s;
-}
-
-.buttons button:hover {
-    background: #0056b3;
 }
