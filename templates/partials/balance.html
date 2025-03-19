@@ -1,0 +1,41 @@
+<div class="balance-wrapper">
+    <div class="balance-header">
+        <h2>Sistema de Alarmes de Balanças</h2>
+        <button id="toggle-calibration" class="toggle-btn">
+            Habilitar Calibração
+        </button>
+    </div>
+
+    <div class="balance-grid">
+        <!-- As linhas serão inseridas dinamicamente via JavaScript -->
+    </div>
+
+    <!-- Modal de Seleção de Peso -->
+    <div id="weight-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Calibração de Balança</h2>
+            <p>Linha: <span id="modal-line-number"></span></p>
+            <p>Valor Atual: <span id="modal-current-value"></span>g</p>
+            
+            <div class="modal-buttons">
+                <button id="min-weight-btn" class="btn btn-primary">Peso Mínimo</button>
+                <button id="max-weight-btn" class="btn btn-primary">Peso Máximo</button>
+                <button id="cancel-weight-btn" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação -->
+    <div id="confirmation-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Confirmar Calibração</h2>
+            <p>Linha: <span id="confirm-line-number"></span></p>
+            <p>Deseja calibrar o peso <span id="weight-type"></span> da balança?</p>
+            
+            <div class="modal-buttons">
+                <button id="confirm-calibration" class="btn btn-success">Confirmar</button>
+                <button id="cancel-confirmation" class="btn btn-danger">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>

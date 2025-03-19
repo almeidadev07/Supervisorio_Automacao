@@ -43,6 +43,12 @@ function showWeightRange() {
     }
 }
 
+function hideAllContainers() {
+    document.getElementById('grid-container').style.display = 'none';
+    document.getElementById('alarm-container').style.display = 'none';
+    document.getElementById('weight-range-container').style.display = 'none';
+    document.getElementById('balance-container').style.display = 'none';
+}
 // Função para exibir o grid
 function showGrid() {
     // Exibe o grid e oculta o conteúdo do alarme
@@ -72,12 +78,45 @@ function showAlarm() {
     }
 }
 
+
+function showBalance(event) {
+    console.log('Mostrando tela de balanças...'); // Debug
+    
+    // Oculta outros containers
+    hideAllContainers();
+    
+    // Mostra o container de balanças
+    const balanceContainer = document.getElementById('balance-container');
+    if (balanceContainer) {
+        balanceContainer.style.display = 'block';
+    } else {
+        console.error('Container balance-container não encontrado!');
+    }
+    
+    // Atualiza botão ativo no menu
+    document.querySelectorAll('.menu-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+        zoomButton(event.currentTarget); // Mantém a funcionalidade do zoom
+    }
+
+    // Inicializa se necessário
+    if (typeof inicializarBalance === 'function') {
+        inicializarBalance();
+    } else {
+        console.error('Função inicializarBalance não encontrada!');
+    }
+}
+
 // Carregar os scripts de forma assíncrona
 Promise.all([
     loadScript('/static/scripts/partials/menu.js'),
     loadScript('/static/scripts/partials/grid.js'),
     loadScript('/static/scripts/partials/alarm.js'), // Carrega o alarm.js
-    loadScript('/static/scripts/partials/weight_range.js') // Add weight range script
+    loadScript('/static/scripts/partials/weight_range.js'), // Add weight range script
+    loadScript('/static/scripts/partials/balance.js') // Add weight range script
 ])
 .then(() => {
     console.log('Todos os scripts carregados com sucesso!');
@@ -101,6 +140,11 @@ Promise.all([
     if (typeof inicializarWeightRange === 'function') {
         inicializarWeightRange();
     }
+
+    // Initialize inicializarBalance if function exists
+    if (typeof inicializarBalance === 'function') {
+        inicializarBalance();
+    }
 })
 .catch(error => console.error('Erro ao carregar scripts:', error));
 
@@ -112,3 +156,4 @@ document.addEventListener('DOMContentLoaded', function() {
 window.showGrid = showGrid;
 window.showAlarm = showAlarm;
 window.showWeightRange = showWeightRange;
+window.showBalance = showBalance;
