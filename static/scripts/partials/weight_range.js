@@ -23,17 +23,46 @@ function inicializarWeightRange() {
     const exportBtn = document.getElementById('export-button');
     const importBtn = document.getElementById('import-button');
 
+    // Setup selection
+    const setupInputs = document.querySelectorAll('input[name="setup"]');
+    
+    setupInputs.forEach(input => {
+        input.addEventListener('change', () => {
+            activeSetup = parseInt(input.value);
+            updateDisplay();
+        });
+    });
+
+    function updateDisplay() {
+        const values = setups[activeSetup];
+        values.forEach((value, index) => {
+            if (segments[index]) {
+                const percentage = (value / MAX_TOTAL) * 100;
+                segments[index].style.width = `${percentage}%`;
+                updateSegmentValue(segments[index], value);
+            }
+            if (inputs[index]) {
+                inputs[index].value = value;
+            }
+        });
+        updateTotal();
+    }
+
+
     // Inicializa eventos de arrastar
     function initializeDragEvents() {
         segments.forEach((segment, index) => {
             let isDragging = false;
             let startX;
             let startWidth;
+            let nextSegment;
 
             segment.addEventListener('mousedown', (e) => {
+                e.preventDefault();
                 isDragging = true;
                 startX = e.clientX;
                 startWidth = segment.offsetWidth;
+                nextSegment = segments[index + 1];
                 
                 document.addEventListener('mousemove', onMouseMove);
                 document.addEventListener('mouseup', onMouseUp);
@@ -43,11 +72,26 @@ function inicializarWeightRange() {
                 if (!isDragging) return;
                 
                 const delta = e.clientX - startX;
-                const newWidth = Math.max(10, Math.min(90, startWidth + delta));
-                const percentage = (newWidth / mainBar.offsetWidth) * 100;
+                const totalWidth = mainBar.offsetWidth;
                 
-                segment.style.width = `${percentage}%`;
-                updateInputValue(index, Math.round((percentage / 100) * MAX_TOTAL));
+                // Calcula nova largura mantendo entre 0 e 150g
+                const currentPercentage = (startWidth + delta) / totalWidth;
+                const newValue = Math.max(0, Math.min(150, Math.round(currentPercentage * MAX_TOTAL)));
+                
+                // Atualiza largura e valor do segmento atual
+                const newPercentage = (newValue / MAX_TOTAL) * 100;
+                segment.style.width = `${newPercentage}%`;
+                updateInputValue(index, newValue);
+                updateSegmentValue(segment, newValue);
+                
+                // Atualiza próximo segmento se existir
+                if (nextSegment) {
+                    const nextValue = Math.max(0, Math.min(150, setups[activeSetup][index + 1] - (newValue - setups[activeSetup][index])));
+                    const nextPercentage = (nextValue / MAX_TOTAL) * 100;
+                    nextSegment.style.width = `${nextPercentage}%`;
+                    updateInputValue(index + 1, nextValue);
+                    updateSegmentValue(nextSegment, nextValue);
+                }
             }
 
             function onMouseUp() {
@@ -58,24 +102,40 @@ function inicializarWeightRange() {
         });
     }
 
-    // Atualiza valor do input
+    // Atualiza valor mostrado na barra
+    function updateSegmentValue(segment, value) {
+        let valueDisplay = segment.querySelector('.segment-value');
+        if (!valueDisplay) {
+            valueDisplay = document.createElement('span');
+            valueDisplay.className = 'segment-value';
+            segment.appendChild(valueDisplay);
+        }
+        valueDisplay.textContent = `${value}g`;
+    }
+
+    // Atualiza valor do input e recalcula barras
     function updateInputValue(index, value) {
         if (inputs[index]) {
-            inputs[index].value = value;
-            setups[activeSetup][index] = value;
+            const newValue = Math.max(0, Math.min(150, value));
+            inputs[index].value = newValue;
+            setups[activeSetup][index] = newValue;
+            
+            // Atualiza largura da barra
+            const percentage = (newValue / MAX_TOTAL) * 100;
+            segments[index].style.width = `${percentage}%`;
+            updateSegmentValue(segments[index], newValue);
+            
             updateTotal();
         }
     }
 
-    // Atualiza total
-    function updateTotal() {
-        const total = setups[activeSetup].reduce((sum, val) => sum + val, 0);
-        const totalDisplay = document.getElementById('total-weight');
-        if (totalDisplay) {
-            totalDisplay.textContent = total;
-            totalDisplay.style.color = total > MAX_TOTAL ? 'red' : 'black';
-        }
-    }
+    // Eventos dos inputs
+    inputs.forEach((input, index) => {
+        input.addEventListener('change', () => {
+            const value = parseInt(input.value) || 0;
+            updateInputValue(index, value);
+        });
+    })
 
     // Salvar configurações
     function saveSetups() {
@@ -152,7 +212,6 @@ function inicializarWeightRange() {
                 console.error('Erro ao carregar configurações:', error);
             });
     }
-
     // Atualiza display
     function updateDisplay() {
         const values = setups[activeSetup];
@@ -160,12 +219,23 @@ function inicializarWeightRange() {
             if (segments[index]) {
                 const percentage = (value / MAX_TOTAL) * 100;
                 segments[index].style.width = `${percentage}%`;
+                updateSegmentValue(segments[index], value);
             }
             if (inputs[index]) {
                 inputs[index].value = value;
             }
         });
         updateTotal();
+    }
+
+    // Atualiza total
+    function updateTotal() {
+        const total = setups[activeSetup].reduce((sum, val) => sum + val, 0);
+        const totalDisplay = document.getElementById('total-weight');
+        if (totalDisplay) {
+            totalDisplay.textContent = total;
+            totalDisplay.style.color = total > MAX_TOTAL ? 'red' : 'black';
+        }
     }
 
     // Inicialização

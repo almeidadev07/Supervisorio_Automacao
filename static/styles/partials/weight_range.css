@@ -1,3 +1,57 @@
+
+
+.weight-scale {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+    margin-bottom: 5px;
+}
+
+.weight-scale span {
+    font-size: 12px;
+    color: #666;
+}
+
+.segment {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.segment-value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    pointer-events: none;
+}
+
+.weight-inputs {
+    display: flex;
+    justify-content: space-between;
+    margin: 20px 0;
+    gap: 10px;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.weight-input {
+    width: 60px;
+    padding: 5px;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+
 .weight-range-wrapper {
     padding: 20px;
     background: #fff;
@@ -19,6 +73,8 @@
     cursor: ew-resize;
     transition: width 0.1s ease;
     border-right: 1px solid rgba(255,255,255,0.3);
+    position: relative;
+    cursor: ew-resize;
 }
 
 .weight-inputs {
@@ -65,4 +121,46 @@
     font-size: 18px;
     font-weight: bold;
     margin: 20px 0;
+}
+
+.setup-selection {
+    margin: 20px 0;
+    text-align: center;
+}
+
+.setup-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.setup-label {
+    cursor: pointer;
+}
+
+.setup-label input[type="radio"] {
+    display: none;
+}
+
+.setup-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #007bff;
+    color: #007bff;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.setup-label:hover .setup-circle {
+    background: #e6f2ff;
+}
+
+.setup-label input[type="radio"]:checked + .setup-circle {
+    background: #007bff;
+    color: white;
 }

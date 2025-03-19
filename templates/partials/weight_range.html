@@ -1,9 +1,42 @@
 <div class="weight-range-wrapper">
     <div class="weight-range-header">
-        <h2>Configuração de Faixa de Peso</h2>
+
     </div>
-    
+
+    <!-- Setup selection -->
+    <div class="setup-selection">
+        <div class="setup-buttons">
+            <label class="setup-label">
+                <input type="radio" name="setup" value="0" checked>
+                <span class="setup-circle">1</span>
+            </label>
+            <label class="setup-label">
+                <input type="radio" name="setup" value="1">
+                <span class="setup-circle">2</span>
+            </label>
+            <label class="setup-label">
+                <input type="radio" name="setup" value="2">
+                <span class="setup-circle">3</span>
+            </label>
+            <label class="setup-label">
+                <input type="radio" name="setup" value="3">
+                <span class="setup-circle">4</span>
+            </label>
+        </div>
+    </div>
+
     <div class="weight-range-content">
+        <!-- Escala de peso -->
+        <div class="weight-scale">
+            <span>0g</span>
+            <span>30g</span>
+            <span>60g</span>
+            <span>90g</span>
+            <span>120g</span>
+            <span>150g</span>
+        </div>
+
+        <!-- Barra principal -->
         <div id="main-bar" class="weight-bar">
             <div class="segment" style="width: 14.28%; background-color: #FF1493"></div>
             <div class="segment" style="width: 14.28%; background-color: #FFFF00"></div>
@@ -14,12 +47,43 @@
             <div class="segment" style="width: 14.28%; background-color: #00FFBF"></div>
         </div>
 
+        <!-- Inputs de peso -->
         <div class="weight-inputs">
             <div class="input-group">
+                <label>Faixa 1</label>
                 <input type="number" class="weight-input" value="0" min="0" max="150">
                 <span>g</span>
             </div>
-            <!-- Repita para os 7 inputs -->
+            <div class="input-group">
+                <label>Faixa 2</label>
+                <input type="number" class="weight-input" value="0" min="0" max="150">
+                <span>g</span>
+            </div>
+            <div class="input-group">
+                <label>Faixa 3</label>
+                <input type="number" class="weight-input" value="0" min="0" max="150">
+                <span>g</span>
+            </div>
+            <div class="input-group">
+                <label>Faixa 4</label>
+                <input type="number" class="weight-input" value="0" min="0" max="150">
+                <span>g</span>
+            </div>
+            <div class="input-group">
+                <label>Faixa 5</label>
+                <input type="number" class="weight-input" value="0" min="0" max="150">
+                <span>g</span>
+            </div>
+            <div class="input-group">
+                <label>Faixa 6</label>
+                <input type="number" class="weight-input" value="0" min="0" max="150">
+                <span>g</span>
+            </div>
+            <div class="input-group">
+                <label>Faixa 7</label>
+                <input type="number" class="weight-input" value="0" min="0" max="150">
+                <span>g</span>
+            </div>
         </div>
 
         <div class="total-weight">
