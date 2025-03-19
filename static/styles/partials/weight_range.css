@@ -1,15 +1,15 @@
 
-
 .weight-scale {
     display: flex;
     justify-content: space-between;
-    padding: 0 10px;
-    margin-bottom: 5px;
+    padding: 0 20px;
+    margin-bottom: 10px;
 }
 
 .weight-scale span {
-    font-size: 12px;
+    font-size: 14px; /* Increased font size */
     color: #666;
+    font-weight: 500;
 }
 
 .segment {
@@ -18,13 +18,9 @@
     align-items: center;
     justify-content: center;
 }
-
 .segment-value {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     color: white;
+    font-size: 16px; /* Increased font size */
     font-weight: bold;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
     pointer-events: none;
@@ -33,14 +29,16 @@
 .weight-inputs {
     display: flex;
     justify-content: space-between;
-    margin: 20px 0;
-    gap: 10px;
+    margin: 30px 0;
+    padding: 0 20px;
 }
+
 
 .input-group {
     display: flex;
+    flex-direction: column; /* Changed to column layout */
     align-items: center;
-    gap: 5px;
+    gap: 8px;
 }
 
 .weight-input {
@@ -57,15 +55,42 @@
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-height: calc(100vh - 40px); /* Full viewport height minus padding */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    max-width: 1400px; /* Increased max width */
+    margin: 0 auto;
 }
 
-.weight-bar {
-    height: 40px;
-    background: #f0f0f0;
-    border-radius: 4px;
+.weight-range-content {
+    flex: 1;
     display: flex;
-    margin: 20px 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 30px; /* Increased spacing between elements */
+}
+
+/* Add this to ensure proper container sizing */
+#weight-range-container {
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+
+.weight-bar {
+    height: 60px; /* Increased height */
+    background: #f0f0f0;
+    border-radius: 8px;
+    display: flex;
     overflow: hidden;
+    margin: 20px 0;
 }
 
 .segment {
@@ -74,7 +99,9 @@
     transition: width 0.1s ease;
     border-right: 1px solid rgba(255,255,255,0.3);
     position: relative;
-    cursor: ew-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .weight-inputs {
@@ -89,21 +116,33 @@
     gap: 5px;
 }
 
-.weight-input {
-    width: 60px;
-    padding: 5px;
-    text-align: center;
+.input-group label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
 }
+
+
+.weight-input {
+    width: 80px; /* Increased width */
+    padding: 8px;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
 
 .buttons {
     display: flex;
-    gap: 10px;
+    gap: 20px;
     justify-content: center;
-    margin-top: 20px;
+    margin-top: 30px;
 }
-
 .buttons button {
-    padding: 8px 16px;
+    padding: 12px 24px; /* Increased padding */
+    font-size: 16px; /* Increased font size */
+    min-width: 120px; /* Added min-width */
     border: none;
     border-radius: 4px;
     background: #007bff;
@@ -118,20 +157,20 @@
 
 .total-weight {
     text-align: center;
-    font-size: 18px;
+    font-size: 24px; /* Increased font size */
     font-weight: bold;
-    margin: 20px 0;
+    margin: 30px 0;
 }
 
 .setup-selection {
-    margin: 20px 0;
+    margin: 30px 0;
     text-align: center;
 }
 
 .setup-buttons {
     display: flex;
     justify-content: center;
-    gap: 20px;
+    gap: 30px; /* Increased gap */
 }
 
 .setup-label {
@@ -146,8 +185,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 40px; /* Increased size */
+    height: 40px; /* Increased size */
+    font-size: 16px; /* Increased font size */
     border-radius: 50%;
     background: white;
     border: 2px solid #007bff;
@@ -164,3 +204,4 @@
     background: #007bff;
     color: white;
 }
+
