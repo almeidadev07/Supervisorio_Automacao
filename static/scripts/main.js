@@ -44,55 +44,10 @@ function showWeightRange() {
 }
 
 function hideAllContainers() {
-    // Hide all main containers
     document.getElementById('grid-container').style.display = 'none';
     document.getElementById('alarm-container').style.display = 'none';
     document.getElementById('weight-range-container').style.display = 'none';
     document.getElementById('balance-container').style.display = 'none';
-    document.getElementById('classification-container').style.display = 'none';
-
-    // Hide all modals
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(modal => {
-        modal.style.display = 'none';
-        modal.classList.remove('show');
-    });
-
-    // Reset any active states
-    document.querySelectorAll('.active').forEach(element => {
-        element.classList.remove('active');
-    });
-}
-
-function showClassification(event) {
-    console.log('Mostrando tela de classificação...'); // Debug
-    
-    // Oculta outros containers
-    hideAllContainers();
-    
-    // Mostra o container de classificação
-    const classificationContainer = document.getElementById('classification-container');
-    if (classificationContainer) {
-        classificationContainer.style.display = 'block';
-        classificationContainer.style.zIndex = '1'; // Add this
-    } else {
-        console.error('Container classification-container não encontrado!');
-    }
-    
-    // Atualiza botão ativo no menu
-    document.querySelectorAll('.menu-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    if (event && event.currentTarget) {
-        event.currentTarget.classList.add('active');
-    }
-
-    // Inicializa se necessário
-    if (typeof inicializarClassification === 'function') {
-        inicializarClassification();
-    } else {
-        console.error('Função inicializarClassification não encontrada!');
-    }
 }
 // Função para exibir o grid
 function showGrid() {
@@ -100,17 +55,12 @@ function showGrid() {
     document.getElementById('grid-container').style.display = 'block';
     document.getElementById('alarm-container').style.display = 'none';
     document.getElementById('weight-range-container').style.display = 'none';
-    hideAllContainers();
-    document.getElementById('grid-container').style.display = 'block';
+    
     // Update active menu button state
     document.querySelectorAll('.menu-btn').forEach(btn => {
         btn.classList.remove('active');
     });
     event.currentTarget.classList.add('active');
-
-    if (event && event.currentTarget) {
-        event.currentTarget.classList.add('active');
-    }
 }
 
 // Função para exibir o conteúdo do alarme
@@ -166,9 +116,7 @@ Promise.all([
     loadScript('/static/scripts/partials/grid.js'),
     loadScript('/static/scripts/partials/alarm.js'), // Carrega o alarm.js
     loadScript('/static/scripts/partials/weight_range.js'), // Add weight range script
-    loadScript('/static/scripts/partials/balance.js'), // Add weight range script
-    loadScript('/static/scripts/partials/classification.js') // Add weight range script
-
+    loadScript('/static/scripts/partials/balance.js') // Add weight range script
 ])
 .then(() => {
     console.log('Todos os scripts carregados com sucesso!');
@@ -197,12 +145,6 @@ Promise.all([
     if (typeof inicializarBalance === 'function') {
         inicializarBalance();
     }
-
-    // Initialize inicializarBalance if function exists
-    if (typeof inicializarBalance === 'function') {
-        inicializarClassification();
-    }
-
 })
 .catch(error => console.error('Erro ao carregar scripts:', error));
 
@@ -215,4 +157,3 @@ window.showGrid = showGrid;
 window.showAlarm = showAlarm;
 window.showWeightRange = showWeightRange;
 window.showBalance = showBalance;
-window.showClassification = showClassification;
