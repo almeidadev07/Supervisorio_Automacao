@@ -120,13 +120,13 @@ function inicializarClassification() {
                 <div class="color-box" style="background-color: ${classe.cor}"></div>
                 <span>${classe.nome}</span>
                 <div class="type-buttons">
-                    <button class="type-btn" onclick="handleClassSelection('${embaladora.id}', '${classe.id}', 'branco')">
+                    <button class="type-btn type-branco" onclick="handleClassSelection('${embaladora.id}', '${classe.id}', 'branco')">
                         Branco
                     </button>
-                    <button class="type-btn" onclick="handleClassSelection('${embaladora.id}', '${classe.id}', 'vermelho')">
+                    <button class="type-btn type-vermelho" onclick="handleClassSelection('${embaladora.id}', '${classe.id}', 'vermelho')">
                         Vermelho
                     </button>
-                    <button class="type-btn" onclick="handleClassSelection('${embaladora.id}', '${classe.id}', 'misto')">
+                    <button class="type-btn type-misto" onclick="handleClassSelection('${embaladora.id}', '${classe.id}', 'misto')">
                         Misto
                     </button>
                 </div>
@@ -396,6 +396,21 @@ function inicializarClassification() {
             btn.addEventListener('click', (e) => {
                 const modal = e.target.closest('.modal');
                 if (modal) hideModal(modal.id);
+            });
+        });
+
+                // Add type button selection handling
+        document.querySelectorAll('.type-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Remove selected class from all buttons in this group
+                const group = btn.closest('.type-buttons');
+                if (group) {
+                    group.querySelectorAll('.type-btn').forEach(b => {
+                        b.classList.remove('selected');
+                    });
+                }
+                // Add selected class to clicked button
+                btn.classList.add('selected');
             });
         });
 
