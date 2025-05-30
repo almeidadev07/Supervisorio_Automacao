@@ -1,8 +1,8 @@
 
 .weight-scale {
+    width: 100%;
     display: flex;
     justify-content: space-between;
-    padding: 0 20px;
     margin-bottom: 10px;
 }
 
@@ -12,20 +12,44 @@
     font-weight: 500;
 }
 
-.segment {
-    position: relative;
+#main-bar {
     display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.segment-value {
-    color: white;
-    font-size: 16px; /* Increased font size */
-    font-weight: bold;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    pointer-events: none;
+    height: 60px;
+    position: relative;
+    overflow: visible; /* muito importante para a barra ::after poder sair do limite */
 }
 
+.segment {
+    position: relative;
+    height: 30px; /* altura da barra principal */
+    border-radius: 8px;
+
+}
+
+.segment::after {
+    content: '';
+    position: absolute;
+    top: -10px; /* sobe 5px para ficar maior */
+    right: 0;
+    width: 15px;
+    height: 80px; /* maior que a barra */
+    background-color: #a0a0a0;
+    z-index: 10;
+    border-radius: 8px;
+    border: 2px solid #686868; /* Cor da borda da separação */
+}
+
+.segment-value {
+    position: absolute;
+    right: 25px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+    pointer-events: none;
+}
 .weight-inputs {
     display: flex;
     justify-content: space-between;
@@ -85,23 +109,27 @@
 
 
 .weight-bar {
-    height: 60px; /* Increased height */
+    position: relative; /* necessário para posicionamento absoluto dos filhos */
+    height: 60px;
     background: #f0f0f0;
     border-radius: 8px;
-    display: flex;
     overflow: hidden;
     margin: 20px 0;
 }
 
+/* Agora cada segmento é posicionado por cima */
 .segment {
+    position: absolute;
+    left: 0; /* começa sempre do 0 */
+    top: 0;
     height: 100%;
     cursor: ew-resize;
     transition: width 0.1s ease;
-    border-right: 1px solid rgba(255,255,255,0.3);
-    position: relative;
+    border: 1px solid white;
     display: flex;
     align-items: center;
     justify-content: center;
+    opacity: 0.9; /* levemente transparente para visualização de sobreposição */
 }
 
 .weight-inputs {

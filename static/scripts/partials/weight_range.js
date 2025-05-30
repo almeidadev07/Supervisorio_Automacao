@@ -56,6 +56,8 @@ function inicializarWeightRange() {
             let startX;
             let startWidth;
             let nextSegment;
+            const zIndex = segments.length - index; // faixa 1 = 7, faixa 2 = 6, ..., faixa 7 = 1
+            segment.style.zIndex = zIndex;
 
             segment.addEventListener('mousedown', (e) => {
                 e.preventDefault();
@@ -219,6 +221,7 @@ function inicializarWeightRange() {
             if (segments[index]) {
                 const percentage = (value / MAX_TOTAL) * 100;
                 segments[index].style.width = `${percentage}%`;
+                segments[index].style.left = `0`; // Agora sempre parte do zero
                 updateSegmentValue(segments[index], value);
             }
             if (inputs[index]) {

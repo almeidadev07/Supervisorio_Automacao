@@ -24,10 +24,10 @@ function inicializarBalance() {
             card.className = 'balance-card';
             card.innerHTML = `
                 <h3>Linha ${line.number}</h3>
-                <span>${line.weight}g</span>
+                <span class="weight-value">${line.weight}g</span>
                 <div class="balance-status">
                     <span class="status-indicator ${line.calibrated ? 'calibrated' : 'not-calibrated'}"></span>
-                    <span>${line.calibrated ? 'Calibrada' : 'Não Calibrada'}</span>
+                    <span>${line.calibrated ? 'Calibrado' : 'Pendente'}</span>
                 </div>
                 ${calibrationEnabled ? `
                     <button class="calibrate-btn" data-line="${line.number}">
