@@ -7,10 +7,34 @@
 }
 
 .weight-scale span {
-    font-size: 14px; /* Increased font size */
+    font-size: 20px; /* Increased font size */
     color: #666;
     font-weight: 500;
 }
+
+.input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+
+
+.weight-input.faixa-1 { border: 3px solid #FF1493;    font-size: 25px; }  /* Rosa */
+.weight-input.faixa-2 { border: 3px solid #FFFF00;    font-size: 25px; }  /* Amarelo */
+.weight-input.faixa-3 { border: 3px solid #0000FF;    font-size: 25px; }  /* Azul */
+.weight-input.faixa-4 { border: 3px solid #00FF00;    font-size: 25px; }  /* Verde */
+.weight-input.faixa-5 { border: 3px solid #FF4500;    font-size: 25px; }  /* Vermelho alaranjado */
+.weight-input.faixa-6 { border: 3px solid #00BFFF;    font-size: 25px; }  /* Azul claro */
+.weight-input.faixa-7 { border: 3px solid #00FFBF;    font-size: 25px; }  /* Verde água */
+
+.faixa-label.faixa-1 { font-weight: bold; font-size: 25px; color: #FF1493; }
+.faixa-label.faixa-2 { font-weight: bold; font-size: 25px; color: #FFFF00; }
+.faixa-label.faixa-3 { font-weight: bold; font-size: 25px; color: #0000FF; }
+.faixa-label.faixa-4 { font-weight: bold; font-size: 25px; color: #00FF00; }
+.faixa-label.faixa-5 { font-weight: bold; font-size: 25px; color: #FF4500; }
+.faixa-label.faixa-6 { font-weight: bold; font-size: 25px; color: #00BFFF; }
+.faixa-label.faixa-7 { font-weight: bold; font-size: 25px; color: #00FFBF; }
 
 #main-bar {
     display: flex;
@@ -33,19 +57,46 @@
     right: 0;
     width: 15px;
     height: 80px; /* maior que a barra */
-    background-color: #a0a0a0;
     z-index: 10;
     border-radius: 8px;
-    border: 2px solid #686868; /* Cor da borda da separação */
+    border: 1px solid #c4c4c4; /* Cor da borda da separação */
+}
+
+.segment.faixa-1::after {
+    background-color: #9e0858; /* Rosa */
+}
+
+.segment.faixa-2::after {
+    background-color: #a1a100; /* Amarelo */
+}
+
+.segment.faixa-3::after {
+    background-color: #0101ac; /* Azul */
+}
+
+.segment.faixa-4::after {
+    background-color: #009b00; /* Verde */
+}
+
+.segment.faixa-5::after {
+    background-color: #b13001; /* Vermelho alaranjado */
+}
+
+.segment.faixa-6::after {
+    background-color: #028bb9; /* Azul claro */
+}
+
+.segment.faixa-7::after {
+    background-color: #01bb8c; /* Verde água */
 }
 
 .segment-value {
     position: absolute;
-    right: 25px;
+    right: 45px;
     top: 50%;
     transform: translateY(-50%);
     color: white;
-    font-size: 14px;
+    font-size: 30px;
     font-weight: bold;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
     pointer-events: none;
@@ -63,6 +114,9 @@
     flex-direction: column; /* Changed to column layout */
     align-items: center;
     gap: 8px;
+    font-size: 25px;
+    font-weight: bold;
+
 }
 
 .weight-input {
