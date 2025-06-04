@@ -52,7 +52,7 @@ function inicializarClassification() {
     function renderGrid() {
         const grid = document.getElementById('embaladora-grid');
         if (!grid) return;
-    
+        console.log('Renderizando grid com estado:', state.embaladoras);
         grid.innerHTML = state.embaladoras.map(emb => `
             <div class="embaladora-column" data-id="${emb.id}">
                 ${renderClasses(emb.classes)}
@@ -76,18 +76,20 @@ function inicializarClassification() {
         }
     }
     function renderClasses(classes) {
+        console.log('Renderizando classes:', classes);
+        
         const fixedPositions = state.classesOvos.map((classe, index) => ({
             id: classe.id,
             top: index * 40 + 10,
             cor: classe.cor
         }));
-    
         return fixedPositions.map(position => {
             const selectedClass = classes.find(c => c.id === position.id);
             if (selectedClass) {
+                // Não mostra a letra do tipo na tela, apenas aplica a classe CSS
                 return `
                     <div class="egg-class-item tipo-${selectedClass.tipo}" style="
-                        color: ${position.cor};
+                        background-color: ${position.cor};
                         top: ${position.top}px;
                     "></div>
                 `;
@@ -109,13 +111,11 @@ function inicializarClassification() {
     function showClassModal(embaladora) {
         if (!embaladora) return;
         console.log('Showing modal for:', embaladora.nome);
-    
         const modal = document.getElementById('class-modal');
         const selectedEmbSpan = document.getElementById('selected-embaladora');
         const options = document.getElementById('class-options');
         
         if (!modal || !selectedEmbSpan || !options) return;
-    
         selectedEmbSpan.textContent = embaladora.nome;
         
         options.innerHTML = state.classesOvos.map(classe => {
@@ -124,7 +124,7 @@ function inicializarClassification() {
             
             return `
                 <div class="class-option">
-                    <div class="color-box" style="width: 20px; height: 20px; background-color: ${classe.cor}; border-radius: 50%;"></div>
+                    <div class="color-box" style="background-color: ${classe.cor};"></div>
                     <span>${classe.nome}</span>
                     <div class="type-buttons">
                         <button class="type-btn type-branco ${selectedType === 'branco' ? 'selected' : ''}" 
@@ -158,97 +158,135 @@ function inicializarClassification() {
                 handleClassSelection(embId, classId, type);
             });
         });
-    
         modal.classList.add('show');
     }
-    function handleClassSelection(embId, classeId, tipo) {
-        console.log('Selection:', embId, classeId, tipo);
-    
+    function handleClassSelection(embId, classId, tipo) {
+        console.log('Selection:', embId, classId, tipo);
         const embaladora = state.embaladoras.find(e => e.id === embId);
-        const classe = state.classesOvos.find(c => c.id === classeId);
+        const classe = state.classesOvos.find(c => c.id === classId);
         
         if (!embaladora || !classe) return;
-    
         const embIndex = state.embaladoras.findIndex(e => e.id === embId);
         if (embIndex === -1) return;
-    
         const novasClasses = [...state.embaladoras[embIndex].classes];
-        const existingClassIndex = novasClasses.findIndex(c => c.id === classeId);
+        const existingClassIndex = novasClasses.findIndex(c => c.id === classId);
         
         if (existingClassIndex !== -1 && novasClasses[existingClassIndex].tipo === tipo) {
+            // Remove a classe se clicar no mesmo tipo
             novasClasses.splice(existingClassIndex, 1);
             
-            const button = document.querySelector(`.type-btn[data-emb="${embId}"][data-class="${classeId}"][data-type="${tipo}"]`);
+            const button = document.querySelector(`.type-btn[data-emb="${embId}"][data-class="${classId}"][data-type="${tipo}"]`);
             if (button) {
                 button.classList.remove('selected');
             }
         } else {
+            // Remove a classe existente se houver
             if (existingClassIndex !== -1) {
                 novasClasses.splice(existingClassIndex, 1);
             }
             
-            novasClasses.push({ ...classe, tipo });
+            // Adiciona a nova classe com o tipo selecionado
+            novasClasses.push({ 
+                id: classe.id,
+                nome: classe.nome,
+                cor: classe.cor,
+                tipo: tipo
+            });
             
-            const buttons = document.querySelectorAll(`.type-btn[data-emb="${embId}"][data-class="${classeId}"]`);
+            // Atualiza os botões visuais
+            const buttons = document.querySelectorAll(`.type-btn[data-emb="${embId}"][data-class="${classId}"]`);
             buttons.forEach(btn => {
                 btn.classList.remove('selected');
             });
             
-            const selectedButton = document.querySelector(`.type-btn[data-emb="${embId}"][data-class="${classeId}"][data-type="${tipo}"]`);
+            const selectedButton = document.querySelector(`.type-btn[data-emb="${embId}"][data-class="${classId}"][data-type="${tipo}"]`);
             if (selectedButton) {
                 selectedButton.classList.add('selected');
             }
         }
-    
         state.embaladoras[embIndex].classes = novasClasses;
+        console.log('Estado atualizado:', state.embaladoras[embIndex]);
         renderGrid();
     }
     function handleSalvarPreset() {
         const nomePreset = document.getElementById('recipe-name').value.trim();
-        if (!nomePreset) return;
+        if (!nomePreset) {
+            alert('Por favor, insira um nome para a receita');
+            return;
+        }
         const editingId = document.getElementById('recipe-name').dataset.editing;
-        
+        // Cria uma cópia profunda da configuração atual
+        const configuracaoAtual = state.embaladoras.map(emb => ({
+            id: emb.id,
+            nome: emb.nome,
+            classes: emb.classes.map(classe => ({
+                id: classe.id,
+                nome: classe.nome,
+                cor: classe.cor,
+                tipo: classe.tipo
+            }))
+        }));
+        console.log('Salvando preset com configuração:', configuracaoAtual);
+        const novoPreset = {
+            id: editingId ? Number(editandoId) : Date.now(),
+            nome: nomePreset,
+            configuracao: configuracaoAtual,
+            dataCriacao: new Date().toISOString()
+        };
         if (editingId) {
-            const index = state.presets.findIndex(p => p.id === Number(editingId));
+            const index = state.presets.findIndex(p => p.id === Number(editandoId));
             if (index !== -1) {
-                state.presets[index] = {
-                    ...state.presets[index],
-                    nome: nomePreset,
-                    configuracao: state.embaladoras.map(emb => ({
-                        id: emb.id,
-                        classes: [...emb.classes]
-                    }))
-                };
+                state.presets[index] = novoPreset;
             }
-            delete document.getElementById('recipe-name').dataset.editing;
         } else {
-            const novoPreset = {
-                id: Date.now(),
-                nome: nomePreset,
-                configuracao: state.embaladoras.map(emb => ({
-                    id: emb.id,
-                    classes: [...emb.classes]
-                }))
-            };
             state.presets.push(novoPreset);
+        }
+        // Salva no localStorage
+        try {
+            localStorage.setItem('classification_presets', JSON.stringify(state.presets));
+            console.log('Presets salvos no localStorage');
+        } catch (error) {
+            console.error('Erro ao salvar no localStorage:', error);
         }
         renderPresets();
         document.getElementById('recipe-name').value = '';
+        delete document.getElementById('recipe-name').dataset.editing;
+        
+        // Feedback visual
+        const saveBtn = document.getElementById('save-recipe-btn');
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = 'Salvo!';
+        saveBtn.style.backgroundColor = '#22c55e';
+        setTimeout(() => {
+            saveBtn.textContent = originalText;
+            saveBtn.style.backgroundColor = '';
+        }, 1500);
     }
     function renderPresets() {
         const presetList = document.getElementById('recipe-list');
         if (!presetList) return;
-        presetList.innerHTML = state.presets.map(preset => `
-            <div class="recipe-item">
-                <span>${preset.nome}</span>
-                <div class="recipe-actions">
-                    <button class="btn-action btn-edit" data-id="${preset.id}">Editar</button>
-                    <button class="btn-action btn-load" data-id="${preset.id}">Carregar</button>
-                    <button class="btn-action btn-delete" data-id="${preset.id}">Excluir</button>
-                </div>
-            </div>
-        `).join('');
         
+        presetList.innerHTML = state.presets.map(preset => {
+            const embaladorasConfiguradas = preset.configuracao.filter(emb => emb.classes.length > 0).length;
+            const totalClasses = preset.configuracao.reduce((acc, emb) => acc + emb.classes.length, 0);
+            
+            return `
+                <div class="recipe-item">
+                    <div>
+                        <strong>${preset.nome}</strong>
+                        <br>
+                        <small>${embaladorasConfiguradas} embaladoras • ${totalClasses} classes configuradas</small>
+                    </div>
+                    <div class="recipe-actions">
+                        <button class="btn-action btn-edit" data-id="${preset.id}">Editar</button>
+                        <button class="btn-action btn-load" data-id="${preset.id}">Carregar</button>
+                        <button class="btn-action btn-delete" data-id="${preset.id}">Excluir</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Event listeners para os botões
         presetList.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', () => {
                 handleEditPreset(btn.getAttribute('data-id'));
@@ -269,26 +307,55 @@ function inicializarClassification() {
     }
     function handleLoadPreset(presetId) {
         const preset = state.presets.find(p => p.id === Number(presetId));
-        if (preset) {
-            state.embaladoras = state.embaladoras.map(emb => {
-                const config = preset.configuracao.find(c => c.id === emb.id);
-                return config ? { ...emb, classes: [...config.classes] } : { ...emb, classes: [] };
-            });
-            renderGrid();
-            const modal = document.getElementById('recipe-modal');
-            modal.classList.remove('show');
+        if (!preset) {
+            console.error('Preset não encontrado:', presetId);
+            return;
         }
-    }
-    function handleDeletePreset(presetId) {
-        state.presets = state.presets.filter(p => p.id !== Number(presetId));
-        renderPresets();
+        console.log('Carregando preset:', preset);
+
+        // Limpa todas as classes primeiro
+        state.embaladoras.forEach(emb => {
+            emb.classes = [];
+        });
+
+        // Aplica as configurações do preset
+        preset.configuracao.forEach(configEmb => {
+            const emb = state.embaladoras.find(e => e.id === configEmb.id);
+            if (emb && Array.isArray(configEmb.classes)) {
+                // Copia todas as propriedades, inclusive tipo
+                emb.classes = configEmb.classes.map(classe => ({
+                    id: classe.id,
+                    nome: classe.nome,
+                    cor: classe.cor,
+                    tipo: classe.tipo
+                }));
+            }
+        });
+
+        // Força atualização do grid e dos botões
+        renderGrid();
+        renderStatus();
+        renderHeaders();
+        renderClassesList();
+
+        hideModal('recipe-modal');
+        showNotification('Receita carregada com sucesso!');
     }
     function handleEditPreset(presetId) {
         const preset = state.presets.find(p => p.id === Number(presetId));
-        if (preset) {
-            document.getElementById('recipe-name').value = preset.nome;
-            document.getElementById('recipe-name').dataset.editing = presetId;
-        }
+        if (!preset) return;
+        const nameInput = document.getElementById('recipe-name');
+        nameInput.value = preset.nome;
+        nameInput.dataset.editing = presetId;
+        const saveBtn = document.getElementById('save-recipe-btn');
+        saveBtn.textContent = 'Atualizar';
+    }
+    function handleDeletePreset(presetId) {
+        if (confirm('Tem certeza que deseja excluir esta receita?')) {
+            state.presets = state.presets.filter(p => p.id !== Number(presetId));
+            localStorage.setItem('classification_presets', JSON.stringify(state.presets));
+            renderPresets();
+            showNotification('Receita excluída com sucesso!');}
     }
     function showModal(modalId) {
         const modal = document.getElementById(modalId);

@@ -53,7 +53,15 @@ function zoomButton(clickedButton) {
         : `${currentTransform} scale(1.4)`;
 }
 
-// Adicionar navegação para a tela de alarmes
-document.querySelector('.menu-btn[onclick*="Alarme"]').addEventListener('click', () => {
-    window.location.href = '/alarm';
+// Corrige obtenção do menu após DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+    menu = document.getElementById('menu');
+
+    // Adicionar navegação para a tela de alarmes
+    const alarmBtn = document.querySelector('.menu-btn[onclick*="Alarme"]');
+    if (alarmBtn) {
+        alarmBtn.addEventListener('click', () => {
+            window.location.href = '/alarm';
+        });
+    }
 });

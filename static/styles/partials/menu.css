@@ -2,7 +2,7 @@
 #menu-container {
     position: relative;
     width: 100vw;
-    height: var(--menu-height, 95px);
+    height: var(--menu-height, 100px);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -23,8 +23,8 @@
 }
 
 .menu-btn {
-    width: 80px;
-    height: 80px;
+    width: 70px;
+    height: 70px;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

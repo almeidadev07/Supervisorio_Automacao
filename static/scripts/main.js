@@ -164,11 +164,11 @@ function showBalance(event) {
 Promise.all([
     loadScript('/static/scripts/partials/menu.js'),
     loadScript('/static/scripts/partials/grid.js'),
-    loadScript('/static/scripts/partials/alarm.js'), // Carrega o alarm.js
-    loadScript('/static/scripts/partials/weight_range.js'), // Add weight range script
-    loadScript('/static/scripts/partials/balance.js'), // Add weight range script
-    loadScript('/static/scripts/partials/classification.js') // Add weight range script
-
+    loadScript('/static/scripts/partials/alarm.js'),
+    loadScript('/static/scripts/partials/weight_range.js'),
+    loadScript('/static/scripts/partials/balance.js'),
+    loadScript('/static/scripts/partials/classification.js'),
+    loadScript('/static/scripts/partials/login.js')  // Caminho atualizado para partials
 ])
 .then(() => {
     console.log('Todos os scripts carregados com sucesso!');
