@@ -2,20 +2,19 @@
     <div class="classification-header">
         <h1>Sistema de Classificação de Ovos</h1>
     </div>
-
+    
     <div class="embaladora-grid">
         <div class="grid-row" id="status-row"></div>
         <div class="grid-row" id="header-row"></div>
         <div class="grid-content" id="embaladora-grid"></div>
     </div>
-
-
+    
     <div class="control-row">
         <button id="recipe-btn" class="control-btn recipe-btn">
             📥 Receita
         </button>
+        
         <div class="classes-group" id="classes-list">
-            <!-- Classes serão injetadas aqui via JavaScript -->
         </div>
         
         <button id="clear-btn" class="control-btn clear-btn">
@@ -23,23 +22,21 @@
         </button>
     </div>
 </div>
-
-<!-- Class Selection Modal -->
-<div id="class-modal" class="modal">
+<!-- Modal para seleção de classe -->
+<div id="class-modal" class="modal" style="display:none;">
     <div class="modal-content">
         <div class="modal-header">
             <h2>Embaladora <span id="selected-embaladora"></span></h2>
             <button class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
-            <div id="class-options" class="class-options"></div>
+            <div id="class-options" class="class-options">
+            </div>
         </div>
-
     </div>
 </div>
-
-<!-- Recipe Modal -->
-<div id="recipe-modal" class="modal">
+<!-- Modal para gerenciar receitas -->
+<div id="recipe-modal" class="modal" style="display:none;">
     <div class="modal-content">
         <div class="modal-header">
             <h2>Gerenciar Receitas</h2>
@@ -47,7 +44,7 @@
         </div>
         <div class="modal-body">
             <div class="recipe-form">
-                <input type="text" id="recipe-name" placeholder="Nome da Receita">
+                <input type="text" id="recipe-name" placeholder="Nome da Receita" />
                 <button id="save-recipe-btn" class="control-btn save-btn">Salvar</button>
             </div>
             <div id="recipe-list" class="recipe-list"></div>

@@ -5,20 +5,16 @@
     overflow-y: auto;
     position: relative;
     box-sizing: border-box;
-    background-color: #f5f5f5; /* Light gray background */
+    background-color: #f5f5f5;
 }
-
-
 .classification-header {
     text-align: center;
 }
-
 .classification-header h1 {
     font-size: 24px;
     color: #333;
     margin: 0;
 }
-
 .embaladora-grid {
     flex: 1;
     display: flex;
@@ -34,7 +30,6 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     z-index: 2;
 }
-
 #embaladora-grid {
     display: grid;
     grid-template-columns: repeat(13, 80px);
@@ -42,42 +37,35 @@
     min-height: 450px;
     margin: 0;
     padding: 0;
-    background-color: #f8fafc; /* Light background for grid */
+    background-color: #f8fafc;
     position: relative;
-    z-index: 3; /* Add z-index to bring grid forward */
+    z-index: 3;
 }
-
 .embaladora-column:hover {
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     transform: translateY(-2px);
 }
-
 .grid-row {
     display: grid;
     grid-template-columns: repeat(13, minmax(80px, 1fr));
     gap: 5px;
     width: 100%;
 }
-
-
 .grid-content {
-    min-height: 400px; /* Add minimum height */
+    min-height: 400px;
     position: relative;
     z-index: 3;
 }
-
 .status-cell,
 .header-cell {
     width: 100%;
     text-align: center;
     padding: 5px;
 }
-
 .header-cell {
     font-weight: bold;
     padding: 10px;
 }
-
 .embaladora-column {
     width: 100%;
     height: 400px;
@@ -85,25 +73,22 @@
     max-width: 100px;
     margin: 0 2px;
     background: #ffffff;
-    border: 1px solid #e0e0e0; /* Lighter border for better visibility */
+    border: 1px solid #e0e0e0;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     position: relative;
-    z-index: 4; /* Add higher z-index to bring columns to front */
+    z-index: 4;
 }
-
 .status-indicator {
     width: 12px;
     height: 12px;
     border-radius: 50%;
     margin: 0 auto;
 }
-
 .status-active { background-color: #22c55e; }
 .status-inactive { background-color: #ef4444; }
-
 .egg-class-item {
     position: absolute;
     width: 30px;
@@ -112,8 +97,6 @@
     transform: translateX(-50%);
     border-radius: 50%;
 }
-
-/* Update positioning for each class */
 .egg-class-item:nth-child(1) { top: 10px; }
 .egg-class-item:nth-child(2) { top: 50px; }
 .egg-class-item:nth-child(3) { top: 90px; }
@@ -123,43 +106,42 @@
 .egg-class-item:nth-child(7) { top: 250px; }
 .egg-class-item:nth-child(8) { top: 290px; }
 .egg-class-item:nth-child(9) { top: 330px; }
-
-/* Cores das classes */
-.tipo-branco .egg-color { 
-    background: white; 
-    border: 2px solid #ccc;
-}
-
-.tipo-vermelho .egg-color { 
-    background: #ef4444; 
-}
-
-.tipo-misto .egg-color {
-    background: currentColor;
-    border: 2px solid #ccc;
-}
-
-
+/* Tipo Branco - fundo da classe com borda branca */
 .egg-class-item.tipo-branco {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
     border: 4px solid white;
     box-shadow: 0 0 0 1px #ccc;
+    background-color: currentColor; /* Usa a cor da classe */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
 }
-
+/* Tipo Vermelho - fundo da classe com borda vermelha */
 .egg-class-item.tipo-vermelho {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
     border: 4px solid #ef4444;
+    background-color: currentColor; /* Usa a cor da classe */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
 }
-
-/* Update egg representation styles */
+/* Tipo Misto - fundo da classe com borda metade branca, metade vermelha */
 .egg-class-item.tipo-misto {
-    position: absolute;
-    width: 32px;
-    height: 32px;
-    background: currentColor; /* Single color fill */
-    border: none;
+    position: relative;
+    width: 30px;
+    height: 30px;
+    background-color: currentColor; /* Usa a cor da classe */
     border-radius: 50%;
     z-index: 2;
 }
-
 .egg-class-item.tipo-misto::before {
     content: '';
     position: absolute;
@@ -178,19 +160,9 @@
         linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
-    padding: 6px;
+    padding: 4px;
     z-index: 1;
 }
-
-.egg-class-item.tipo-misto::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: currentColor;
-    border-radius: 50%;
-    z-index: 3;
-}
-/* Nova linha de controle */
 .control-row {
     display: flex;
     justify-content: space-between;
@@ -200,29 +172,22 @@
     max-width: 1400px;
     padding: 0 10px;
 }
-
 .control-btn {
     padding: 8px 20px;
     border: none;
     border-radius: 25px;
     cursor: pointer;
     flex-shrink: 0;
-}
-
-.control-btn {
-    flex-shrink: 0; /* Prevent buttons from shrinking */
     min-width: 120px;
 }
 .recipe-btn {
     background: #3b82f6;
     color: white;
 }
-
 .clear-btn {
     background: #ef4444;
     color: white;
 }
-
 .classes-group {
     display: flex;
     gap: 10px;
@@ -230,8 +195,6 @@
     overflow-x: auto;
     padding: 8px 0;
 }
-
-
 .egg-class {
     background: #f8fafc;
     padding: 8px 15px;
@@ -240,31 +203,28 @@
     white-space: nowrap;
     flex-shrink: 0;
 }
-
-.egg-color {
-    width: 20px;
-    height: 20px;
+.egg-class-item .egg-color {
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
+    background-color: pink;
+    z-index: 3;
 }
-
 .modal {
     position: fixed;
     top: 0;
-    left: 0px; /* Match menu width */
-    width: 100% ;
-    display: none; /* Hidden by default */
+    left: 0px;
+    width: 100%;
+    display: none;
     background: rgba(0, 0, 0, 0.5);
     height: 100vh;
     z-index: 9999;
 }
-
-
 .modal.show {
-    display: flex !important; /* Force display when shown */
+    display: flex !important;
     justify-content: center;
     align-items: center;
 }
-
 .modal-content {
     background: white;
     padding: 20px;
@@ -273,21 +233,17 @@
     max-width: 600px;
     position: relative;
     z-index: 10000;
-
 }
-
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
 }
-
 .class-options {
     display: grid;
     gap: 10px;
 }
-
 .class-option {
     display: flex;
     align-items: center;
@@ -296,7 +252,6 @@
     background: #f8fafc;
     border-radius: 4px;
 }
-
 .type-buttons {
     margin-left: auto;
     display: flex;
@@ -306,74 +261,6 @@
     background: #fff;
     z-index: 1;
 }
-
-/* Hide tipo indicators */
-.tipo-indicator {
-    display: none;
-}
-
-.tipo-branco::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border: 2px solid white;
-    border-radius: 50%;
-}
-
-.tipo-vermelho::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border: 2px solid #ef4444;
-    border-radius: 50%;
-}
-
-.tipo-misto::after {
-    display: none;
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(45deg, white 50%, #ef4444 50%);
-    border-radius: 50%;
-    opacity: 0.3;
-}
-
-.preset-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.preset-buttons {
-    display: flex;
-    gap: 8px;
-}
-
-.btn-load {
-    background: #3b82f6;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-}
-
-.btn-delete {
-    background: #ef4444;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-}
-
 .type-btn {
     padding: 8px 16px 8px 40px;
     border-radius: 6px;
@@ -388,7 +275,6 @@
     margin: 2px;
     outline: none;
 }
-/* Checkbox style */
 .type-btn::before {
     content: '';
     position: absolute;
@@ -406,9 +292,6 @@
     align-items: center;
     justify-content: center;
 }
-/* Checkmark when selected */
-
-/* Checkmark when selected */
 .type-btn.selected::before {
     content: '✓';
     background: #22c55e;
@@ -418,55 +301,21 @@
     font-weight: bold;
     line-height: 18px;
 }
-
-/* Button type specific styles */
 .type-branco {
     background: white;
     color: #333;
 }
-
-/* Remove duplicate styles */
-.type-branco.selected::before,
-.type-vermelho.selected::before,
-.type-misto.selected::before {
-    content: '✓';
-    background: #22c55e;
-    border-color: #22c55e;
-    color: white;
-}
-
-/* Update button backgrounds when selected */
-.type-branco.selected {
-    background: #f8fafc;
+.type-branco.selected,
+.type-vermelho.selected,
+.type-misto.selected {
     border-color: #22c55e;
 }
-
 .type-vermelho.selected {
     background: #dc2626;
-    border-color: #22c55e;
+    color: white;
 }
-
 .type-misto.selected {
     background: #f8fafc;
-    border-color: #22c55e;
-}
-
-.type-misto::after {
-    display: none;
-}
-
-/* Remove the gradient background from selected state */
-.type-misto.selected::before {
-    content: '✓';
-    background: #22c55e;
-    border-color: #22c55e;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: bold;
-    line-height: 1;
 }
 .close-btn {
     cursor: pointer;
@@ -474,9 +323,8 @@
     background: none;
     border: none;
     padding: 5px;
-    z-index: 10001; /* Ensure clickable */
+    z-index: 10001;
 }
-
 .recipe-form {
     display: flex;
     gap: 10px;
@@ -485,14 +333,12 @@
     background: #f8fafc;
     border-radius: 6px;
 }
-
 .recipe-form input {
     flex: 1;
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
 }
-
 .save-btn {
     background-color: #22c55e;
     color: white;
@@ -501,12 +347,10 @@
     border-radius: 4px;
     cursor: pointer;
 }
-
 .recipe-list {
     max-height: 300px;
     overflow-y: auto;
 }
-
 .recipe-item {
     display: flex;
     justify-content: space-between;
@@ -514,12 +358,10 @@
     padding: 10px;
     border-bottom: 1px solid #e5e7eb;
 }
-
 .recipe-actions {
     display: flex;
     gap: 8px;
 }
-
 .btn-action {
     padding: 4px 8px;
     border: none;
@@ -527,7 +369,6 @@
     cursor: pointer;
     color: white;
 }
-
 .btn-edit { background-color: #3b82f6; }
 .btn-load { background-color: #22c55e; }
 .btn-delete { background-color: #ef4444; }

@@ -1,7 +1,5 @@
 function inicializarClassification() {
     console.log('Inicializando Classification...');
-
-    // Estado inicial
     const state = {
         embaladoras: [
             { id: 'IND', nome: 'IND', ativo: false, classes: [] },
@@ -33,8 +31,6 @@ function inicializarClassification() {
         presets: [],
         tiposOvo: ['branco', 'vermelho', 'misto']
     };
-
-    // Renderização inicial
     function renderStatus() {
         const statusRow = document.getElementById('status-row');
         if (!statusRow) return;
@@ -45,7 +41,6 @@ function inicializarClassification() {
             </div>
         `).join('');
     }
-
     function renderHeaders() {
         const headerRow = document.getElementById('header-row');
         if (!headerRow) return;
@@ -54,7 +49,6 @@ function inicializarClassification() {
             <div class="header-cell">${emb.nome}</div>
         `).join('');
     }
-
     function renderGrid() {
         const grid = document.getElementById('embaladora-grid');
         if (!grid) return;
@@ -65,7 +59,6 @@ function inicializarClassification() {
             </div>
         `).join('');
         
-        // Add click event listeners to all embaladora columns
         document.querySelectorAll('.embaladora-column').forEach(column => {
             column.addEventListener('click', () => {
                 const embId = column.getAttribute('data-id');
@@ -82,16 +75,13 @@ function inicializarClassification() {
             showClassModal(embaladora);
         }
     }
-
     function renderClasses(classes) {
-        // Create a map of all possible positions
         const fixedPositions = state.classesOvos.map((classe, index) => ({
             id: classe.id,
             top: index * 40 + 10,
             cor: classe.cor
         }));
     
-        // Generate all slots, filling with selected classes where they exist
         return fixedPositions.map(position => {
             const selectedClass = classes.find(c => c.id === position.id);
             if (selectedClass) {
@@ -102,10 +92,9 @@ function inicializarClassification() {
                     "></div>
                 `;
             }
-            return ''; // Empty slot
+            return '';
         }).join('');
     }
-
     function renderClassesList() {
         const classList = document.getElementById('classes-list');
         if (!classList) return;
@@ -117,8 +106,6 @@ function inicializarClassification() {
             </div>
         `).join('');
     }
-
-    // Modal handling
     function showClassModal(embaladora) {
         if (!embaladora) return;
         console.log('Showing modal for:', embaladora.nome);
@@ -163,7 +150,6 @@ function inicializarClassification() {
             `;
         }).join('');
         
-        // Add event listeners to type buttons
         options.querySelectorAll('.type-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const embId = e.target.getAttribute('data-emb');
@@ -175,7 +161,6 @@ function inicializarClassification() {
     
         modal.classList.add('show');
     }
-
     function handleClassSelection(embId, classeId, tipo) {
         console.log('Selection:', embId, classeId, tipo);
     
@@ -190,28 +175,20 @@ function inicializarClassification() {
         const novasClasses = [...state.embaladoras[embIndex].classes];
         const existingClassIndex = novasClasses.findIndex(c => c.id === classeId);
         
-        // Check if the same type is already selected
         if (existingClassIndex !== -1 && novasClasses[existingClassIndex].tipo === tipo) {
-            // If same type is selected, remove it (toggle off)
             novasClasses.splice(existingClassIndex, 1);
             
-            // Remove selected class from the button
             const button = document.querySelector(`.type-btn[data-emb="${embId}"][data-class="${classeId}"][data-type="${tipo}"]`);
             if (button) {
                 button.classList.remove('selected');
             }
         } else {
-            // If different type is selected or not selected yet
-            
-            // First remove any existing entry for this class
             if (existingClassIndex !== -1) {
                 novasClasses.splice(existingClassIndex, 1);
             }
             
-            // Then add the new one
             novasClasses.push({ ...classe, tipo });
             
-            // Update button states in UI
             const buttons = document.querySelectorAll(`.type-btn[data-emb="${embId}"][data-class="${classeId}"]`);
             buttons.forEach(btn => {
                 btn.classList.remove('selected');
@@ -223,20 +200,15 @@ function inicializarClassification() {
             }
         }
     
-        // Update state and re-render
         state.embaladoras[embIndex].classes = novasClasses;
         renderGrid();
     }
-
     function handleSalvarPreset() {
         const nomePreset = document.getElementById('recipe-name').value.trim();
         if (!nomePreset) return;
-
-        // Check if we're editing an existing preset
         const editingId = document.getElementById('recipe-name').dataset.editing;
         
         if (editingId) {
-            // Update existing preset
             const index = state.presets.findIndex(p => p.id === Number(editingId));
             if (index !== -1) {
                 state.presets[index] = {
@@ -250,7 +222,6 @@ function inicializarClassification() {
             }
             delete document.getElementById('recipe-name').dataset.editing;
         } else {
-            // Create new preset
             const novoPreset = {
                 id: Date.now(),
                 nome: nomePreset,
@@ -261,15 +232,12 @@ function inicializarClassification() {
             };
             state.presets.push(novoPreset);
         }
-
         renderPresets();
         document.getElementById('recipe-name').value = '';
     }
-
     function renderPresets() {
         const presetList = document.getElementById('recipe-list');
         if (!presetList) return;
-
         presetList.innerHTML = state.presets.map(preset => `
             <div class="recipe-item">
                 <span>${preset.nome}</span>
@@ -281,7 +249,6 @@ function inicializarClassification() {
             </div>
         `).join('');
         
-        // Add event listeners to buttons
         presetList.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', () => {
                 handleEditPreset(btn.getAttribute('data-id'));
@@ -300,7 +267,6 @@ function inicializarClassification() {
             });
         });
     }
-
     function handleLoadPreset(presetId) {
         const preset = state.presets.find(p => p.id === Number(presetId));
         if (preset) {
@@ -313,12 +279,10 @@ function inicializarClassification() {
             modal.classList.remove('show');
         }
     }
-
     function handleDeletePreset(presetId) {
         state.presets = state.presets.filter(p => p.id !== Number(presetId));
         renderPresets();
     }
-
     function handleEditPreset(presetId) {
         const preset = state.presets.find(p => p.id === Number(presetId));
         if (preset) {
@@ -326,41 +290,31 @@ function inicializarClassification() {
             document.getElementById('recipe-name').dataset.editing = presetId;
         }
     }
-
     function showModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) modal.classList.add('show');
     }
-
     function hideModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) modal.classList.remove('show');
     }
-
     function setupEventListeners() {
-        // Close buttons
         document.querySelectorAll('.close-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const modal = e.target.closest('.modal');
                 if (modal) hideModal(modal.id);
             });
         });
-
-        // Recipe button
         const recipeBtn = document.getElementById('recipe-btn');
         if (recipeBtn) {
             recipeBtn.addEventListener('click', () => {
                 showModal('recipe-modal');
             });
         }
-
-        // Save recipe button
         const saveRecipeBtn = document.getElementById('save-recipe-btn');
         if (saveRecipeBtn) {
             saveRecipeBtn.addEventListener('click', handleSalvarPreset);
         }
-
-        // Clear button
         const clearBtn = document.getElementById('clear-btn');
         if (clearBtn) {
             clearBtn.addEventListener('click', () => {
@@ -368,8 +322,6 @@ function inicializarClassification() {
                 renderGrid();
             });
         }
-
-        // Click outside modal to close
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) hideModal(modal.id);
