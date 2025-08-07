@@ -1,0 +1,94 @@
+<!-- partials/windows.html -->
+<div class="windows-layout">
+    <!-- Barra de Status Superior com Pinos -->
+    <div class="status-bar">
+
+    </div>
+
+    <!-- Grid de Botões de Captura -->
+    <div class="capture-grid">
+        <!-- Linha Superior -->
+        <div class="capture-row">
+            <button class="capture-btn active" data-station="magna-visio">
+                <div class="capture-icon">🎯</div>
+                <div class="capture-label">Magna Visio</div>
+            </button>
+            <button class="capture-btn active" data-station="grieta">
+                <div class="capture-icon">🎯</div>
+                <div class="capture-label">Crack</div>
+            </button>
+            <button class="capture-btn" data-station="peso">
+                <div class="capture-icon">🎯</div>
+                <div class="capture-label">Peso</div>
+            </button>
+            <button class="capture-btn" data-station="cint-corr-ind">
+                <div class="capture-icon">🎯</div>
+                <div class="capture-label">Esteira Industrial</div>
+            </button>
+            <button class="capture-btn" data-station="e01">
+                <div class="capture-icon">🎯</div>
+                <div class="capture-label">E01</div>
+            </button>
+            <button class="capture-btn" data-station="e02">
+                <div class="capture-icon">🎯</div>
+                <div class="capture-label">E02</div>
+            </button>
+            <button class="capture-btn" data-station="e03">
+                <div class="capture-icon">🎯</div>
+                <div class="capture-label">E03</div>
+            </button>
+            <button class="capture-btn" data-station="e04">
+                <div class="capture-icon">🎯</div>
+                <div class="capture-label">E04</div>
+            </button>
+            <button class="capture-btn" data-station="e05">
+                <div class="capture-icon">🎯</div>
+                <div class="capture-label">E05</div>
+            </button>
+        </div>
+
+        <!-- Linha Inferior -->
+        <div class="capture-row">
+            <button class="capture-btn" data-station="e06">
+                <div class="capture-icon">🎯</div>
+                <div class="capture-label">E06</div>
+            </button>
+            <button class="capture-btn special" data-station="captura-final">
+                <div class="capture-icon">🏁</div>
+                <div class="capture-label">Captura Final</div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Pop-up Modal de Captura -->
+    <div class="capture-modal" id="capture-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Peso</h3>
+                <button class="modal-close" id="modal-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="capture-actions">
+                    <button class="action-btn initial" id="btn-captura-inicial">
+                        <div class="action-icon">🎯</div>
+                        <div class="action-label">Captura Inicial</div>
+                    </button>
+                    <button class="action-btn final" id="btn-captura-final">
+                        <div class="action-icon">🎯</div>
+                        <div class="action-label">Captura Final</div>
+                    </button>
+                </div>
+                <div class="offset-section">
+                    <div class="offset-label">Búsqueda de compensación</div>
+                    <button class="action-btn offset" id="btn-busca-offset">
+                        <div class="action-icon">⚡</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay para o Modal -->
+    <div class="modal-overlay" id="modal-overlay"></div>
+</div>
+

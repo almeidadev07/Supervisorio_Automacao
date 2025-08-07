@@ -41,13 +41,56 @@
             </div>
         </div>
     </button>
-    <button class="draggable-btn" draggable="true">4</button>
-    <button class="draggable-btn" draggable="true">5</button>
-    <button class="draggable-btn" draggable="true">6</button>
+    <button class="draggable-btn" draggable="true">
+        <!-- Acumuladora -->
+        <div class="unit">
+          <h2>Acumuladora</h2>
+          <div class="jog-switch">
+            <input type="checkbox" id="jog1" class="toggle"/>
+            <label for="jog1">Jog</label>
+          </div>
+          <div class="gauge-container">
+            <div class="gauge" id="gauge1"><span id="gaugeVal1">0%</span></div>
+            <div class="slider-wrapper">
+              <input type="range" min="0" max="100" value="0" class="slider" id="slider1"/>
+              <div class="limite">Limitação: <span id="limite1">0%</span></div>
+            </div>
+          </div>
+        </div>
+    </button>
+    <button class="draggable-btn" draggable="true">
+        <!-- Dosificadora -->
+         <div class="unit">
+           <h2>Dosificadora</h2>
+           <div class="jog-switch">
+             <input type="checkbox" id="jog2" class="toggle"/>
+             <label for="jog2">Jog</label>
+           </div>
+           <div class="gauge-container">
+             <div class="gauge" id="gauge2"><span id="gaugeVal2">0%</span></div>
+             <div class="slider-wrapper">
+               <input type="range" min="0" max="100" value="0" class="slider" id="slider2"/>
+               <div class="limite">Limitação: <span id="limite2">0%</span></div>
+             </div>
+           </div>
+         </div>
+    </button>
+    <button class="draggable-btn" draggable="true">
+        <!-- Plasson Farm -->
+        <div class="unit plasson-unit">
+            <div class="plasson-content">
+                <h2>Plasson Farm</h2>
+                <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Relatorio.png') }}" 
+                     alt="Ícone Relatório" 
+                     class="menu-icon">
+            </div>
+        </div>
+    </button>
     <button class="draggable-btn" draggable="true">7</button>
     <button class="draggable-btn" draggable="true">8</button>
     <button class="draggable-btn" draggable="true">9</button>
     <button class="draggable-btn" draggable="true">10</button>
     <button class="draggable-btn" draggable="true">11</button>
     <button class="draggable-btn" draggable="true">12</button>
+</section>
 </section>

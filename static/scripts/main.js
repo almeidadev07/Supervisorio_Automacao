@@ -46,7 +46,6 @@ function showWeightRange() {
 
 
 function hideAllContainers() {
-    // Hide all main containers
     const containers = [
         'grid-container',
         'alarm-container',
@@ -54,25 +53,13 @@ function hideAllContainers() {
         'balance-container',
         'classification-container',
         'input-container',
-        'washer-container', // Adicionado para garantir ocultação da lavadora
-        'diagram-container'  // Adicionar novo container
-
+        'washer-container',
+        'windows-container', // Adicionar windows-container
+        'diagram-container'
     ];
     containers.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
-    });
-
-    // Hide all modals
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(modal => {
-        modal.style.display = 'none';
-        modal.classList.remove('show');
-    });
-
-    // Reset any active states
-    document.querySelectorAll('.active').forEach(element => {
-        element.classList.remove('active');
     });
 }
 
@@ -175,17 +162,18 @@ function showWasher(event) {
     const washerContainer = document.getElementById('washer-container');
     if (washerContainer) {
         washerContainer.style.display = 'block';
-        // Pequeno delay para garantir que o DOM está pronto
-        setTimeout(() => {
-            if (typeof window.inicializarWasher === 'function') {
-                window.inicializarWasher();
-            }
-        }, 100);
     }
 
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
     if (event?.currentTarget) {
         event.currentTarget.classList.add('active');
+    }
+    
+    // Inicializa o washer se ainda não foi inicializado
+    if (typeof window.inicializarWasher === 'function' && !window.washerInitialized) {
+        console.log('🔧 Inicializando sistema Washer...');
+        window.inicializarWasher();
+        window.washerInitialized = true; // Evita reinicializar
     }
 }
 
@@ -210,6 +198,28 @@ function showDiagram(event) {
     }
 }
 
+// 1. Adicione esta função ao seu main.js
+function showWindows(event) {
+    hideAllContainers();
+    const windowsContainer = document.getElementById('windows-container');
+    if (windowsContainer) {
+        windowsContainer.style.display = 'block';
+    }
+
+    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+    if (event?.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+    
+    // Inicializa o sistema Windows se ainda não foi inicializado
+    if (typeof window.inicializarWindows === 'function' && !window.windowsInitialized) {
+        console.log('🎯 Inicializando sistema Windows...');
+        window.inicializarWindows();
+        window.windowsInitialized = true; // Evita reinicializar
+    }
+}
+
+
 // Carregar os scripts de forma assíncrona
 Promise.all([
     loadScript('/static/scripts/partials/menu.js'),
@@ -221,8 +231,8 @@ Promise.all([
     loadScript('/static/scripts/partials/login.js'),  // Caminho atualizado para partials
     loadScript('/static/scripts/partials/input.js'),  // Caminho atualizado para partials
     loadScript('/static/scripts/partials/washer.js'), // ✅ Script da lavadora
-    loadScript('/static/scripts/partials/diagram.js') 
-
+    loadScript('/static/scripts/partials/diagram.js'), 
+    loadScript('/static/scripts/partials/windows.js') 
 
 ])
 .then(() => {
@@ -283,3 +293,17 @@ window.showClassification = showClassification;
 window.showInput = showInput;
 window.showWasher = showWasher; // ✅ Exportação global da função da lavadora
 window.showDiagram = showDiagram;
+window.showWindows = showWindows;
+document.addEventListener('DOMContentLoaded', function() {
+    showGrid(); // Ensure the grid is displayed correctly on initial load
+});
+// Exporta funções para o escopo global
+window.showGrid = showGrid;
+window.showAlarm = showAlarm;
+window.showWeightRange = showWeightRange;
+window.showBalance = showBalance;
+window.showClassification = showClassification;
+window.showInput = showInput;
+window.showWasher = showWasher; // ✅ Exportação global da função da lavadora
+window.showDiagram = showDiagram;
+window.showWindows = showWindows;

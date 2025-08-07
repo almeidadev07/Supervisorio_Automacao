@@ -11,11 +11,14 @@
 #menu {
     display: flex;
     justify-content: center;
+    align-items: center;
     position: fixed;  /* Mantém o menu fixo na tela */
     left: 0;
     bottom: 0;       /* Fixa o menu na base da tela */
     overflow: hidden;
     width: 100%;
+    padding: 0 10px;
+    gap: 20px;       /* Espaçamento entre os grupos */
     transition: transform 0.8s ease-in-out;
     background-color: #fff; /* Garante que o fundo do menu seja visível */
     box-shadow: 0 -2px 5px rgba(0,0,0,0.1); /* Adiciona sombra sutil na parte superior */
@@ -39,18 +42,31 @@
     z-index: 50;
 }
 
-#menu button:not(.logo-btn) {
-    margin: 0 1px;
-}
+
 
 
 .logo-btn {
-    position: absolute;
+    position: relative;
     z-index: 10;
     cursor: pointer;
     border: none !important;
     outline: none !important;
+    background: transparent;
+}
 
+.menu-left,
+.menu-right {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+}
+
+.menu-left {
+    justify-content: flex-end;
+}
+
+.menu-right {
+    justify-content: flex-start;
 }
 
 .menu-icon {
@@ -69,6 +85,8 @@
 @media screen and (max-width: 768px) {
     #menu {
         height: var(--menu-height, 70px); /* Menu menor em telas pequenas */
+        padding: 0 5px;
+        gap: 15px;
     }
 
     .menu-btn {
@@ -85,11 +103,18 @@
         width: 35px;
         height: 35px;
     }
+
+    .menu-left,
+    .menu-right {
+        gap: 2px;
+    }
 }
 
 @media screen and (max-width: 480px) {
     #menu {
         height: var(--menu-height, 60px);
+        padding: 0 2px;
+        gap: 10px;
     }
 
     .menu-btn {
@@ -107,9 +132,9 @@
         height: 30px;
     }
 
-    /* Ajusta o espaçamento entre botões */
-    #menu button:not(.logo-btn) {
-        margin: 0 5px;
+    .menu-left,
+    .menu-right {
+        gap: 1px;
     }
 }
 
@@ -117,6 +142,7 @@
 @media screen and (max-height: 480px) and (orientation: landscape) {
     #menu {
         height: var(--menu-height, 50px);
+        gap: 8px;
     }
 
     .menu-btn {
@@ -139,6 +165,8 @@
 @media screen and (max-width: 320px) {
     #menu {
         height: var(--menu-height, 50px);
+        padding: 0 1px;
+        gap: 5px;
     }
 
     .menu-btn {
@@ -154,5 +182,10 @@
     .menu-icon {
         width: 20px;
         height: 20px;
+    }
+
+    .menu-left,
+    .menu-right {
+        gap: 0px;
     }
 }

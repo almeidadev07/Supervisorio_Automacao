@@ -372,3 +372,32 @@
         font-size: 16px;
     }
 }
+
+/* Estilos específicos para o botão Plasson Farm */
+.plasson-unit {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 5px;
+}
+
+.plasson-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.plasson-content h2 {
+    margin: 35;
+    padding: 5px;
+    text-align: center;
+    font-size: 1.5em;
+}
+
+.plasson-content .menu-icon {
+    width: 120px;
+    height: 120px;
+    margin: 5;
+    display: block;
+}

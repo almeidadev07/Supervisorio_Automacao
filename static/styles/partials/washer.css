@@ -1,4 +1,5 @@
-/* washer.css - Atualizado */
+/* washer.css - Versão Corrigida baseada no input.css funcional */
+
 .washer-layout {
   display: flex;
   flex-direction: column;
@@ -27,7 +28,6 @@
   margin-bottom: 10px;
   font-size: 1.4rem;
 }
-
 
 #washer-container .jog-switch {
   display: flex;
@@ -73,16 +73,16 @@
   gap: 20px;
 }
 
+/* Gauge com o mesmo estilo do input.css que funciona */
 #washer-container .gauge {
   width: 70px;
   height: 70px;
   border-radius: 50%;
-  background: #eee;
+  background: conic-gradient(#00cc66 0% 0%, #eee 0% 100%);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: rotate(-90deg);
 }
 
 #washer-container .gauge span {
@@ -90,7 +90,6 @@
   font-weight: bold;
   color: #000;
   font-size: 1.1rem;
-  transform: rotate(90deg);
 }
 
 #washer-container .slider-wrapper {
@@ -100,6 +99,7 @@
 #washer-container .slider {
   width: 100%;
 }
+
 #washer-container .slider::-webkit-slider-thumb {
   appearance: none;
   width: 20px;
@@ -125,6 +125,7 @@
   margin-top: 4px;
 }
 
+/* Estilos para a parte dos motores (mantidos do original) */
 .units-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -145,11 +146,16 @@
   color: #333;
 }
 
-.motor-unit img {
+.motor-icon {
   width: 50px;
   height: 50px;
-  margin-bottom: 10px;
-  object-fit: cover;
+  background: #ddd;
+  margin: 0 auto 10px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
 }
 
 .btn-group {
@@ -230,3 +236,4 @@
     font-size: 0.9rem;
   }
 }
+
