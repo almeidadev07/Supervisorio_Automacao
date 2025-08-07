@@ -8,9 +8,9 @@
 @import url('partials/login.css');
 @import url('partials/input.css');
 @import url('partials/washer.css');
+@import url('partials/diagram.css'); 
 
-
-/* ========== Estilos Globais ========== *////
+/* ========== Estilos Globais ========== */
 
 .main-container {
     display: flex;
@@ -100,7 +100,24 @@
     user-select: none;
 }
 
-/* ...existing code... */
+/* Estilos para o container de diagramas */
+#diagram-container {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 60px);
+    background: #fff;
+    overflow: hidden;
+}
+
+/* Ícone para o botão de diagrama */
+.menu-btn i.fa-project-diagram {
+    font-size: 1.2em;
+    color: #2196F3;
+}
+
+.menu-btn {
+    background-image: url('/static/images/menu/boxs/00_Botao_Aux.png');
+}
 
 /* ========== Estilos Responsivos ========== */
 @media screen and (max-width: 1024px) {

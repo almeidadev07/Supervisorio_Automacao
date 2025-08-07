@@ -54,7 +54,8 @@ function hideAllContainers() {
         'balance-container',
         'classification-container',
         'input-container',
-        'washer-container' // Adicionado para garantir ocultação da lavadora
+        'washer-container', // Adicionado para garantir ocultação da lavadora
+        'diagram-container'  // Adicionar novo container
 
     ];
     containers.forEach(id => {
@@ -172,18 +173,42 @@ function showInput(event) {
 function showWasher(event) {
     hideAllContainers();
     const washerContainer = document.getElementById('washer-container');
-    if (washerContainer) washerContainer.style.display = 'block';
+    if (washerContainer) {
+        washerContainer.style.display = 'block';
+        // Pequeno delay para garantir que o DOM está pronto
+        setTimeout(() => {
+            if (typeof window.inicializarWasher === 'function') {
+                window.inicializarWasher();
+            }
+        }, 100);
+    }
 
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
     if (event?.currentTarget) {
         event.currentTarget.classList.add('active');
     }
-
-    if (typeof inicializarWasher === 'function') {
-        inicializarWasher();
-    }
 }
 
+// Função para exibir a tela de diagramas
+function showDiagram(event) {
+    hideAllContainers();
+    const diagramContainer = document.getElementById('diagram-container');
+    if (diagramContainer) {
+        diagramContainer.style.display = 'block';
+    }
+
+    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+    if (event?.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+    
+    // A inicialização agora acontece aqui, se ainda não tiver sido feita.
+    // A verificação 'typeof window.inicializarDiagrama' garante que o script já carregou.
+    if (typeof window.inicializarDiagrama === 'function' && !window.diagramInitialized) {
+        window.inicializarDiagrama();
+        window.diagramInitialized = true; // Evita reinicializar
+    }
+}
 
 // Carregar os scripts de forma assíncrona
 Promise.all([
@@ -195,7 +220,8 @@ Promise.all([
     loadScript('/static/scripts/partials/classification.js'),
     loadScript('/static/scripts/partials/login.js'),  // Caminho atualizado para partials
     loadScript('/static/scripts/partials/input.js'),  // Caminho atualizado para partials
-    loadScript('/static/scripts/partials/washer.js') // ✅ Script da lavadora
+    loadScript('/static/scripts/partials/washer.js'), // ✅ Script da lavadora
+    loadScript('/static/scripts/partials/diagram.js') 
 
 
 ])
@@ -236,9 +262,10 @@ Promise.all([
         inicializarInput();
     }
 
-    if (typeof inicializarWasher === 'function') {
-        inicializarWasher();
-    }
+    // Remova ou comente esta linha:
+    // if (typeof inicializarWasher === 'function') {
+    //     inicializarWasher();
+    // }
 
 })
 .catch(error => console.error('Erro ao carregar scripts:', error));
@@ -255,3 +282,4 @@ window.showBalance = showBalance;
 window.showClassification = showClassification;
 window.showInput = showInput;
 window.showWasher = showWasher; // ✅ Exportação global da função da lavadora
+window.showDiagram = showDiagram;

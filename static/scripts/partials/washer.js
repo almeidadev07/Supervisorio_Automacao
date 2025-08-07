@@ -1,31 +1,35 @@
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM carregado, configurando washer...');
+    
+    const slider = document.getElementById('slider1');
+    const gauge = document.getElementById('gauge1');
+    const valueText = document.getElementById('gaugeVal1');
+    const limiteText = document.getElementById('limite1');
 
-function setupGauge(sliderId, gaugeId, textId, limiteId) {
-  const slider = document.getElementById(sliderId);
-  const gauge = document.getElementById(gaugeId);
-  const valueText = document.getElementById(textId);
-  const limiteText = document.getElementById(limiteId);
-  slider.addEventListener("input", () => {
-    const val = slider.value;
-    valueText.textContent = `${val}%`;
-    limiteText.textContent = `${val}%`;
-    gauge.style.background = `conic-gradient(#00cc66 0% ${val}%, #eee ${val}% 100%)`;
-  });
-}
-setupGauge("slider1", "gauge1", "gaugeVal1", "limite1");
-document.addEventListener("DOMContentLoaded", function () {
-  const buttons = document.querySelectorAll(".btn");
-  buttons.forEach((btn) => {
-    btn.addEventListener("click", function () {
-      const type = btn.classList.contains("hand")
-        ? "Jog Manual"
-        : btn.classList.contains("power")
-        ? "Ligar/Desligar"
-        : btn.classList.contains("timer")
-        ? "Timer"
-        : "Outro";
-      const unidade = btn.closest(".motor-unit")?.querySelector("h3")?.innerText || "Desconhecido";
-      btn.classList.toggle("active");
-      console.log(`[${unidade}] Botão "${type}" foi ${btn.classList.contains("active") ? 'ativado' : 'desativado'}`);
-    });
-  });
+    if (!slider || !gauge || !valueText || !limiteText) {
+        console.error('Elementos não encontrados');
+        return;
+    }
+
+    function updateGauge() {
+        const value = slider.value;
+        console.log('Novo valor:', value);
+        
+        // Atualiza textos
+        valueText.textContent = `${value}%`;
+        limiteText.textContent = `${value}%`;
+        
+        // Atualiza gradiente
+        gauge.style.background = `conic-gradient(
+            #00cc66 ${value * 3.6}deg,
+            #eee ${value * 3.6}deg
+        )`;
+    }
+
+    // Adiciona eventos
+    slider.addEventListener('input', updateGauge);
+    slider.addEventListener('change', updateGauge);
+    
+    // Inicialização
+    updateGauge();
 });

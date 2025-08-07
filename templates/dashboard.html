@@ -44,7 +44,10 @@
                     {% include 'partials/washer.html' %}
                 </div>
 
-
+                <!-- Adicionar o container do diagrama -->
+                <div id="diagram-container" style="display: none;">
+                    {% include 'partials/diagram.html' %}
+                </div>
                 
                 <!-- Componentes de interface -->
                 {% include 'partials/virtual_keyboard.html' %}
@@ -60,5 +63,6 @@
     </header>
 
     <script src="{{ url_for('static', filename='scripts/main.js') }}" defer></script>
+
 </body>
 </html>

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory, send_file
+from flask import Flask, render_template, request, jsonify, send_from_directory, send_file, make_response
 from flask_cors import CORS
 import json
 import os
@@ -152,6 +152,13 @@ def import_setups():
     except Exception as e:
         logger.error(f"Error importing setups: {str(e)}")
         return jsonify({"error": "Failed to import setups"}), 500
+
+@app.route('/static/pdfs/<path:filename>')
+def serve_pdf(filename):
+    response = make_response(send_from_directory('static/pdfs', filename))
+    # Remove X-Frame-Options se existir
+    response.headers.pop('X-Frame-Options', None)
+    return response
 
 if __name__ == "__main__":
     app.run(debug=True, host='127.0.0.1', port=5000)
