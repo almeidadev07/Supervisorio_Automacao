@@ -1,4 +1,4 @@
-// Função para carregar scripts dinamicamente
+// Função para carregar scripts dinamicamente ///
 function loadScript(src) {
     return new Promise((resolve, reject) => {
         const script = document.createElement('script');
