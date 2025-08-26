@@ -193,65 +193,59 @@
     gap: 10px;
     z-index: 1000;
 }
+/* Alarm counters inside grid: compact, professional circles with label */
 .alarm-counts-container {
-    display: flex;
-    flex-wrap: wrap;
+    /* organização dos tipos de alarme em grid 2 linhas x 3 colunas */
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    grid-template-rows: repeat(2, auto);
     justify-content: center;
     align-items: center;
-    gap: 10px;
-    width: 90%;
-    height: 100%;
-    max-height: 250px; /* Match velocimeter container */
-    padding: 10px;
+    gap: 12px 18px;
+    width: 100%;
+    padding: 6px 0 0 0;
     box-sizing: border-box;
 }
+
 .alarm-count-circle {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 70px;
-    height: 70px;
+    /* círculos maiores para melhor leitura */
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
-    background-color: transparent !important;
-    font-size: 30px;
-    font-weight: bold;
-    margin: 4px;
+    background-color: var(--alarm-bg, #f0f0f0);
+    border: 2px solid var(--alarm-border, rgba(0,0,0,0.08));
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    font-weight: 800;
+    margin: 0;
     flex-shrink: 0;
-    border-width: 8px;
-    border-style: dashed;
     text-align: center;
-
 }
 
 .count-value {
-    font-family: monospace;
-    color: #ffffff; /* Changed from white to dark gray */
-    text-shadow: none; /* Removed text shadow */
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: var(--alarm-fg, #222);
+    font-size: 1.6em;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+
+.alarm-label {
+    font-size: 0.66rem;
+    color: rgba(0,0,0,0.55);
+    text-transform: none;
+    letter-spacing: 0.01em;
 }
 /* Cores das bordas por tipo de alarme */
-.alarm-count-circle.emergency {
-    border-color: #ff4444;
-}
-
-.alarm-count-circle.drives {
-    border-color: #ff9900;
-}
-
-.alarm-count-circle.thermal {
-    border-color: #ffdd00;
-}
-
-.alarm-count-circle.hardware {
-    border-color: #aa66cc;
-}
-
-.alarm-count-circle.process {
-    border-color: #4285f4;
-}
-
-.alarm-count-circle.total {
-    border-color: #666666;
-}
+.alarm-count-circle.emergency { --alarm-border: #ff4444; --alarm-bg: #ffecec; --alarm-fg: #c62828; }
+.alarm-count-circle.drives    { --alarm-border: #ff9900; --alarm-bg: #fff4e6; --alarm-fg: #bf360c; }
+.alarm-count-circle.thermal   { --alarm-border: #ffdd00; --alarm-bg: #fffbdb; --alarm-fg: #8a6b00; }
+.alarm-count-circle.hardware  { --alarm-border: #aa66cc; --alarm-bg: #fbf0ff; --alarm-fg: #6a1b9a; }
+.alarm-count-circle.process   { --alarm-border: #4285f4; --alarm-bg: #eaf3ff; --alarm-fg: #0d47a1; }
+.alarm-count-circle.total     { --alarm-border: #666666; --alarm-bg: #f2f2f2; --alarm-fg: #333333; }
 
 
 
