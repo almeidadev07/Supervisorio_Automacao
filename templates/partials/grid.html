@@ -2,84 +2,108 @@
         <!-- Botões modulares -->
     <!-- Botões com velocímetros ---->
     <button class="draggable-btn" draggable="true">
-        <div class="velocimetro-container">
-            <img src="{{ url_for('static', filename='images/grid/status/00_Medida_Velocimentro_Verde.png') }}" class="velocimetro-imagem" id="imgVelocimetroReal">
-            <img src="{{ url_for('static', filename='images/grid/status/00_Ponteiro_Velocimentro_Verde.png') }}"class="ponteiro" id="ponteiroReal" data-tipo="real">
-            <div id="valorReal" class="velocimetro-texto">
-                <span class="valor">0</span>
-                <span class="unidade">Cx/h</span>
+        <!-- Velocidade Real -->
+        <div class="unit">
+            <h2>Velocidade Real</h2>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
+                <div class="velocimetro-container">
+                    <img src="{{ url_for('static', filename='images/grid/status/00_Medida_Velocimentro_Verde.png') }}" class="velocimetro-imagem" id="imgVelocimetroReal">
+                    <img src="{{ url_for('static', filename='images/grid/status/00_Ponteiro_Velocimentro_Verde.png') }}"class="ponteiro" id="ponteiroReal" data-tipo="real">
+                    <div id="valorReal" class="velocimetro-texto">
+                        <span class="valor">0</span>
+                        <span class="unidade">Cx/h</span>
+                    </div>
+                </div>
             </div>
         </div>
     </button>
     <button class="draggable-btn" draggable="true">
-        <div class="velocimetro-container">
-            <img src="{{ url_for('static', filename='images/grid/status/00_Medida_Velocimentro_Amarelo.png') }}" class="velocimetro-imagem" id="imgVelocimetroProg">
-            <img src="{{ url_for('static', filename='images/grid/status/00_Ponteiro_Velocimentro_Amarelo.png') }}" class="ponteiro" id="ponteiroProg">
-            <input type="text" id="velocidadeInput" class="velocimetro-input" value="50" readonly onclick="abrirTeclado(event)">
-            <span class="unidade-programada">Cx/h</span>
+        <!-- Velocidade Prog. -->
+        <div class="unit">
+            <h2>Velocidade Prog.</h2>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
+                <div class="velocimetro-container">
+                    <img src="{{ url_for('static', filename='images/grid/status/00_Medida_Velocimentro_Amarelo.png') }}" class="velocimetro-imagem" id="imgVelocimetroProg">
+                    <img src="{{ url_for('static', filename='images/grid/status/00_Ponteiro_Velocimentro_Amarelo.png') }}" class="ponteiro" id="ponteiroProg">
+                    <input type="text" id="velocidadeInput" class="velocimetro-input" value="50" readonly onclick="abrirTeclado(event)">
+                    <span class="unidade-programada">Cx/h</span>
+                </div>
+            </div>
         </div>
     </button>
     <button class="draggable-btn" draggable="true">
-        <div class="alarm-counts-container">
-            <div class="alarm-count-circle emergency">
-                <span class="count-value">000</span>
-            </div>
-            <div class="alarm-count-circle drives">
-                <span class="count-value">000</span>
-            </div>
-            <div class="alarm-count-circle thermal">
-                <span class="count-value">000</span>
-            </div>
-            <div class="alarm-count-circle hardware">
-                <span class="count-value">000</span>
-            </div>
-            <div class="alarm-count-circle process">
-                <span class="count-value">000</span>
-            </div>
-            <div class="alarm-count-circle total">
-                <span class="count-value">000</span>
+        <!-- Alarmes -->
+        <div class="unit">
+            <h2>Alarmes</h2>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
+                <div class="alarm-counts-container">
+                    <div class="alarm-count-circle emergency">
+                        <span class="count-value">000</span>
+                    </div>
+                    <div class="alarm-count-circle drives">
+                        <span class="count-value">000</span>
+                    </div>
+                    <div class="alarm-count-circle thermal">
+                        <span class="count-value">000</span>
+                    </div>
+                    <div class="alarm-count-circle hardware">
+                        <span class="count-value">000</span>
+                    </div>
+                    <div class="alarm-count-circle process">
+                        <span class="count-value">000</span>
+                    </div>
+                    <div class="alarm-count-circle total">
+                        <span class="count-value">000</span>
+                    </div>
+                </div>
             </div>
         </div>
     </button>
     <button class="draggable-btn" draggable="true">
         <!-- Acumuladora -->
         <div class="unit">
-          <h2>Acumuladora</h2>
-          <div class="jog-switch">
-            <input type="checkbox" id="jog1" class="toggle"/>
-            <label for="jog1">Jog</label>
-          </div>
-          <div class="gauge-container">
-            <div class="gauge" id="gauge1"><span id="gaugeVal1">0%</span></div>
-            <div class="slider-wrapper">
-              <input type="range" min="0" max="100" value="0" class="slider" id="slider1"/>
-              <div class="limite">Limitação: <span id="limite1">0%</span></div>
+            <h2>Acumuladora</h2>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
+                <div class="pie-gauge" id="gauge1">
+                    <span class="pie-gauge-value" id="gaugeVal1">0%</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 8px;">
+                    <div class="jog-switch" style="flex:1; text-align:left;">
+                        <input type="checkbox" id="jog1" class="toggle"/>
+                        <label for="jog1">Jog</label>
+                    </div>
+                    <div class="slider-wrapper" style="flex:2; text-align:right;">
+                        <input type="range" min="0" max="100" value="0" class="slider" id="slider1" style="width: 160px; display:inline-block; vertical-align:middle;"/>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
     </button>
     <button class="draggable-btn" draggable="true">
         <!-- Dosificadora -->
          <div class="unit">
-           <h2>Dosificadora</h2>
-           <div class="jog-switch">
-             <input type="checkbox" id="jog2" class="toggle"/>
-             <label for="jog2">Jog</label>
-           </div>
-           <div class="gauge-container">
-             <div class="gauge" id="gauge2"><span id="gaugeVal2">0%</span></div>
-             <div class="slider-wrapper">
-               <input type="range" min="0" max="100" value="0" class="slider" id="slider2"/>
-               <div class="limite">Limitação: <span id="limite2">0%</span></div>
+             <h2>Dosificadora</h2>
+             <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
+                 <div class="pie-gauge" id="gauge2">
+                     <span class="pie-gauge-value" id="gaugeVal2">0%</span>
+                 </div>
+                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 8px;">
+                     <div class="jog-switch" style="flex:1; text-align:left;">
+                         <input type="checkbox" id="jog2" class="toggle"/>
+                         <label for="jog2">Jog</label>
+                     </div>
+                     <div class="slider-wrapper" style="flex:2; text-align:right;">
+                        <input type="range" min="0" max="100" value="0" class="slider" id="slider2" style="width: 160px; display:inline-block; vertical-align:middle;"/>
+                     </div>
+                 </div>
              </div>
-           </div>
          </div>
     </button>
     <button class="draggable-btn" draggable="true">
         <!-- Plasson Farm -->
-        <div class="unit plasson-unit">
-            <div class="plasson-content">
-                <h2>Plasson Farm</h2>
+         <div class="unit">
+             <h2>Plasson Farm</h2>
+             <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
                 <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Relatorio.png') }}" 
                      alt="Ícone Relatório" 
                      class="menu-icon">

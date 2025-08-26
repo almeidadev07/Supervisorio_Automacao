@@ -1,18 +1,50 @@
 let draggedButton = null;
 
 // Funções de arrastar e soltar
+
+// Trava para só permitir drag após segurar por 1 segundo
+let dragTimeout = null;
+let allowDrag = false;
+
 document.querySelectorAll('.draggable-btn').forEach(button => {
+    // Impede drag imediato
+    button.addEventListener('mousedown', (e) => {
+        allowDrag = false;
+        dragTimeout = setTimeout(() => {
+            allowDrag = true;
+            // Inicia drag programaticamente se mouse ainda está pressionado
+            button.setAttribute('draggable', 'true');
+        }, 1000); // 1 segundo
+    });
+
+    button.addEventListener('mouseup', (e) => {
+        clearTimeout(dragTimeout);
+        button.removeAttribute('draggable');
+    });
+
+    button.addEventListener('mouseleave', (e) => {
+        clearTimeout(dragTimeout);
+        button.removeAttribute('draggable');
+    });
+
     button.addEventListener('dragstart', (e) => {
+        if (!allowDrag) {
+            e.preventDefault();
+            return;
+        }
         draggedButton = e.currentTarget;
         draggedButton.style.opacity = '0.5';
         document.querySelectorAll('.draggable-btn').forEach(btn => {
             if (btn !== draggedButton) btn.classList.add('inactive');
         });
+        allowDrag = false;
     });
 
     button.addEventListener('dragend', () => {
         draggedButton.style.opacity = '1';
         document.querySelectorAll('.draggable-btn').forEach(btn => btn.classList.remove('inactive'));
+        button.removeAttribute('draggable');
+        allowDrag = false;
     });
 
     button.addEventListener('dragover', (e) => e.preventDefault());
@@ -20,7 +52,6 @@ document.querySelectorAll('.draggable-btn').forEach(button => {
     button.addEventListener('drop', (e) => {
         e.preventDefault();
         const target = e.currentTarget;
-        
         if (draggedButton && target !== draggedButton) {
             const parent = target.parentNode;
             const temp = document.createElement('div');
@@ -52,6 +83,18 @@ let valorDigitado = "";
 let deveSubstituir = false;
 const teclado = document.getElementById("teclado-virtual");
 let intervaloAjuste;
+
+// Color helper utilities used by gauges
+function hexToRgb(hex) {
+    const h = hex.replace('#','');
+    return [parseInt(h.substring(0,2),16), parseInt(h.substring(2,4),16), parseInt(h.substring(4,6),16)];
+}
+function rgbToHex(r,g,b){
+    return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
+}
+function mix(c1, c2, t){
+    return [Math.round(c1[0] + (c2[0]-c1[0])*t), Math.round(c1[1] + (c2[1]-c1[1])*t), Math.round(c1[2] + (c2[2]-c1[2])*t)];
+}
 
 // Adiciona listener para clicks em toda a página
 document.addEventListener('mousedown', function(event) {
@@ -180,3 +223,107 @@ function inicializarVelocimetro() {
 
 // Inicialização
 document.addEventListener("DOMContentLoaded", inicializarVelocimetro);
+
+// Atualiza os pie-gauges com base nos sliders e evita que o slider dispare drag do botão
+function atualizarPieGauges() {
+    document.querySelectorAll('.pie-gauge').forEach(g => {
+        const id = g.id.replace('gauge', '');
+        const slider = document.getElementById('slider' + id);
+        const limite = document.getElementById('limite' + id);
+        const valueEl = g.querySelector('.pie-gauge-value');
+        let pct = 0;
+        if (slider) {
+            pct = parseInt(slider.value, 10) || 0;
+            // Atualiza label de limite (sem % para não duplicar)
+            if (limite) limite.textContent = pct;
+        } else if (valueEl) {
+            pct = parseInt(valueEl.textContent, 10) || 0;
+        }
+
+        // Converter 0..100 para CSS var --pct (deg) -> percent of circle
+        g.style.setProperty('--pct', pct + '%');
+        // Generate a smooth gradient arc that starts green at 0 and progresses
+        // to yellow and red as pct increases. We'll build a conic-gradient string
+        // and set it to --arc. This reveals the colored arc only up to pct.
+        // At low pct the arc remains green; towards 50% becomes yellowish and
+        // near 100% becomes red.
+        const p = Math.max(0, Math.min(100, pct));
+        // Set the clipping percent --p and choose fill color based on pct.
+        g.style.setProperty('--p', p + '%');
+        // Interpolate color smoothly from green -> yellow -> red
+        const green = hexToRgb('00c853');
+        const yellow = hexToRgb('ffdd00');
+        const red = hexToRgb('ff4444');
+        let colorRgb;
+        if (p <= 50) {
+            const t = p / 50;
+            colorRgb = mix(green, yellow, t);
+        } else {
+            const t = (p - 50) / 50;
+            colorRgb = mix(yellow, red, t);
+        }
+        const fillColor = rgbToHex(colorRgb[0], colorRgb[1], colorRgb[2]);
+        g.style.setProperty('--fill-color', fillColor);
+        // Atualiza texto central
+        if (valueEl) valueEl.textContent = pct + '%';
+    });
+}
+
+// Hook nos sliders para atualizar em tempo real e evitar que o movimento do slider comece drag
+document.querySelectorAll('.slider').forEach(slider => {
+    // Ao pressionar no slider, bloqueia o possível drag do botão pai
+    slider.addEventListener('pointerdown', (e) => {
+        const btn = slider.closest('.draggable-btn');
+        if (btn) {
+            // Temporariamente remover arrastabilidade
+            btn.removeAttribute('draggable');
+            // Também cancela a timeout de iniciar drag
+            clearTimeout(dragTimeout);
+        }
+        // Prevent the pointerdown from starting a drag
+        e.stopPropagation();
+    });
+
+    slider.addEventListener('input', (e) => {
+        const s = e.currentTarget;
+        const id = s.id.replace('slider', '');
+        const gauge = document.getElementById('gauge' + id);
+        const limite = document.getElementById('limite' + id);
+        if (gauge) {
+            // update arc and central text
+            const p = Math.max(0, Math.min(100, parseInt(s.value,10)||0));
+            gauge.style.setProperty('--p', p + '%');
+            // calc interpolated color (same logic as above)
+            const green2 = [0x00,0xc8,0x53];
+            const yellow2 = [0xff,0xdd,0x00];
+            const red2 = [0xff,0x44,0x44];
+            let rgb;
+            if (p <= 50) {
+                const t = p/50;
+                rgb = mix(green2, yellow2, t);
+            } else {
+                const t = (p-50)/50;
+                rgb = mix(yellow2, red2, t);
+            }
+            const hex = rgbToHex(rgb[0], rgb[1], rgb[2]);
+            gauge.style.setProperty('--fill-color', hex);
+            const valEl = gauge.querySelector('.pie-gauge-value');
+            if (valEl) valEl.textContent = p + '%';
+        }
+        if (limite) limite.textContent = s.value;
+    });
+
+    slider.addEventListener('pointerup', (e) => {
+        const btn = slider.closest('.draggable-btn');
+        if (btn) {
+            // Re-enable draggable only after short delay to avoid immediate drag after release
+            setTimeout(() => btn.setAttribute('draggable', 'true'), 150);
+        }
+        e.stopPropagation();
+    });
+});
+
+// Inicializa pie-gauges ao carregar DOM
+document.addEventListener('DOMContentLoaded', () => {
+    atualizarPieGauges();
+});

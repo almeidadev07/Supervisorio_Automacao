@@ -12,7 +12,7 @@ CORS(app)  # Enable CORS
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Add routes at the beginning
+# Add routes at the beginning #
 @app.route('/')
 @app.route('/index')
 def index():

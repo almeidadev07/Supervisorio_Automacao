@@ -3,8 +3,8 @@
 #grid-container {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 10px;
+    grid-template-rows: repeat(3, minmax(120px, 1fr));
+    gap: 6px;
     width: 100%;
     height: 100%;
     box-sizing: border-box;
@@ -23,8 +23,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
-    border-radius: 5px;
+    font-size: 20px;
+    border-radius: 6px;
     transition: transform 0.2s;
     pointer-events: all;
 }
@@ -41,9 +41,9 @@
 /* Ajuste dos containers dentro dos botões */
 .velocimetro-container {
     position: relative;
-    width: 90%;
-    height: 80%; /* Changed from 80% to 100% */
-    max-height: 250px; /* Add max-height to prevent overflow */
+    width: 80%;
+    height: 78%;
+    max-height: 220px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -52,7 +52,7 @@
 }
 .velocimetro-imagem {
     width: 52%;
-    height: 130px;
+    height: 90px;
     margin-top: -75px;
     max-height: 60%;
     pointer-events: none;
@@ -126,6 +126,40 @@
     text-align: center;
 }
 
+/* Fix internal layout so controls don't shift when slider moves */
+.unit {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+}
+
+.pie-gauge, .jog-switch, .slider-wrapper {
+    pointer-events: auto; /* allow interaction */
+}
+
+.slider-wrapper { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
+.slider-wrapper .slider { width: 100%; max-width: 180px; height: 10px; border-radius: 8px; background: linear-gradient(#ddd,#e9e9e9); }
+.slider-wrapper .slider::-webkit-slider-thumb { -webkit-appearance: none; width:18px; height:18px; background:#1976d2; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.25); margin-top: -4px; }
+.slider-wrapper .slider::-moz-range-thumb { width:18px; height:18px; background:#1976d2; border-radius:50%; border:none; }
+
+.jog-switch { display:flex; align-items:center; gap:10px; }
+
+/* Modern toggle switch */
+.jog-switch .toggle { appearance: none; -webkit-appearance: none; width:48px; height:28px; background:#ccc; border-radius:14px; position:relative; cursor:pointer; outline:none; }
+.jog-switch .toggle:before { content:''; position:absolute; left:5px; top:6px; width:16px; height:16px; background:white; border-radius:50%; transition: transform 0.18s ease; }
+.jog-switch .toggle:checked { background: linear-gradient(90deg,#66bb6a,#43a047); }
+.jog-switch .toggle:checked:before { transform: translateX(20px); }
+
+/* Ensure the button content doesn't reflow while interacting with the range input */
+.draggable-btn * { user-select: none; }
+.draggable-btn input[type='range'] { -webkit-appearance: none; appearance: none; }
+.draggable-btn input[type='range']:active, .draggable-btn input[type='range']:focus { outline: none; }
+
 
 /* ========== Elementos de Controle ========== */
 #teclado-virtual {
@@ -165,17 +199,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 80px;
-    height: 80px;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
     background-color: transparent !important;
-    font-size: 35px;
+    font-size: 30px;
     font-weight: bold;
-    margin: 5px;
+    margin: 4px;
     flex-shrink: 0;
-    border-width: 10px; /* Reduced to make border thinner */
-    border-style: dashed; /* Changed from solid to dashed */
-    text-align: center; /* Centraliza o texto */
+    border-width: 8px;
+    border-style: dashed;
+    text-align: center;
 
 }
 
@@ -389,15 +423,15 @@
 }
 
 .plasson-content h2 {
-    margin: 35;
-    padding: 5px;
+    margin: 10px 0 6px 0;
+    padding: 2px;
     text-align: center;
-    font-size: 1.5em;
+    font-size: 1.25em;
 }
 
 .plasson-content .menu-icon {
-    width: 120px;
-    height: 120px;
-    margin: 5;
+    width: 90px;
+    height: 90px;
+    margin: 4px;
     display: block;
 }

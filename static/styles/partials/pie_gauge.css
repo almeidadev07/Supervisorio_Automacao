@@ -1,0 +1,67 @@
+/* Pie chart gauge for grid buttons */
+.pie-gauge {
+    --pct: 0%;
+    --stop1: 33%;
+    --stop2: 66%;
+    --c-red: #ff4444;
+    --c-yellow: #ffdd00;
+    --c-green: #00c853;
+    --bg: #e6e6e6;
+
+    position: relative;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 8px auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    overflow: visible;
+}
+
+/* Colored arc up to the current percentage.
+   We build the arc using a pseudo-element with a conic-gradient
+   where color stops are driven by CSS variables set from JS. */
+.pie-gauge::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    /* Draw a single-color arc (color provided by --fill-color) from 0 to --p,
+       then transparent from --p to 100% so the arc is clipped. */
+    background: conic-gradient(var(--fill-color, var(--c-green)) 0% var(--p,0%), transparent var(--p,0%) 100%);
+    z-index: 0;
+}
+
+/* Inner disk to create a donut look (keeps center label readable) */
+.pie-gauge::after {
+    content: '';
+    position: absolute;
+    width: 56%;
+    height: 56%;
+    border-radius: 50%;
+    background: #fff;
+    z-index: 1;
+    box-shadow: inset 0 1px 0 rgba(0,0,0,0.03);
+}
+
+.pie-gauge-value {
+    position: relative; /* above ::after */
+    z-index: 2;
+    font-size: 0.95em;
+    font-weight: 700;
+    color: #222;
+}
+
+.pie-gauge-label {
+    position: absolute;
+    width: 100%;
+    left: 0;
+    bottom: -18px;
+    text-align: center;
+    font-size: 0.95em;
+    color: #333;
+    font-weight: 500;
+}
