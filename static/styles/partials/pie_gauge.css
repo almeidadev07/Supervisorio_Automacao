@@ -7,16 +7,18 @@
     --c-yellow: #ffdd00;
     --c-green: #00c853;
     --bg: #e6e6e6;
-
+    margin-top: 38px; /* ajuste o valor conforme desejar */
     position: relative;
-    width: 70px;
-    height: 70px;
+    width: 140px;
+    height: 140px;
+    min-width: 0;
+    min-height: 0;
     border-radius: 50%;
     background: var(--bg);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 8px auto;
+    margin: 18px auto 0px auto; /* desce o gráfico */
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     overflow: visible;
 }
@@ -39,8 +41,8 @@
 .pie-gauge::after {
     content: '';
     position: absolute;
-    width: 56%;
-    height: 56%;
+    width: 60%;
+    height: 60%;
     border-radius: 50%;
     background: #fff;
     z-index: 1;
@@ -50,7 +52,7 @@
 .pie-gauge-value {
     position: relative; /* above ::after */
     z-index: 2;
-    font-size: 0.95em;
+    font-size: 1.1em;
     font-weight: 700;
     color: #222;
 }

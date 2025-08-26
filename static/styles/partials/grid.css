@@ -1,3 +1,13 @@
+/* Títulos dos botões do grid */
+.draggable-btn h2 {
+    margin: 0 0 6px 0;
+    font-size: 1.13em;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-align: center;
+    color: #fff;
+    line-height: 1.1;
+}
 /* ========== Estilos da Grid ========== */
 
 #grid-container {
@@ -42,8 +52,8 @@
 .velocimetro-container {
     position: relative;
     width: 80%;
-    height: 78%;
-    max-height: 220px;
+    height: 150%;
+    max-height: 350px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -52,8 +62,8 @@
 }
 .velocimetro-imagem {
     width: 52%;
-    height: 90px;
-    margin-top: -75px;
+    height: 190px;
+    margin-top: -25px;
     max-height: 60%;
     pointer-events: none;
 }
@@ -62,7 +72,7 @@
     position: absolute;
     width: 17%;
     height: auto;
-    bottom: 36%;
+    bottom: 25%;
     left: 50%;
     transform-origin: 31% 78%;
     transform: translateX(-50%) rotate(-90deg);
@@ -81,8 +91,8 @@
 
 .unidade-programada {
     position: absolute;
-    right: 95px;
-    top: 90%;
+    right: 65px;
+    top: 100%;
     transform: translateY(-50%);
     font-size: 27px;
     font-weight: bold;
@@ -93,7 +103,7 @@
 
 .velocimetro-input {
     position: absolute;
-    bottom: -5%; /* Ajuste conforme necessário */
+    bottom: -18%; /* Ajuste conforme necessário */
     left: 45%;
     transform: translateX(-50%);
     width: 125px;
@@ -116,7 +126,7 @@
 }
 .velocimetro-texto {
     position: absolute;
-    bottom: -8%; /* Ajuste conforme necessário */
+    bottom: -18%; /* Ajuste conforme necessário */
     width: 300px;
     left: 45%;
     transform: translateX(-50%);
