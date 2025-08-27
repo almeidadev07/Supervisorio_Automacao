@@ -28,14 +28,18 @@
 .menu-btn {
     width: 70px;
     height: 70px;
+    display: flex;                /* centraliza o ícone */
+    justify-content: center;
+    align-items: center;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     border: none;
     cursor: pointer;
-    transition: all 0.8s ease-in-out var(--delay);
+    transition: transform 0.3s ease, opacity 0.3s ease;
     opacity: 0;
     transform-origin: center center;
+    overflow: hidden;             /* garante que nada ultrapasse */
 }
 
 .menu-btn.zoomed {
@@ -70,16 +74,10 @@
 }
 
 .menu-icon {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 36px;
-    height: 36px;
-    object-fit: contain;
+    max-width: 70%;               /* ícone sempre proporcional */
+    max-height: 70%;
+    object-fit: contain;          /* mantém proporção */
 }
-
-/* ...existing code... */
 
 /* Estilos responsivos */
 @media screen and (max-width: 768px) {

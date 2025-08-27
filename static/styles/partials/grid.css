@@ -141,7 +141,7 @@
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    padding: 6px;
+    padding: 15px;
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -152,22 +152,87 @@
     pointer-events: auto; /* allow interaction */
 }
 
-.slider-wrapper { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
-.slider-wrapper .slider { width: 100%; max-width: 180px; height: 10px; border-radius: 8px; background: linear-gradient(#ddd,#e9e9e9); }
-.slider-wrapper .slider::-webkit-slider-thumb { -webkit-appearance: none; width:18px; height:18px; background:#1976d2; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.25); margin-top: -4px; }
-.slider-wrapper .slider::-moz-range-thumb { width:18px; height:18px; background:#1976d2; border-radius:50%; border:none; }
+.slider-wrapper { 
+    display:flex; 
+    align-items:center; 
+    justify-content:flex-end; 
+    gap:15px; 
+}
 
-.jog-switch { display:flex; align-items:center; gap:10px; }
+.slider-wrapper .slider { 
+    width: 100%; 
+    max-width: 180px; 
+    height: 15px; 
+    border-radius: 8px; 
+    background: linear-gradient(#ddd,#e9e9e9); 
+}
+
+.slider-wrapper .slider::-webkit-slider-thumb { 
+    -webkit-appearance: none; 
+    width:25px; 
+    height:25px; 
+    background:#1976d2; 
+    border-radius:50%; 
+    box-shadow:0 1px 3px rgba(0,0,0,0.25); 
+    margin-top: 0px; 
+}
+
+.slider-wrapper .slider::-moz-range-thumb { 
+    width:18px; 
+    height:18px; 
+    background:#1976d2; 
+    border-radius:50%; 
+    border:none; 
+}
+
+.jog-switch { 
+    display:flex; 
+    align-items:center; 
+    gap:10px; 
+}
 
 /* Modern toggle switch */
-.jog-switch .toggle { appearance: none; -webkit-appearance: none; width:48px; height:28px; background:#ccc; border-radius:14px; position:relative; cursor:pointer; outline:none; }
-.jog-switch .toggle:before { content:''; position:absolute; left:5px; top:6px; width:16px; height:16px; background:white; border-radius:50%; transition: transform 0.18s ease; }
-.jog-switch .toggle:checked { background: linear-gradient(90deg,#66bb6a,#43a047); }
-.jog-switch .toggle:checked:before { transform: translateX(20px); }
+.jog-switch .toggle { 
+    appearance: none; 
+    -webkit-appearance: none; 
+    width:48px; 
+    height:28px; 
+    background:#ccc; 
+    border-radius:14px; 
+    position:relative; 
+    cursor:pointer; 
+    outline:none; 
+}
+.jog-switch .toggle:before { 
+    content:''; 
+    position:absolute; 
+    left:5px; 
+    top:6px; 
+    width:16px; 
+    height:16px; 
+    background:white; 
+    border-radius:50%; 
+    transition: transform 0.18s ease; 
+}
+
+.jog-switch .toggle:checked { 
+    background: linear-gradient(90deg,#66bb6a,#43a047); 
+}
+
+.jog-switch .toggle:checked:before { 
+    transform: translateX(20px); 
+}
 
 /* Ensure the button content doesn't reflow while interacting with the range input */
-.draggable-btn * { user-select: none; }
-.draggable-btn input[type='range'] { -webkit-appearance: none; appearance: none; }
+.draggable-btn * { 
+    user-select: none; 
+}
+
+.draggable-btn input[type='range'] { 
+    -webkit-appearance: none; 
+    appearance: none; 
+}
+
 .draggable-btn input[type='range']:active, .draggable-btn input[type='range']:focus { outline: none; }
 
 
@@ -176,12 +241,14 @@
     display: none;
     grid-template-columns: repeat(3, minmax(50px, 1fr));
     gap: 5px;
-    position: absolute;
+    position: fixed; /* fixo na tela, não depende do container */
     background: white;
     border: 2px solid #333;
     padding: 10px;
     border-radius: 10px;
     box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+    z-index: 99999;
+
 }
 
 #botoes-ajuste {
@@ -246,6 +313,36 @@
 .alarm-count-circle.hardware  { --alarm-border: #aa66cc; --alarm-bg: #fbf0ff; --alarm-fg: #6a1b9a; }
 .alarm-count-circle.process   { --alarm-border: #4285f4; --alarm-bg: #eaf3ff; --alarm-fg: #0d47a1; }
 .alarm-count-circle.total     { --alarm-border: #666666; --alarm-bg: #f2f2f2; --alarm-fg: #333333; }
+
+
+/* Estilos específicos para o botão Plasson Farm */
+.plasson-unit {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 5px;
+}
+
+.plasson-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.plasson-content h2 {
+    margin: 10px 0 6px 0;
+    padding: 2px;
+    text-align: center;
+    font-size: 1.25em;
+}
+
+.menu-icon_farm {
+    width: 150px;
+    height: 150px;
+    margin: 15px;
+    display: block;
+}
 
 
 
@@ -411,31 +508,3 @@
     }
 }
 
-/* Estilos específicos para o botão Plasson Farm */
-.plasson-unit {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    padding: 5px;
-}
-
-.plasson-content {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.plasson-content h2 {
-    margin: 10px 0 6px 0;
-    padding: 2px;
-    text-align: center;
-    font-size: 1.25em;
-}
-
-.menu-icon {
-    width: 120px;
-    height: 120px;
-    margin: 4px;
-    display: block;
-}

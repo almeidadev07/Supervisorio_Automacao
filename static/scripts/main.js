@@ -114,7 +114,6 @@ function showBalance(event) {
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
     if (event && event.currentTarget) {
         event.currentTarget.classList.add('active');
-        zoomButton(event.currentTarget);
     }
 
     if (typeof inicializarBalance === 'function') {
@@ -148,7 +147,6 @@ function showInput(event) {
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
     if (event && event.currentTarget) {
         event.currentTarget.classList.add('active');
-        zoomButton(event.currentTarget);
     }
 
     if (typeof inicializarInput === 'function') {
