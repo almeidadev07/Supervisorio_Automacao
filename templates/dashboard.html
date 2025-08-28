@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Sistema Supervisório</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/logos/00_Logo.png') }}">
+    <!-- Socket.IO client (CDN). Deve ficar antes dos nossos scripts que usam `io()` -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 <body>
     <main>
@@ -23,7 +25,7 @@
                     {% include 'partials/alarm.html' %}
                 </div>
 
-                <!-- Adicione isso dentro da div principal do seu dashboard -->
+                <!-- Demais containers (ocultos por padrão) -->
                 <div id="weight-range-container" class="container" style="display: none;">
                     {% include 'partials/weight_range.html' %}
                 </div>
@@ -44,30 +46,47 @@
                     {% include 'partials/washer.html' %}
                 </div>
 
-                <!-- Adicionar o container do diagrama -->
+                <!-- Diagrama -->
                 <div id="diagram-container" style="display: none;">
                     {% include 'partials/diagram.html' %}
                 </div>
 
-                <!-- Container do Windows -->
+                <!-- Windows container -->
                 <div id="windows-container" class="container" style="display: none;">
                     {% include 'partials/windows.html' %}
                 </div>
                 
                 <!-- Componentes de interface -->
                 {% include 'partials/virtual_keyboard.html' %}
-            {% include 'partials/adjustment_button.html' %}
+                {% include 'partials/adjustment_button.html' %}
             </div>
         </div>
-
     </main>
 
     <header>
-        <!-- Menu principal -->
         {% include 'partials/menu.html' %}
     </header>
 
-    <script src="{{ url_for('static', filename='scripts/main.js') }}" defer></script>
+    <!-- Botão visível para trocar máquina (flutuante) -->
+    <button id="btn-change-machine" title="Trocar máquina" style="position:fixed; right:16px; top:16px; z-index:20000; padding:8px 12px; border-radius:6px; background:#2b8be6; color:#fff; border:none; cursor:pointer;">
+      Trocar Máquina
+    </button>
 
+    <!-- Modal de seleção de máquina -->
+    <div id="machine-modal" class="modal hidden" style="z-index:20001">
+      <div class="modal-content">
+        <h3>Selecione a máquina</h3>
+        <select id="machine-select" style="width:100%; padding:8px; margin:8px 0"></select>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button id="btn-confirm-machine" style="padding:8px 12px">Confirmar</button>
+          <button id="btn-cancel-machine" style="padding:8px 12px">Cancelar</button>
+        </div>
+        <div id="machine-modal-status" style="margin-top:8px; font-size:0.9em; color:#666"></div>
+      </div>
+    </div>
+
+    <!-- scripts do app -->
+    <script src="{{ url_for('static', filename='scripts/machine_select.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='scripts/main.js') }}" defer></script>
 </body>
 </html>

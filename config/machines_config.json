@@ -1,0 +1,43 @@
+[
+  {
+    "name": "200CX",
+    "ip_ranges": [
+      "100.20.0.0/24"
+    ],
+    "default_plc_ip": "100.20.0.10",
+    "plc_type": "siemens_s7",
+    "embaladoras": 2,
+    "features": {
+      "diagram": true,
+      "weight_range": true
+    }
+  },
+  {
+    "name": "400CX",
+    "ip_ranges": [
+      "100.40.0.0/24"
+    ],
+    "default_plc_ip": "100.40.0.10",
+    "plc_type": "siemens_s7",
+    "embaladoras": 4,
+    "features": {
+      "diagram": true,
+      "weight_range": true,
+      "extra_sensor": true
+    }
+  },
+  {
+    "name": "700CX",
+    "ip_ranges": [
+      "100.70.0.0/24"
+    ],
+    "default_plc_ip": "100.70.0.10",
+    "plc_type": "siemens_s7",
+    "embaladoras": 4,
+    "features": {
+      "diagram": true,
+      "weight_range": true,
+      "extra_sensor": true
+    }
+  }
+]
