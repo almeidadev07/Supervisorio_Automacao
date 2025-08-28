@@ -58,7 +58,6 @@
                 
                 <!-- Componentes de interface -->
                 {% include 'partials/virtual_keyboard.html' %}
-                {% include 'partials/adjustment_button.html' %}
             </div>
         </div>
     </main>
@@ -67,9 +66,9 @@
         {% include 'partials/menu.html' %}
     </header>
 
-    <!-- Botão visível para trocar máquina (flutuante) -->
-    <button id="btn-change-machine" title="Trocar máquina" style="position:fixed; right:16px; top:16px; z-index:20000; padding:8px 12px; border-radius:6px; background:#2b8be6; color:#fff; border:none; cursor:pointer;">
-      Trocar Máquina
+    <!-- Ícone flutuante para trocar máquina (canto superior esquerdo) -->
+    <button id="btn-change-machine" title="Trocar máquina" aria-label="Trocar máquina" onclick="(function(){var m=document.getElementById('machine-modal'); if(m){ m.classList.remove('hidden'); m.classList.add('show'); }})();" style="position:fixed; left:16px; top:2px; z-index:100000; background:transparent; border:none; padding:0; cursor:pointer;">
+      <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Sinc.png') }}" alt="Trocar Máquina" style="width:28px; height:28px; display:block; filter: grayscale(100%) brightness(0.6);">
     </button>
 
     <!-- Modal de seleção de máquina -->
@@ -85,6 +84,7 @@
       </div>
     </div>
 
+    
     <!-- scripts do app -->
     <script src="{{ url_for('static', filename='scripts/machine_select.js') }}" defer></script>
     <script src="{{ url_for('static', filename='scripts/main.js') }}" defer></script>

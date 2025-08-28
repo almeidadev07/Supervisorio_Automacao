@@ -1,17 +1,35 @@
-async function fetchMachines(){ return fetch('/api/machines').then(r=>r.json()); }
-async function detect(){ return fetch('/api/detect').then(r=>r.json()); }
+async function fetchMachines(){
+  const res = await fetch('/api/machines');
+  if(!res.ok){ throw new Error(`GET /api/machines -> ${res.status}`); }
+  const ct = res.headers.get('content-type')||'';
+  if(!ct.includes('application/json')){ throw new Error('GET /api/machines -> not JSON'); }
+  return res.json();
+}
+async function detect(){
+  const res = await fetch('/api/detect');
+  if(!res.ok){ throw new Error(`GET /api/detect -> ${res.status}`); }
+  const ct = res.headers.get('content-type')||'';
+  if(!ct.includes('application/json')){ throw new Error('GET /api/detect -> not JSON'); }
+  return res.json();
+}
 
 function showModal(preselect){
   const modal = document.getElementById('machine-modal');
   modal.classList.remove('hidden');
+  modal.classList.add('show');
   const select = document.getElementById('machine-select');
   if(preselect) select.value = preselect;
 }
 
 async function initMachinePicker(){
-  const machines = await fetchMachines();
-  const select = document.getElementById('machine-select');
-  select.innerHTML = machines.map(m => `<option value="${m.name}">${m.name} (${m.embaladoras} embaladoras)</option>`).join('');
+  const statusEl = document.getElementById('machine-modal-status');
+  try {
+    const machines = await fetchMachines();
+    const select = document.getElementById('machine-select');
+    select.innerHTML = machines.map(m => `<option value="${m.name}">${m.name} (${m.embaladoras} embaladoras)</option>`).join('');
+  } catch(err){
+    if(statusEl){ statusEl.textContent = 'Erro ao carregar máquinas. Inicie o servidor correto (run.py)'; }
+  }
 
   const urlParams = new URLSearchParams(location.search);
   const urlMachine = urlParams.get('machine');
@@ -20,17 +38,28 @@ async function initMachinePicker(){
   if(urlMachine){ await setMachine(urlMachine); return; }
   if(saved){ await setMachine(saved); return; }
 
-  const det = await detect();
-  showModal(det.detected);
+  try{
+    const det = await detect();
+    showModal(det.detected);
+  } catch(err){
+    if(statusEl){ statusEl.textContent = 'Detecção automática indisponível.'; }
+    showModal();
+  }
 
   document.getElementById('btn-confirm-machine').onclick = async ()=>{
     const name = select.value;
     await setMachine(name);
-    document.getElementById('machine-modal').classList.add('hidden');
+    const modal = document.getElementById('machine-modal');
+    modal.classList.remove('show');
+    modal.classList.add('hidden');
   };
-  document.getElementById('btn-cancel-machine').onclick = ()=>{ document.getElementById('machine-modal').classList.add('hidden'); };
-  document.getElementById('btn-change-machine').addEventListener('click', ()=>{ document.getElementById('machine-modal').classList.remove('hidden'); });
+  document.getElementById('btn-cancel-machine').onclick = ()=>{
+    const modal = document.getElementById('machine-modal');
+    modal.classList.remove('show');
+    modal.classList.add('hidden');
+  };
 }
+
 
 async function setMachine(name){
   const res = await fetch('/api/set_machine', {
@@ -49,4 +78,18 @@ async function setMachine(name){
   }
 }
 
-window.addEventListener('DOMContentLoaded', ()=>{ initMachinePicker(); });
+window.addEventListener('DOMContentLoaded', ()=>{
+  const changeBtn = document.getElementById('btn-change-machine');
+  if(changeBtn){
+    changeBtn.addEventListener('click', ()=>{
+      const modal = document.getElementById('machine-modal');
+      if(modal){ modal.classList.remove('hidden'); modal.classList.add('show'); }
+    });
+  }
+  initMachinePicker();
+  // Garante que o modal usa a classe .show para aparecer conforme CSS global
+  const modal = document.getElementById('machine-modal');
+  if(modal && !modal.classList.contains('hidden') && !modal.classList.contains('show')){
+    modal.classList.add('show');
+  }
+});
