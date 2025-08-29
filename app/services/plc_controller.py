@@ -13,6 +13,9 @@ class PLCController:
         self._stop_event = threading.Event()
         self._lock = threading.Lock()
         self.comm_map_by_machine = {}
+        self._last_reconnect_attempt = 0.0
+        self._plc_connected_state = None
+        self._reconnect_failures = 0
 
     def set_active_machine(self, cfg):
         with self._lock:
@@ -73,7 +76,53 @@ class PLCController:
                 if not self.driver:
                     time.sleep(1)
                     continue
+                # tenta reconectar caso a conexão caia (sem precisar recarregar a página)
+                try:
+                    if hasattr(self.driver, 'is_connected') and not self.driver.is_connected():
+                        now = time.time()
+                        if now - self._last_reconnect_attempt > 2.0:
+                            self._last_reconnect_attempt = now
+                            try:
+                                self.driver.disconnect()
+                            except Exception:
+                                pass
+                            ok = False
+                            for _ in range(3):
+                                try:
+                                    ok = bool(self.driver.connect())
+                                except Exception:
+                                    ok = False
+                                if ok:
+                                    break
+                                time.sleep(0.5)
+                            if ok:
+                                self._reconnect_failures = 0
+                            else:
+                                self._reconnect_failures += 1
+                                # após algumas falhas, recriar o driver inteiro
+                                if self._reconnect_failures >= 5:
+                                    try:
+                                        print('[PLC] Recreating snap7 client after repeated failures')
+                                        self.driver.disconnect()
+                                    except Exception:
+                                        pass
+                                    try:
+                                        self.driver = create_driver_for_config(self.active_config)
+                                        ok = bool(self.driver.connect())
+                                        print('[PLC] Recreated driver connect ->', ok)
+                                    except Exception as _:
+                                        ok = False
+                                    self._reconnect_failures = 0 if ok else self._reconnect_failures
+                except Exception:
+                    pass
                 telemetry = self.driver.read_telemetry()
+                # status de conexão
+                try:
+                    connected_now = bool(self.driver.is_connected())
+                    telemetry['plc_connected'] = connected_now
+                except Exception:
+                    connected_now = False
+                    telemetry['plc_connected'] = False
                 # Also read all tags from comm map for the active machine
                 try:
                     machine = self.active_config.get('name') if self.active_config else None
@@ -85,6 +134,33 @@ class PLCController:
                     print('read_tags during poll error:', e)
                 if self.socketio:
                     self.socketio.emit('telemetry', telemetry)
+                    # Emitir evento de mudança de estado de conexão
+                    prev_state = self._plc_connected_state
+                    if prev_state is None or connected_now != prev_state:
+                        self._plc_connected_state = connected_now
+                        try:
+                            self.socketio.emit('plc_connection_changed', {'connected': connected_now})
+                            # Ao reconectar, envie imediatamente um pacote de tags e peça reload da UI
+                            if connected_now:
+                                try:
+                                    machine = self.active_config.get('name') if self.active_config else None
+                                    tag_defs = (self.comm_map_by_machine.get(machine) or [])
+                                    tag_values = {}
+                                    if tag_defs:
+                                        tag_values = self.driver.read_tags(tag_defs)
+                                    instant_telem = {'plc_connected': True}
+                                    instant_telem.update(tag_values)
+                                    self.socketio.emit('telemetry', instant_telem)
+                                except Exception:
+                                    pass
+                                # Se estava desconectado e voltou, forçar recarregar clientes
+                                if prev_state is False:
+                                    try:
+                                        self.socketio.emit('force_reload', {'ts': time.time()})
+                                    except Exception:
+                                        pass
+                        except Exception:
+                            pass
             except Exception as e:
                 print('polling error:', e)
             time.sleep(0.5)

@@ -1,4 +1,21 @@
 let draggedButton = null;
+// timestamp global do último valor válido recebido (socket ou HTTP)
+let SPEED_LAST_OK_TS = 0;
+let SPEED_WAS_OFFLINE = false;
+let ENSURE_MACHINE_LAST_TS = 0;
+
+async function ensureMachineSelected(){
+    try{
+        const now = Date.now();
+        if(now - ENSURE_MACHINE_LAST_TS < 1500){ return; }
+        ENSURE_MACHINE_LAST_TS = now;
+        const f = await fetch('/api/features', {cache:'no-store'}).then(r=>r.json()).catch(()=>null);
+        if(f && f.machine){ return; }
+        const name = localStorage.getItem('supervisor_machine');
+        if(!name){ return; }
+        await fetch('/api/set_machine', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({name})});
+    }catch(_){ /* ignore */ }
+}
 
 // Funções de arrastar e soltar
 
@@ -80,27 +97,104 @@ function atualizarPonteiro(ponteiroElement, valor) {
 function atualizarVelocidadeRealUI(valor){
     const valorNum = Math.max(0, Math.min(400, Number(valor) || 0));
     const valorEl = document.querySelector('#valorReal .valor');
-    if (valorEl) valorEl.textContent = Math.round(valorNum);
+    if (valorEl) {
+        valorEl.textContent = Math.round(valorNum);
+    } else {
+        const root = document.getElementById('valorReal');
+        if (root) root.textContent = String(Math.round(valorNum));
+    }
     const ponteiro = document.getElementById('ponteiroReal');
     if (ponteiro) atualizarPonteiro(ponteiro, valorNum);
+    // debug
+    // console.debug('[GRID] UI atualizado com valor', valorNum);
+}
+
+function mostrarVelocidadeIndisponivel(){
+    const valorEl = document.querySelector('#valorReal .valor');
+    if (valorEl) {
+        valorEl.textContent = '???';
+    } else {
+        const root = document.getElementById('valorReal');
+        if (root) root.textContent = '???';
+    }
+    const ponteiro = document.getElementById('ponteiroReal');
+    if (ponteiro) atualizarPonteiro(ponteiro, 0);
 }
 
 // Vincula Socket.IO para receber a tag real_speed_cxh
 function bindTelemetryVelocidadeReal(){
     try {
         // Reutiliza conexão existente, se houver
-        const socket = window.io ? (window.supervisorSocket || (window.supervisorSocket = window.io())) : null;
+        const socket = window.io ? (
+            window.supervisorSocket || (
+                window.supervisorSocket = window.io({
+                    reconnection: true,
+                    reconnectionAttempts: Infinity,
+                    reconnectionDelay: 500,
+                    reconnectionDelayMax: 3000,
+                    timeout: 20000,
+                    transports: ['polling', 'websocket']
+                })
+            )
+        ) : null;
         if (!socket) return false;
         console.log('[GRID] Socket.IO conectado para velocidade real');
+        // usar timestamp global
+        SPEED_LAST_OK_TS = Date.now();
+        socket.on('connect', () => {
+            // Ao conectar/reconectar, força uma leitura imediata
+            fetch('/api/read_tags?names=real_speed_cxh', { cache: 'no-store' })
+                .then(r => r.json())
+                .then(res => {
+                    if (res && res.ok && res.values && res.values.real_speed_cxh != null) {
+                        atualizarVelocidadeRealUI(res.values.real_speed_cxh);
+                        SPEED_LAST_OK_TS = Date.now();
+                    }
+                })
+                .catch(() => {});
+            ensureMachineSelected();
+        });
         socket.on('telemetry', data => {
             if (!data) return;
+            if (data.plc_connected === false){
+                mostrarVelocidadeIndisponivel();
+                return;
+            }
             if (data.real_speed_cxh == null) return;
             if (data && data.real_speed_cxh != null) {
                 atualizarVelocidadeRealUI(data.real_speed_cxh);
-                // debug leve
-                // console.log('[GRID] real_speed_cxh', data.real_speed_cxh);
+                SPEED_LAST_OK_TS = Date.now();
             }
         });
+        // Quando reconectar, faça uma leitura imediata por HTTP para repopular
+        socket.on('plc_connection_changed', (s) => {
+            if (s && s.connected){
+                fetch('/api/read_tags?names=real_speed_cxh', { cache: 'no-store' })
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res && res.ok && res.values && res.values.real_speed_cxh != null) {
+                            atualizarVelocidadeRealUI(res.values.real_speed_cxh);
+                            if (SPEED_WAS_OFFLINE) {
+                                SPEED_WAS_OFFLINE = false;
+                                setTimeout(() => window.location.reload(), 50);
+                            }
+                        }
+                    })
+                    .catch(() => {});
+                ensureMachineSelected();
+            }
+        });
+        // Comando remoto para recarregar a página
+        socket.on('force_reload', () => {
+            window.location.reload();
+        });
+        // watchdog: se passar >2.5s sem dado válido, mostrar ???
+        if (window.supervisorSpeedWatchdog) clearInterval(window.supervisorSpeedWatchdog);
+        window.supervisorSpeedWatchdog = setInterval(() => {
+            if (Date.now() - SPEED_LAST_OK_TS > 2500) {
+                mostrarVelocidadeIndisponivel();
+            }
+        }, 1000);
         return true;
     } catch(e){
         console.warn('Socket.IO indisponível para velocidade real:', e);
@@ -236,19 +330,45 @@ function inicializarVelocimetro() {
     });
 
     // Tenta receber por Socket.IO; se não houver, faz fallback por HTTP
-    // Liga Socket.IO (se disponível)
+    // Liga Socket.IO (se disponível) 
     bindTelemetryVelocidadeReal();
-    // Sempre manter um polling leve por HTTP como segurança
+    
+    // Polling HTTP agressivo a cada 500ms - garante reconexão rápida
+    let consecutiveFailures = 0;
     setInterval(() => {
-        fetch('/api/read_tags?names=real_speed_cxh', { cache: 'no-store' })
-            .then(r => r.json())
+        fetch('/api/read_tags?names=real_speed_cxh', { 
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+        })
+            .then(r => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
             .then(res => {
                 if (res && res.ok && res.values && res.values.real_speed_cxh != null) {
                     atualizarVelocidadeRealUI(res.values.real_speed_cxh);
+                    consecutiveFailures = 0;
+                    SPEED_LAST_OK_TS = Date.now();
+                    if (SPEED_WAS_OFFLINE) {
+                        SPEED_WAS_OFFLINE = false;
+                        setTimeout(() => window.location.reload(), 50);
+                    }
+                } else {
+                    consecutiveFailures++;
+                    if (consecutiveFailures >= 3) {
+                        mostrarVelocidadeIndisponivel();
+                        SPEED_WAS_OFFLINE = true;
+                    }
                 }
             })
-            .catch(() => {});
-    }, 1000);
+            .catch(() => {
+                consecutiveFailures++;
+                if (consecutiveFailures >= 3) {
+                    mostrarVelocidadeIndisponivel();
+                    SPEED_WAS_OFFLINE = true;
+                }
+            });
+    }, 500);
     // Dispara uma leitura imediata para preencher a UI rapidamente
     fetch('/api/read_tags?names=real_speed_cxh')
         .then(r => r.json())

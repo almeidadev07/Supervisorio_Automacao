@@ -1,0 +1,4 @@
+[
+  {"name": "real_speed_cxh", "area": "DB", "db": 1, "offset": 124, "type": "REAL", "units": "cx/h", "description": "Velocidade real (caixas por hora)"}
+]
+

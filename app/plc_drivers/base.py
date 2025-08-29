@@ -23,3 +23,7 @@ class BasePLC(ABC):
         Base implementation returns empty dict. Drivers should override.
         """
         return {}
+
+    def is_connected(self) -> bool:
+        """Return True if underlying connection is alive. Base assumes True."""
+        return True

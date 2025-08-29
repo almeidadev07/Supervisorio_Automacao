@@ -26,15 +26,31 @@ def create_app():
     plc_controller = PLCController(socketio, machines)
     # attach to app for controllers to access
     app.plc_controller = plc_controller
+    app.socketio = socketio
     app.machines = machines
 
-    # load communication map
-    comm_map_path = os.path.join(os.getcwd(), 'config', 'comm_map.json')
-    try:
-        with open(comm_map_path, 'r') as f:
-            app.comm_map = json.load(f)
-    except Exception:
-        app.comm_map = {}
+    # load communication map (supports per-machine files in config/comm_map/*.json)
+    comm_dir = os.path.join(os.getcwd(), 'config', 'comm_map')
+    comm_map = {}
+    if os.path.isdir(comm_dir):
+        try:
+            for fname in os.listdir(comm_dir):
+                if not fname.lower().endswith('.json'):
+                    continue
+                model = os.path.splitext(fname)[0]
+                with open(os.path.join(comm_dir, fname), 'r') as f:
+                    comm_map[model] = json.load(f)
+        except Exception:
+            comm_map = {}
+    if not comm_map:
+        # fallback to single JSON
+        comm_map_path = os.path.join(os.getcwd(), 'config', 'comm_map.json')
+        try:
+            with open(comm_map_path, 'r') as f:
+                comm_map = json.load(f)
+        except Exception:
+            comm_map = {}
+    app.comm_map = comm_map
     plc_controller.set_comm_map(app.comm_map)
 
     # register blueprints

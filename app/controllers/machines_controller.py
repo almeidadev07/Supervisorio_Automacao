@@ -134,3 +134,12 @@ def debug_db_read():
         return jsonify({'ok': True, 'db': db, 'offset': offset, 'size': size, 'hex': hex_bytes, 'real_be': real_be})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+@machines_bp.route('/force_reload', methods=['POST'])
+def force_reload():
+    """Emit a socket event to force clients to reload the page."""
+    try:
+        current_app.socketio.emit('force_reload', {'ts': __import__('time').time()})
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
