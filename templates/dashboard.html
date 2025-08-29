@@ -67,7 +67,7 @@
     </header>
 
     <!-- Ícone flutuante para trocar máquina (canto superior esquerdo) -->
-    <button id="btn-change-machine" title="Trocar máquina" aria-label="Trocar máquina" onclick="(function(){var m=document.getElementById('machine-modal'); if(m){ m.classList.remove('hidden'); m.classList.add('show'); }})();" style="position:fixed; left:16px; top:2px; z-index:100000; background:transparent; border:none; padding:0; cursor:pointer;">
+    <button id="btn-change-machine" title="Trocar máquina" aria-label="Trocar máquina" onclick="(function(){var m=document.getElementById('machine-modal'); if(m){ m.classList.remove('hidden'); m.classList.add('show'); console.log('Button clicked, opening modal'); }})();" style="position:fixed; left:16px; top:2px; z-index:100000; background:transparent; border:none; padding:0; cursor:pointer;">
       <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Sinc.png') }}" alt="Trocar Máquina" style="width:28px; height:28px; display:block; filter: grayscale(100%) brightness(0.6);">
     </button>
 

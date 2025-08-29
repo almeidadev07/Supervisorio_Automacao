@@ -17,3 +17,9 @@ class BasePLC(ABC):
     @abstractmethod
     def read_telemetry(self):
         pass
+
+    def read_tags(self, tag_definitions):
+        """Optional: Read a list of tag definitions and return dict name->value.
+        Base implementation returns empty dict. Drivers should override.
+        """
+        return {}

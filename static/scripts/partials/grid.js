@@ -76,6 +76,38 @@ function atualizarPonteiro(ponteiroElement, valor) {
     ponteiroElement.style.transform = `translateX(-50%) rotate(${angulo}deg)`;
 }
 
+// Atualiza a UI da velocidade real a partir de um valor numérico (cx/h)
+function atualizarVelocidadeRealUI(valor){
+    const valorNum = Math.max(0, Math.min(400, Number(valor) || 0));
+    const valorEl = document.querySelector('#valorReal .valor');
+    if (valorEl) valorEl.textContent = Math.round(valorNum);
+    const ponteiro = document.getElementById('ponteiroReal');
+    if (ponteiro) atualizarPonteiro(ponteiro, valorNum);
+}
+
+// Vincula Socket.IO para receber a tag real_speed_cxh
+function bindTelemetryVelocidadeReal(){
+    try {
+        // Reutiliza conexão existente, se houver
+        const socket = window.io ? (window.supervisorSocket || (window.supervisorSocket = window.io())) : null;
+        if (!socket) return false;
+        console.log('[GRID] Socket.IO conectado para velocidade real');
+        socket.on('telemetry', data => {
+            if (!data) return;
+            if (data.real_speed_cxh == null) return;
+            if (data && data.real_speed_cxh != null) {
+                atualizarVelocidadeRealUI(data.real_speed_cxh);
+                // debug leve
+                // console.log('[GRID] real_speed_cxh', data.real_speed_cxh);
+            }
+        });
+        return true;
+    } catch(e){
+        console.warn('Socket.IO indisponível para velocidade real:', e);
+        return false;
+    }
+}
+
 
 
 // Funções do teclado virtual
@@ -203,20 +235,32 @@ function inicializarVelocimetro() {
         }
     });
 
-    // Atualização periódica dos velocímetros e contadores
+    // Tenta receber por Socket.IO; se não houver, faz fallback por HTTP
+    // Liga Socket.IO (se disponível)
+    bindTelemetryVelocidadeReal();
+    // Sempre manter um polling leve por HTTP como segurança
     setInterval(() => {
-        // Atualiza velocímetros
-        document.querySelectorAll('.velocimetro-texto').forEach(texto => {
-            const valorAleatorio = Math.floor(Math.random() * 400);
-            const ponteiro = texto.closest('.draggable-btn').querySelector('.ponteiro[data-tipo="real"]');
-
-            if (ponteiro) {
-                texto.querySelector('.valor').textContent = valorAleatorio;
-                atualizarPonteiro(ponteiro, valorAleatorio);
+        fetch('/api/read_tags?names=real_speed_cxh', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(res => {
+                if (res && res.ok && res.values && res.values.real_speed_cxh != null) {
+                    atualizarVelocidadeRealUI(res.values.real_speed_cxh);
+                }
+            })
+            .catch(() => {});
+    }, 1000);
+    // Dispara uma leitura imediata para preencher a UI rapidamente
+    fetch('/api/read_tags?names=real_speed_cxh')
+        .then(r => r.json())
+        .then(res => {
+            if (res && res.ok && res.values && res.values.real_speed_cxh != null) {
+                atualizarVelocidadeRealUI(res.values.real_speed_cxh);
             }
-        });
+        })
+        .catch(() => {});
 
-        // Atualiza contadores de alarme
+    // Atualiza contadores de alarme periodicamente
+    setInterval(() => {
         atualizarContadoresAlarme();
     }, 2000);
 }

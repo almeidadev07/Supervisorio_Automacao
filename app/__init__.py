@@ -28,6 +28,15 @@ def create_app():
     app.plc_controller = plc_controller
     app.machines = machines
 
+    # load communication map
+    comm_map_path = os.path.join(os.getcwd(), 'config', 'comm_map.json')
+    try:
+        with open(comm_map_path, 'r') as f:
+            app.comm_map = json.load(f)
+    except Exception:
+        app.comm_map = {}
+    plc_controller.set_comm_map(app.comm_map)
+
     # register blueprints
     app.register_blueprint(setups_bp, url_prefix='/api')
     app.register_blueprint(machines_bp, url_prefix='/api')

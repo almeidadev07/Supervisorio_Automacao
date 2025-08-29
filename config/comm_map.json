@@ -1,0 +1,21 @@
+{
+  "200CX": [
+    {"name": "machine_running", "area": "DB", "db": 1, "byte": 0, "bit": 0, "type": "BOOL", "description": "Máquina em operação"},
+    {"name": "speed_setpoint", "area": "DB", "db": 10, "offset": 0, "type": "REAL", "units": "Hz", "description": "Setpoint de velocidade"},
+    {"name": "weight", "area": "DB", "db": 20, "offset": 4, "type": "REAL", "units": "kg", "description": "Peso atual"},
+    {"name": "real_speed_cxh", "area": "DB", "db": 1, "offset": 124, "type": "REAL", "units": "cx/h", "description": "Velocidade real (caixas por hora)"}
+  ],
+  "400CX": [
+    {"name": "machine_running", "area": "DB", "db": 1, "byte": 0, "bit": 0, "type": "BOOL", "description": "Máquina em operação"},
+    {"name": "speed_setpoint", "area": "DB", "db": 14, "offset": 0, "type": "REAL", "units": "Hz", "description": "Setpoint de velocidade"},
+    {"name": "weight", "area": "DB", "db": 24, "offset": 4, "type": "REAL", "units": "kg", "description": "Peso atual"},
+    {"name": "real_speed_cxh", "area": "DB", "db": 1, "offset": 124, "type": "REAL", "units": "cx/h", "description": "Velocidade real (caixas por hora)"}
+  ],
+  "700CX": [
+    {"name": "machine_running", "area": "DB", "db": 1, "byte": 0, "bit": 0, "type": "BOOL", "description": "Máquina em operação"},
+    {"name": "speed_setpoint", "area": "DB", "db": 17, "offset": 0, "type": "REAL", "units": "Hz", "description": "Setpoint de velocidade"},
+    {"name": "weight", "area": "DB", "db": 27, "offset": 4, "type": "REAL", "units": "kg", "description": "Peso atual"},
+    {"name": "real_speed_cxh", "area": "DB", "db": 1, "offset": 124, "type": "REAL", "units": "cx/h", "description": "Velocidade real (caixas por hora)"}
+  ]
+}
+

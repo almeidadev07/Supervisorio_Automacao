@@ -15,20 +15,21 @@ async function detect(){
 
 function showModal(preselect){
   const modal = document.getElementById('machine-modal');
+  console.log('Opening modal', modal);
   modal.classList.remove('hidden');
-  modal.classList.add('show');
   const select = document.getElementById('machine-select');
   if(preselect) select.value = preselect;
 }
 
 async function initMachinePicker(){
   const statusEl = document.getElementById('machine-modal-status');
+  const select = document.getElementById('machine-select');
   try {
     const machines = await fetchMachines();
-    const select = document.getElementById('machine-select');
     select.innerHTML = machines.map(m => `<option value="${m.name}">${m.name} (${m.embaladoras} embaladoras)</option>`).join('');
   } catch(err){
     if(statusEl){ statusEl.textContent = 'Erro ao carregar máquinas. Inicie o servidor correto (run.py)'; }
+    if(select){ select.innerHTML = ''; }
   }
 
   const urlParams = new URLSearchParams(location.search);
@@ -50,13 +51,19 @@ async function initMachinePicker(){
     const name = select.value;
     await setMachine(name);
     const modal = document.getElementById('machine-modal');
-    modal.classList.remove('show');
-    modal.classList.add('hidden');
+    if(modal){
+      console.log('Confirm clicked, closing modal');
+      modal.classList.remove('show');
+      modal.classList.add('hidden');
+    }
   };
   document.getElementById('btn-cancel-machine').onclick = ()=>{
     const modal = document.getElementById('machine-modal');
-    modal.classList.remove('show');
-    modal.classList.add('hidden');
+    if(modal){
+      console.log('Cancel clicked, closing modal');
+      modal.classList.remove('show');
+      modal.classList.add('hidden');
+    }
   };
 }
 
@@ -69,8 +76,20 @@ async function setMachine(name){
   }).then(r=>r.json());
   if(res.ok){
     localStorage.setItem('supervisor_machine', name);
-    document.getElementById('machine-name').innerText = name;
-    document.getElementById('conn-status').innerText = 'conectando...';
+    const nameEl = document.getElementById('machine-name');
+    if(nameEl){ nameEl.innerText = name; }
+    const connEl = document.getElementById('conn-status');
+    if(connEl){ connEl.innerText = 'conectando...'; }
+    // Fetch and store communication map for this machine
+    try {
+      const cm = await fetch('/api/comm_map').then(r=>r.json());
+      if(cm && cm.ok){
+        localStorage.setItem('supervisor_comm_map', JSON.stringify(cm.map));
+        window.supervisorCommMap = cm.map;
+      }
+    } catch(e) {
+      console.warn('comm_map fetch failed', e);
+    }
     return true;
   } else {
     alert('Erro: ' + (res.error||'unknown'));
@@ -83,13 +102,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(changeBtn){
     changeBtn.addEventListener('click', ()=>{
       const modal = document.getElementById('machine-modal');
-      if(modal){ modal.classList.remove('hidden'); modal.classList.add('show'); }
+      if(modal){ modal.classList.remove('hidden'); }
     });
   }
   initMachinePicker();
-  // Garante que o modal usa a classe .show para aparecer conforme CSS global
-  const modal = document.getElementById('machine-modal');
-  if(modal && !modal.classList.contains('hidden') && !modal.classList.contains('show')){
-    modal.classList.add('show');
-  }
 });
