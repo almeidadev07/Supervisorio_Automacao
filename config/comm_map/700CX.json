@@ -1,4 +1,17 @@
 [
-  {"name": "real_speed_cxh", "area": "DB", "db": 1, "offset": 124, "type": "REAL", "units": "cx/h", "description": "Velocidade real (caixas por hora)"}
+  {"name": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS", "area": "DB", "db": 1, "offset": 0, "type": "WORD", "description": "XLCLASS - DB1 - PRINCIPAL ALARMES NIVEL ALTO"},
+  {"name": "XLCLASS_DB1_PRINCIPAL_ALARME_BAIXO_DESLIGA_MAQ", "area": "DB", "db": 1, "offset": 2, "type": "WORD", "description": "XLCLASS - DB1 - PRINCIPAL ALARME NIVEL BAIXO DESLIGA MAQUINA"},
+  {"name": "XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_01", "area": "DB", "db": 1, "offset": 96, "type": "WORD", "description": "XLCLASS - DB1 - PRINCIPAL COMANDO STATUS 01"},
+  {"name": "XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_02", "area": "DB", "db": 1, "offset": 98, "type": "WORD", "description": "XLCLASS - DB1 - PRINCIPAL COMANDO STATUS 02"},
+  {"name": "XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03", "area": "DB", "db": 1, "offset": 100, "type": "WORD", "description": "XLCLASS - DB1 - PRINCIPAL COMANDO STATUS 03"},
+  {"name": "XLCLASS_DB1_PRINCIPAL_VELOCIDADE_AUTO", "area": "DB", "db": 1, "offset": 102, "type": "WORD", "description": "XLCLASS - DB1 - PRINCIPAL VELOCIDADE AUTO"},
+  {"name": "XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_05", "area": "DB", "db": 1, "offset": 104, "type": "WORD", "description": "XLCLASS - DB1 - PRINCIPAL COMANDO STATUS 05"},
+  {"name": "XLCLASS_DB1_PRINCIPAL_AUX_SINCRONISMO", "area": "DB", "db": 1, "offset": 116, "type": "WORD", "description": "XLCLASS - DB1 - PRINCIPAL AUXILIAR SINCRONISMO"},
+  {"name": "XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_REAL", "area": "DB", "db": 1, "offset": 124, "type": "REAL", "units": "cx/h", "description": "XLCLASS - DB1 - PRINCIPAL VELOCIDADE REAL"},
+  {"name": "XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_PROG", "area": "DB", "db": 1, "offset": 152, "type": "REAL", "description": "XLCLASS - DB1 - PRINCIPAL VELOCIDADE PROG"},
+  {"name": "XLCLASS_DB1_PRINCIPAL_ALARME_CLASSIFICADORA", "area": "DB", "db": 1, "offset": 204, "type": "WORD", "description": "XLCLASS - DB1 - PRINCIPAL ALARME CLASSIFICADORA"},
+  {"name": "XLCLASS_DB1_PRINCIPAL_POS_REAL_CLASS", "area": "DB", "db": 1, "offset": 242, "type": "REAL", "description": "XLCLASS - DB1 - PRINCIPAL POSIÇÃO REAL CLASSIFICADORA"},
+  {"name": "XLCLASS_DB1_PRINCIPAL_POS_REAL_OVOSC", "area": "DB", "db": 1, "offset": 246, "type": "REAL", "description": "XLCLASS - DB1 - PRINCIPAL POSIÇÃO REAL OVOSCOPIA"}
+
 ]
 

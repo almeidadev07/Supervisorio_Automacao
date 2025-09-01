@@ -4,6 +4,25 @@ let SPEED_LAST_OK_TS = 0;
 let SPEED_WAS_OFFLINE = false;
 let ENSURE_MACHINE_LAST_TS = 0;
 
+// Nome da tag de velocidade
+const SPEED_TAG_PRIMARY = 'XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_REAL';
+const SPEED_TAGS = [SPEED_TAG_PRIMARY];
+
+// Limite de velocidade por máquina (padrão 400)
+let SPEED_MAX = 400;
+const SPEED_MAX_BY_MACHINE = { '200CX': 200, '400CX': 400, '700CX': 700 };
+async function syncSpeedMaxFromServer(){
+    try {
+        const f = await fetch('/api/features', {cache:'no-store'}).then(r=>r.json()).catch(()=>null);
+        const machine = f && f.machine ? f.machine : null;
+        if (machine && SPEED_MAX_BY_MACHINE[machine]){
+            SPEED_MAX = SPEED_MAX_BY_MACHINE[machine];
+        } else {
+            SPEED_MAX = 400;
+        }
+    } catch(_) { SPEED_MAX = 400; }
+}
+
 async function ensureMachineSelected(){
     try{
         const now = Date.now();
@@ -86,8 +105,8 @@ function atualizarPonteiro(ponteiroElement, valor) {
     const anguloMin = -128;  // Posição mínima (0 Cx/h)
     const anguloMax = 65;    // Posição máxima (400 Cx/h)
     
-    valor = Math.max(0, Math.min(400, valor));
-    const percentual = valor / 400;
+    valor = Math.max(0, Math.min(SPEED_MAX, valor));
+    const percentual = valor / SPEED_MAX;
     const angulo = anguloMin + (anguloMax - anguloMin) * percentual;
     
     ponteiroElement.style.transform = `translateX(-50%) rotate(${angulo}deg)`;
@@ -95,7 +114,7 @@ function atualizarPonteiro(ponteiroElement, valor) {
 
 // Atualiza a UI da velocidade real a partir de um valor numérico (cx/h)
 function atualizarVelocidadeRealUI(valor){
-    const valorNum = Math.max(0, Math.min(400, Number(valor) || 0));
+    const valorNum = Math.max(0, Math.min(SPEED_MAX, Number(valor) || 0));
     const valorEl = document.querySelector('#valorReal .valor');
     if (valorEl) {
         valorEl.textContent = Math.round(valorNum);
@@ -121,7 +140,15 @@ function mostrarVelocidadeIndisponivel(){
     if (ponteiro) atualizarPonteiro(ponteiro, 0);
 }
 
-// Vincula Socket.IO para receber a tag real_speed_cxh
+function pickSpeedValue(obj){
+    if (!obj) return null;
+    for (const key of SPEED_TAGS){
+        if (obj[key] != null) return obj[key];
+    }
+    return null;
+}
+
+// Vincula Socket.IO para receber a tag de velocidade (com fallback)
 function bindTelemetryVelocidadeReal(){
     try {
         // Reutiliza conexão existente, se houver
@@ -143,11 +170,12 @@ function bindTelemetryVelocidadeReal(){
         SPEED_LAST_OK_TS = Date.now();
         socket.on('connect', () => {
             // Ao conectar/reconectar, força uma leitura imediata
-            fetch('/api/read_tags?names=real_speed_cxh', { cache: 'no-store' })
+            fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')), { cache: 'no-store' })
                 .then(r => r.json())
                 .then(res => {
-                    if (res && res.ok && res.values && res.values.real_speed_cxh != null) {
-                        atualizarVelocidadeRealUI(res.values.real_speed_cxh);
+                    const val = res && res.ok && res.values ? pickSpeedValue(res.values) : null;
+                    if (val != null) {
+                        atualizarVelocidadeRealUI(val);
                         SPEED_LAST_OK_TS = Date.now();
                     }
                 })
@@ -160,20 +188,20 @@ function bindTelemetryVelocidadeReal(){
                 mostrarVelocidadeIndisponivel();
                 return;
             }
-            if (data.real_speed_cxh == null) return;
-            if (data && data.real_speed_cxh != null) {
-                atualizarVelocidadeRealUI(data.real_speed_cxh);
-                SPEED_LAST_OK_TS = Date.now();
-            }
+            const val = pickSpeedValue(data);
+            if (val == null) return;
+            atualizarVelocidadeRealUI(val);
+            SPEED_LAST_OK_TS = Date.now();
         });
         // Quando reconectar, faça uma leitura imediata por HTTP para repopular
         socket.on('plc_connection_changed', (s) => {
             if (s && s.connected){
-                fetch('/api/read_tags?names=real_speed_cxh', { cache: 'no-store' })
+                fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')), { cache: 'no-store' })
                     .then(r => r.json())
                     .then(res => {
-                        if (res && res.ok && res.values && res.values.real_speed_cxh != null) {
-                            atualizarVelocidadeRealUI(res.values.real_speed_cxh);
+                        const val = res && res.ok && res.values ? pickSpeedValue(res.values) : null;
+                        if (val != null) {
+                            atualizarVelocidadeRealUI(val);
                             if (SPEED_WAS_OFFLINE) {
                                 SPEED_WAS_OFFLINE = false;
                                 setTimeout(() => window.location.reload(), 50);
@@ -254,7 +282,7 @@ function fecharTeclado() {
     if (input) {
         input.blur();
         let valor = parseInt(valorDigitado, 10) || 0;
-        valor = Math.min(400, Math.max(0, valor));
+        valor = Math.min(SPEED_MAX, Math.max(0, valor));
         input.value = valor;
         const ponteiro = input.closest('.draggable-btn').querySelector('.ponteiro');
         if (ponteiro) atualizarPonteiro(ponteiro, valor);
@@ -280,7 +308,7 @@ function ajustarValor(delta) {
 
     intervaloAjuste = setInterval(() => {
         let valor = parseInt(inputAtivo.value, 10) || 0;
-        valor = Math.min(400, Math.max(0, valor + delta));
+        valor = Math.min(SPEED_MAX, Math.max(0, valor + delta));
         inputAtivo.value = valor;
         const ponteiro = inputAtivo.closest('.draggable-btn').querySelector('.ponteiro');
         if (ponteiro) atualizarPonteiro(ponteiro, valor);
@@ -336,7 +364,7 @@ function inicializarVelocimetro() {
     // Polling HTTP agressivo a cada 500ms - garante reconexão rápida
     let consecutiveFailures = 0;
     setInterval(() => {
-        fetch('/api/read_tags?names=real_speed_cxh', { 
+        fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')), { 
             cache: 'no-store',
             headers: { 'Cache-Control': 'no-cache' }
         })
@@ -345,8 +373,9 @@ function inicializarVelocimetro() {
                 return r.json();
             })
             .then(res => {
-                if (res && res.ok && res.values && res.values.real_speed_cxh != null) {
-                    atualizarVelocidadeRealUI(res.values.real_speed_cxh);
+                const val = res && res.ok && res.values ? pickSpeedValue(res.values) : null;
+                if (val != null) {
+                    atualizarVelocidadeRealUI(val);
                     consecutiveFailures = 0;
                     SPEED_LAST_OK_TS = Date.now();
                     if (SPEED_WAS_OFFLINE) {
@@ -369,12 +398,14 @@ function inicializarVelocimetro() {
                 }
             });
     }, 500);
-    // Dispara uma leitura imediata para preencher a UI rapidamente
-    fetch('/api/read_tags?names=real_speed_cxh')
+    // Sincroniza SPEED_MAX e dispara uma leitura imediata para preencher a UI rapidamente
+    syncSpeedMaxFromServer().catch(()=>{});
+    fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')))
         .then(r => r.json())
         .then(res => {
-            if (res && res.ok && res.values && res.values.real_speed_cxh != null) {
-                atualizarVelocidadeRealUI(res.values.real_speed_cxh);
+            const val = res && res.ok && res.values ? pickSpeedValue(res.values) : null;
+            if (val != null) {
+                atualizarVelocidadeRealUI(val);
             }
         })
         .catch(() => {});
