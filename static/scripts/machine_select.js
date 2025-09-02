@@ -17,8 +17,20 @@ function showModal(preselect){
   const modal = document.getElementById('machine-modal');
   console.log('Opening modal', modal);
   modal.classList.remove('hidden');
+  modal.classList.add('show');
+  // garante visibilidade mesmo sem CSS
+  modal.style.display = 'block';
   const select = document.getElementById('machine-select');
   if(preselect) select.value = preselect;
+}
+
+function closeModal(){
+  const modal = document.getElementById('machine-modal');
+  if(!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('show');
+  // força esconder mesmo sem CSS das classes
+  modal.style.display = 'none';
 }
 
 async function initMachinePicker(){
@@ -32,39 +44,67 @@ async function initMachinePicker(){
     if(select){ select.innerHTML = ''; }
   }
 
+  // Preseleciona a máquina atual quando o modal abrir
+  const changeBtn = document.getElementById('btn-change-machine');
+  if (changeBtn){
+    changeBtn.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      try{
+        const f = await fetch('/api/features', {cache:'no-store'}).then(r=>r.json()).catch(()=>null);
+        const current = f && f.machine ? f.machine : (localStorage.getItem('supervisor_machine')||'');
+        if (current){ select.value = current; }
+      }catch(_){ /* ignore */ }
+      const modal = document.getElementById('machine-modal');
+      if(modal){ modal.classList.remove('hidden'); modal.classList.add('show'); }
+    });
+  }
+
   const urlParams = new URLSearchParams(location.search);
   const urlMachine = urlParams.get('machine');
   const saved = localStorage.getItem('supervisor_machine');
+  const wasInitialized = localStorage.getItem('supervisor_machine_initialized') === '1';
 
-  if(urlMachine){ await setMachine(urlMachine); return; }
-  if(saved){ await setMachine(saved); return; }
+  if(urlMachine){ await setMachine(urlMachine); localStorage.setItem('supervisor_machine_initialized','1'); return; }
+  if(saved){ await setMachine(saved); localStorage.setItem('supervisor_machine_initialized','1'); return; }
 
   try{
+    const f = await fetch('/api/features', {cache:'no-store'}).then(r=>r.json()).catch(()=>null);
+    if (f && f.machine){
+      // Já há máquina ativa no servidor -> nada a fazer
+      return;
+    }
     const det = await detect();
-    showModal(det.detected);
+    // Seleção automática apenas uma vez, no primeiro start do app
+    if(!wasInitialized && det && det.detected){
+      await setMachine(det.detected);
+      localStorage.setItem('supervisor_machine_initialized','1');
+      return;
+    }
+    // Sem auto seleção -> apenas mostrar modal com preselect
+    showModal(det && det.detected ? det.detected : undefined);
   } catch(err){
     if(statusEl){ statusEl.textContent = 'Detecção automática indisponível.'; }
     showModal();
   }
 
-  document.getElementById('btn-confirm-machine').onclick = async ()=>{
+  document.getElementById('btn-confirm-machine').onclick = async (e)=>{
+    e.preventDefault();
     const name = select.value;
     await setMachine(name);
-    const modal = document.getElementById('machine-modal');
-    if(modal){
-      console.log('Confirm clicked, closing modal');
-      modal.classList.remove('show');
-      modal.classList.add('hidden');
-    }
+    console.log('Confirm clicked, closing modal');
+    closeModal();
   };
-  document.getElementById('btn-cancel-machine').onclick = ()=>{
-    const modal = document.getElementById('machine-modal');
-    if(modal){
-      console.log('Cancel clicked, closing modal');
-      modal.classList.remove('show');
-      modal.classList.add('hidden');
-    }
+  document.getElementById('btn-cancel-machine').onclick = (e)=>{
+    e.preventDefault();
+    console.log('Cancel clicked, closing modal');
+    closeModal();
   };
+
+  // Fechar com ESC
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape') closeModal();
+  });
 }
 
 

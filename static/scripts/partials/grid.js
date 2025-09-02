@@ -361,9 +361,11 @@ function inicializarVelocimetro() {
     // Liga Socket.IO (se disponível) 
     bindTelemetryVelocidadeReal();
     
-    // Polling HTTP agressivo a cada 500ms - garante reconexão rápida
+    // Polling HTTP reduzido: usa Socket.IO primário e HTTP como fallback lento
     let consecutiveFailures = 0;
     setInterval(() => {
+        // se recebemos dado válido via socket há <= 1500ms, não faz HTTP agora
+        if (Date.now() - SPEED_LAST_OK_TS <= 1500) return;
         fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')), { 
             cache: 'no-store',
             headers: { 'Cache-Control': 'no-cache' }
@@ -397,7 +399,7 @@ function inicializarVelocimetro() {
                     SPEED_WAS_OFFLINE = true;
                 }
             });
-    }, 500);
+    }, 700);
     // Sincroniza SPEED_MAX e dispara uma leitura imediata para preencher a UI rapidamente
     syncSpeedMaxFromServer().catch(()=>{});
     fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')))

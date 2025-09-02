@@ -12,6 +12,8 @@ class PLCController:
         self._poll_thread = None
         self._stop_event = threading.Event()
         self._lock = threading.Lock()
+        # serialize low-level PLC I/O to avoid concurrent db_read 'Job pending'
+        self._io_lock = threading.Lock()
         self.comm_map_by_machine = {}
         self._last_reconnect_attempt = 0.0
         self._plc_connected_state = None
@@ -57,7 +59,8 @@ class PLCController:
         if names:
             names_set = set(names)
             tag_defs = [t for t in tag_defs if t.get('name') in names_set]
-        return self.driver.read_tags(tag_defs)
+        with self._io_lock:
+            return self.driver.read_tags(tag_defs)
 
     def _start_polling(self):
         self._stop_event.clear()
@@ -115,7 +118,8 @@ class PLCController:
                                     self._reconnect_failures = 0 if ok else self._reconnect_failures
                 except Exception:
                     pass
-                telemetry = self.driver.read_telemetry()
+                with self._io_lock:
+                    telemetry = self.driver.read_telemetry()
                 # status de conexão
                 try:
                     connected_now = bool(self.driver.is_connected())
@@ -125,11 +129,12 @@ class PLCController:
                     telemetry['plc_connected'] = False
                 # Also read all tags from comm map for the active machine
                 try:
-                    machine = self.active_config.get('name') if self.active_config else None
-                    tag_defs = (self.comm_map_by_machine.get(machine) or [])
-                    if tag_defs:
-                        tag_values = self.driver.read_tags(tag_defs)
-                        telemetry.update(tag_values)
+                    with self._io_lock:
+                        machine = self.active_config.get('name') if self.active_config else None
+                        tag_defs = (self.comm_map_by_machine.get(machine) or [])
+                        if tag_defs:
+                            tag_values = self.driver.read_tags(tag_defs)
+                            telemetry.update(tag_values)
                 except Exception as e:
                     print('read_tags during poll error:', e)
                 if self.socketio:
@@ -143,14 +148,15 @@ class PLCController:
                             # Ao reconectar, envie imediatamente um pacote de tags e peça reload da UI
                             if connected_now:
                                 try:
-                                    machine = self.active_config.get('name') if self.active_config else None
-                                    tag_defs = (self.comm_map_by_machine.get(machine) or [])
-                                    tag_values = {}
-                                    if tag_defs:
-                                        tag_values = self.driver.read_tags(tag_defs)
-                                    instant_telem = {'plc_connected': True}
-                                    instant_telem.update(tag_values)
-                                    self.socketio.emit('telemetry', instant_telem)
+                                    with self._io_lock:
+                                        machine = self.active_config.get('name') if self.active_config else None
+                                        tag_defs = (self.comm_map_by_machine.get(machine) or [])
+                                        tag_values = {}
+                                        if tag_defs:
+                                            tag_values = self.driver.read_tags(tag_defs)
+                                        instant_telem = {'plc_connected': True}
+                                        instant_telem.update(tag_values)
+                                        self.socketio.emit('telemetry', instant_telem)
                                 except Exception:
                                     pass
                                 # Se estava desconectado e voltou, forçar recarregar clientes
