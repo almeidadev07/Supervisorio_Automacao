@@ -41,9 +41,248 @@ async function ensureMachineSelected(){
 
 // Funções de arrastar e soltar
 
+// Sistema de persistência de posições do grid
+const GRID_POSITIONS_KEY = 'supervisor_grid_positions';
+
+// Função para salvar posições atuais do grid
+function saveGridPositions() {
+    try {
+        const positions = {};
+        const buttons = document.querySelectorAll('.draggable-btn');
+        
+        console.log('🔍 Tentando salvar posições. Botões encontrados:', buttons.length);
+        
+        if (buttons.length === 0) {
+            console.warn('⚠️ Nenhum botão draggable encontrado para salvar posições');
+            return;
+        }
+        
+        buttons.forEach((button, index) => {
+            const station = button.getAttribute('data-station');
+            if (station) {
+                positions[station] = index;
+                console.log(`📍 ${station}: posição ${index}`);
+            }
+        });
+        
+        const positionsJson = JSON.stringify(positions);
+        console.log('📦 JSON a ser salvo:', positionsJson);
+        
+        // Salva no localStorage (funciona mesmo sem servidor)
+        localStorage.setItem(GRID_POSITIONS_KEY, positionsJson);
+        console.log('✅ Posições salvas no localStorage');
+        
+        // Também salva no sessionStorage como backup
+        sessionStorage.setItem(GRID_POSITIONS_KEY, positionsJson);
+        console.log('✅ Posições salvas no sessionStorage');
+        
+        // Verifica se foi salvo corretamente
+        const saved = localStorage.getItem(GRID_POSITIONS_KEY);
+        if (saved === positionsJson) {
+            console.log('✅ Verificação: posições salvas corretamente');
+        } else {
+            console.error('❌ Verificação falhou: posições não foram salvas corretamente');
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar posições do grid:', error);
+    }
+}
+
+// Função para carregar posições salvas do grid
+function loadGridPositions() {
+    try {
+        // Tenta primeiro o localStorage
+        let saved = localStorage.getItem(GRID_POSITIONS_KEY);
+        
+        // Se não encontrar no localStorage, tenta o sessionStorage como fallback
+        if (!saved) {
+            saved = sessionStorage.getItem(GRID_POSITIONS_KEY);
+            if (saved) {
+                console.log('📂 Posições carregadas do sessionStorage (fallback)');
+            }
+        }
+        
+        if (saved) {
+            const positions = JSON.parse(saved);
+            console.log('📂 Posições do grid carregadas:', positions);
+            return positions;
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar posições do grid:', error);
+    }
+    return null;
+}
+
+// Função para restaurar posições do grid
+function restoreGridPositions() {
+    const positions = loadGridPositions();
+    if (!positions) {
+        console.log('📋 Nenhuma posição salva encontrada, usando layout padrão');
+        return false;
+    }
+
+    const container = document.querySelector('.draggable-btn')?.parentNode;
+    if (!container) {
+        console.warn('⚠️ Container do grid não encontrado');
+        return false;
+    }
+
+    // Cria um array com os botões na ordem correta
+    const buttons = Array.from(container.querySelectorAll('.draggable-btn'));
+    if (buttons.length === 0) {
+        console.warn('⚠️ Nenhum botão draggable encontrado no container');
+        return false;
+    }
+
+    const reorderedButtons = new Array(buttons.length);
+    
+    // Mapeia as posições salvas
+    Object.entries(positions).forEach(([station, index]) => {
+        const button = buttons.find(btn => btn.getAttribute('data-station') === station);
+        if (button && index >= 0 && index < reorderedButtons.length) {
+            reorderedButtons[index] = button;
+        }
+    });
+
+    // Remove todos os botões do container
+    buttons.forEach(button => {
+        container.removeChild(button);
+    });
+
+    // Adiciona os botões na ordem correta
+    reorderedButtons.forEach((button) => {
+        if (button) {
+            container.appendChild(button);
+        }
+    });
+
+    // Adiciona botões que não foram mapeados no final
+    buttons.forEach(button => {
+        if (!reorderedButtons.includes(button)) {
+            container.appendChild(button);
+        }
+    });
+
+    console.log('✅ Posições do grid restauradas com sucesso');
+    return true;
+}
+
+// Função para resetar posições para o padrão
+function resetGridPositions() {
+    try {
+        console.log('🔄 Iniciando reset das posições...');
+        
+        // Remove as posições salvas
+        localStorage.removeItem(GRID_POSITIONS_KEY);
+        sessionStorage.removeItem(GRID_POSITIONS_KEY);
+        console.log('✅ Posições removidas do localStorage e sessionStorage');
+        
+        // Verifica se foi removido corretamente
+        const saved = localStorage.getItem(GRID_POSITIONS_KEY);
+        if (saved === null) {
+            console.log('✅ Verificação: posições removidas com sucesso');
+        } else {
+            console.error('❌ Verificação falhou: posições ainda existem');
+        }
+        
+        // Aplica o layout padrão imediatamente
+        console.log('🔄 Aplicando layout padrão...');
+        applyDefaultLayout();
+        
+        // Recarrega a página para garantir que tudo está correto
+        setTimeout(() => {
+            console.log('🔄 Recarregando página para garantir consistência...');
+            window.location.reload();
+        }, 500);
+        
+    } catch (error) {
+        console.error('❌ Erro ao resetar posições do grid:', error);
+    }
+}
+
+// Função para aplicar o layout padrão
+function applyDefaultLayout() {
+    try {
+        const container = document.querySelector('.draggable-btn')?.parentNode;
+        if (!container) {
+            console.warn('⚠️ Container do grid não encontrado');
+            return false;
+        }
+
+        const buttons = Array.from(container.querySelectorAll('.draggable-btn'));
+        if (buttons.length === 0) {
+            console.warn('⚠️ Nenhum botão draggable encontrado no container');
+            return false;
+        }
+
+        // Define a ordem padrão baseada nos data-station
+        const defaultOrder = [
+            'velocidade-real',
+            'velocidade-prog', 
+            'alarmes',
+            'plasson-farm',
+            'acumuladora',
+            'dosificadora',
+            'botao-7',
+            'botao-8',
+            'botao-9',
+            'botao-10',
+            'botao-11',
+            'botao-12'
+        ];
+
+        console.log('📋 Aplicando ordem padrão:', defaultOrder);
+
+        // Remove todos os botões do container
+        buttons.forEach(button => {
+            container.removeChild(button);
+        });
+
+        // Adiciona os botões na ordem padrão
+        defaultOrder.forEach(stationId => {
+            const button = buttons.find(btn => btn.getAttribute('data-station') === stationId);
+            if (button) {
+                container.appendChild(button);
+                console.log(`✅ Botão ${stationId} adicionado na posição padrão`);
+            }
+        });
+
+        // Adiciona botões que não estão na lista padrão no final
+        buttons.forEach(button => {
+            const station = button.getAttribute('data-station');
+            if (!defaultOrder.includes(station)) {
+                container.appendChild(button);
+                console.log(`✅ Botão ${station} adicionado no final (não está na lista padrão)`);
+            }
+        });
+
+        console.log('✅ Layout padrão aplicado com sucesso');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Erro ao aplicar layout padrão:', error);
+        return false;
+    }
+}
+
 // Trava para só permitir drag após segurar por 1 segundo
 let dragTimeout = null;
 let allowDrag = false;
+
+// Aguarda o DOM estar completamente carregado antes de configurar os eventos
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🔧 Configurando eventos de drag and drop...');
+    
+    const draggableButtons = document.querySelectorAll('.draggable-btn');
+    console.log('🔍 Botões draggable encontrados:', draggableButtons.length);
+    
+    if (draggableButtons.length === 0) {
+        console.warn('⚠️ Nenhum botão .draggable-btn encontrado! Verificando seletor alternativo...');
+        const alternativeButtons = document.querySelectorAll('[data-station]');
+        console.log('🔍 Botões com data-station encontrados:', alternativeButtons.length);
+    }
+});
 
 document.querySelectorAll('.draggable-btn').forEach(button => {
     // Impede drag imediato
@@ -92,12 +331,18 @@ document.querySelectorAll('.draggable-btn').forEach(button => {
         e.preventDefault();
         const target = e.currentTarget;
         if (draggedButton && target !== draggedButton) {
+            console.log('🔄 Drop detectado:', draggedButton.getAttribute('data-station'), '->', target.getAttribute('data-station'));
+            
             const parent = target.parentNode;
             const temp = document.createElement('div');
             parent.insertBefore(temp, target);
             parent.insertBefore(target, draggedButton);
             parent.insertBefore(draggedButton, temp);
             parent.removeChild(temp);
+            
+            // Salva as novas posições imediatamente após o drop
+            console.log('💾 Salvando posições após drop...');
+            saveGridPositions();
         }
     });
 });
@@ -351,6 +596,16 @@ function atualizarContadoresAlarme() {
 function inicializarVelocimetro() {
     console.log("Velocímetro e contadores inicializados.");
 
+    // Restaura posições salvas do grid antes de inicializar os velocímetros
+    setTimeout(() => {
+        const restored = restoreGridPositions();
+        if (!restored) {
+            // Se não conseguiu restaurar, salva as posições padrão
+            console.log('💾 Salvando posições padrão...');
+            saveGridPositions();
+        }
+    }, 100);
+
     // Inicialização dos velocímetros
     document.querySelectorAll('.draggable-btn').forEach(btn => {
         const ponteiro = btn.querySelector('.ponteiro[data-tipo="real"]');
@@ -423,6 +678,118 @@ function inicializarVelocimetro() {
 
 // Inicialização
 document.addEventListener("DOMContentLoaded", inicializarVelocimetro);
+
+// Função global para resetar posições (pode ser chamada do console ou por botão)
+window.resetGridPositions = resetGridPositions;
+
+// Função global para testar salvamento (pode ser chamada do console)
+window.testSaveGridPositions = saveGridPositions;
+
+// Função global para verificar posições salvas
+window.checkSavedPositions = function() {
+    const saved = localStorage.getItem(GRID_POSITIONS_KEY);
+    console.log('📂 Posições salvas no localStorage:', saved);
+    const sessionSaved = sessionStorage.getItem(GRID_POSITIONS_KEY);
+    console.log('📂 Posições salvas no sessionStorage:', sessionSaved);
+    
+    const buttons = document.querySelectorAll('.draggable-btn');
+    console.log('🔍 Botões draggable encontrados:', buttons.length);
+    buttons.forEach((btn, index) => {
+        const station = btn.getAttribute('data-station');
+        console.log(`📍 Botão ${index}: ${station}`);
+    });
+};
+
+// Função global para testar o botão reset
+window.testResetButton = function() {
+    console.log('🧪 Testando botão reset...');
+    const resetButton = document.getElementById('btn-reset-grid');
+    if (resetButton) {
+        console.log('✅ Botão reset encontrado:', resetButton);
+        console.log('🔍 Estilo do botão:', window.getComputedStyle(resetButton));
+        console.log('🔍 Posição do botão:', resetButton.getBoundingClientRect());
+        
+        // Simula um clique
+        resetButton.click();
+    } else {
+        console.error('❌ Botão reset não encontrado!');
+    }
+};
+
+// Função global para testar o layout padrão
+window.testDefaultLayout = function() {
+    console.log('🧪 Testando layout padrão...');
+    const result = applyDefaultLayout();
+    if (result) {
+        console.log('✅ Layout padrão aplicado com sucesso');
+    } else {
+        console.error('❌ Falha ao aplicar layout padrão');
+    }
+};
+
+// Função global para aplicar layout padrão
+window.applyDefaultLayout = applyDefaultLayout;
+
+// Adiciona atalho de teclado para resetar posições (Ctrl+Shift+R)
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+        e.preventDefault();
+        if (confirm('Deseja resetar as posições do grid para o padrão?')) {
+            resetGridPositions();
+        }
+    }
+});
+
+// Adiciona evento de clique para o botão de reset
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🔧 Configurando botão de reset...');
+    
+    // Tenta encontrar o botão com um pequeno delay para garantir que o DOM está pronto
+    setTimeout(() => {
+        const resetButton = document.getElementById('btn-reset-grid');
+        if (resetButton) {
+            console.log('✅ Botão de reset encontrado');
+            
+            // Remove qualquer evento anterior
+            resetButton.removeEventListener('click', handleResetClick);
+            
+            // Adiciona o novo evento
+            resetButton.addEventListener('click', handleResetClick);
+            
+            // Também adiciona um evento de mousedown para debug
+            resetButton.addEventListener('mousedown', () => {
+                console.log('🖱️ Botão reset mousedown detectado');
+            });
+            
+        } else {
+            console.warn('⚠️ Botão de reset não encontrado!');
+        }
+    }, 100);
+});
+
+// Função separada para o handler do clique
+function handleResetClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('🔄 Botão reset clicado');
+    
+    if (confirm('Deseja resetar as posições do grid para o padrão?')) {
+        console.log('✅ Usuário confirmou reset');
+        resetGridPositions();
+    } else {
+        console.log('❌ Usuário cancelou reset');
+    }
+}
+
+// Salva posições quando a página for fechada ou recarregada
+window.addEventListener('beforeunload', () => {
+    saveGridPositions();
+});
+
+// Salva posições quando a página perder o foco (usuário mudar de aba)
+window.addEventListener('blur', () => {
+    saveGridPositions();
+});
 
 // Atualiza os pie-gauges com base nos sliders e evita que o slider dispare drag do botão
 function atualizarPieGauges() {
