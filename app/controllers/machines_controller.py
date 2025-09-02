@@ -55,6 +55,29 @@ def set_machine():
     print(f"[API] Active machine set to {cfg['name']}")
     return jsonify({'ok': True, 'machine': cfg['name']})
 
+@machines_bp.route('/current', methods=['GET'])
+def get_current_machine():
+    """Retorna a máquina atualmente conectada"""
+    cfg = current_app.plc_controller.active_config
+    if not cfg:
+        return jsonify({'ok': False, 'error': 'no machine selected'}), 400
+    
+    # Verifica se o driver está conectado
+    is_connected = False
+    if current_app.plc_controller.driver:
+        try:
+            is_connected = current_app.plc_controller.driver.is_connected()
+        except:
+            is_connected = False
+    
+    return jsonify({
+        'ok': True, 
+        'machine': cfg['name'], 
+        'connected': is_connected,
+        'ip': cfg.get('default_plc_ip', ''),
+        'embaladoras': cfg.get('embaladoras', 0)
+    })
+
 @machines_bp.route('/features', methods=['GET'])
 def features():
     cfg = current_app.plc_controller.active_config

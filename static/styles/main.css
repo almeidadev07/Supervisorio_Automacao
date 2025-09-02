@@ -9,7 +9,8 @@
 @import url('partials/login.css');
 @import url('partials/input.css');
 @import url('partials/washer.css');
-@import url('partials/diagram.css'); 
+@import url('partials/diagram.css');
+@import url('partials/windows.css'); 
 
 /* ========== Estilos Globais ========== */
 
@@ -279,5 +280,157 @@
         width: 28px;
         height: 28px;
         font-size: 14px;
+    }
+}
+
+/* ========== Modal de Seleção de Máquina ========== */
+#machine-modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.7) !important;
+    z-index: 20001 !important;
+    display: none !important;
+    opacity: 0 !important;
+    transition: opacity 0.3s ease !important;
+    backdrop-filter: blur(3px) !important;
+}
+
+#machine-modal.show {
+    display: flex !important;
+    opacity: 1 !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+#machine-modal .modal-content {
+    background: white !important;
+    border-radius: 20px !important;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5) !important;
+    padding: 30px !important;
+    min-width: 400px !important;
+    max-width: 500px !important;
+    width: 90% !important;
+    position: relative !important;
+    transform: scale(0.9) !important;
+    transition: transform 0.3s ease !important;
+    border: 2px solid #e9ecef !important;
+}
+
+#machine-modal.show .modal-content {
+    transform: scale(1) !important;
+}
+
+#machine-modal h3 {
+    margin: 0 0 20px 0 !important;
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    color: #343a40 !important;
+    text-align: center !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+}
+
+#machine-select {
+    width: 100% !important;
+    padding: 12px 16px !important;
+    margin: 8px 0 20px 0 !important;
+    border: 2px solid #dee2e6 !important;
+    border-radius: 8px !important;
+    font-size: 16px !important;
+    background: white !important;
+    color: #495057 !important;
+    transition: border-color 0.3s ease !important;
+}
+
+#machine-select:focus {
+    outline: none !important;
+    border-color: #007bff !important;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1) !important;
+}
+
+#machine-modal button {
+    padding: 12px 24px !important;
+    margin: 0 8px !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    min-width: 100px !important;
+}
+
+#btn-confirm-machine {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important;
+    color: white !important;
+}
+
+#btn-confirm-machine:hover {
+    background: linear-gradient(135deg, #1e7e34 0%, #155724 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4) !important;
+}
+
+#btn-cancel-machine {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+    color: white !important;
+}
+
+#btn-cancel-machine:hover {
+    background: linear-gradient(135deg, #495057 0%, #343a40 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4) !important;
+}
+
+#machine-modal-status {
+    margin-top: 15px !important;
+    padding: 10px !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    text-align: center !important;
+    font-weight: 500 !important;
+}
+
+#machine-modal-status.loading {
+    background: #fff3cd !important;
+    color: #856404 !important;
+    border: 1px solid #ffeaa7 !important;
+}
+
+#machine-modal-status.success {
+    background: #d4edda !important;
+    color: #155724 !important;
+    border: 1px solid #c3e6cb !important;
+}
+
+#machine-modal-status.error {
+    background: #f8d7da !important;
+    color: #721c24 !important;
+    border: 1px solid #f5c6cb !important;
+}
+
+/* Responsive para o modal */
+@media (max-width: 768px) {
+    #machine-modal .modal-content {
+        min-width: 320px !important;
+        margin: 20px !important;
+        padding: 25px !important;
+    }
+    
+    #machine-modal h3 {
+        font-size: 20px !important;
+    }
+    
+    #machine-select {
+        font-size: 14px !important;
+        padding: 10px 12px !important;
+    }
+    
+    #machine-modal button {
+        padding: 10px 20px !important;
+        font-size: 14px !important;
+        min-width: 80px !important;
     }
 }

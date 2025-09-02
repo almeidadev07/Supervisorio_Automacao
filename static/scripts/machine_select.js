@@ -47,6 +47,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Função para obter máquina atual e selecioná-la
+  async function loadCurrentMachine() {
+    try {
+      const response = await fetch('/api/current');
+      const result = await response.json();
+      
+      if (result.ok && select) {
+        // Seleciona a máquina atual no dropdown
+        select.value = result.machine;
+        
+        // Adiciona indicador visual se conectada
+        if (result.connected) {
+          const option = select.querySelector(`option[value="${result.machine}"]`);
+          if (option) {
+            option.textContent = `${result.machine} (Conectada)`;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao obter máquina atual:', error);
+    }
+  }
+
   // Função para definir máquina ativa
   async function setMachine(machineName) {
     try {
@@ -88,9 +111,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Eventos do modal
-  btnChangeMachine.addEventListener('click', () => {
+  btnChangeMachine.addEventListener('click', async () => {
     showModal();
-    loadMachines();
+    await loadMachines();
+    await loadCurrentMachine();
   });
 
   btnCancel.addEventListener('click', hideModal);
