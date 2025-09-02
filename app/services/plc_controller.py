@@ -70,6 +70,8 @@ class PLCController:
                         'name': cfg['name'],
                         'connected': bool(self.driver and self.driver.is_connected())
                     })
+                    # Força reload da página para reconhecer nova máquina
+                    self.socketio.emit('force_reload', {'reason': 'machine_changed', 'machine': cfg['name']})
             except Exception:
                 pass
 
