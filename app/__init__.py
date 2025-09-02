@@ -1,73 +1,97 @@
-# app/__init__.py
-import json
 import os
+import json
 from flask import Flask, render_template
-from .extensions import socketio, cors
-from .services.plc_controller import PLCController
-from .controllers.setups_controller import setups_bp
+from flask_socketio import SocketIO
+
+# importa os blueprints
 from .controllers.machines_controller import machines_bp
+from .controllers.setups_controller import setups_bp
+
+# socketio global
+socketio = SocketIO(cors_allowed_origins="*")
+
 
 def create_app():
-    app = Flask(__name__, static_folder='../static', template_folder='../templates')
-    # CORS
-    cors.init_app(app)
-    # SocketIO
-    socketio.init_app(app, cors_allowed_origins='*', async_mode='eventlet')
+    app = Flask(__name__, 
+                template_folder='../templates',
+                static_folder='../static')
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'supervisorio123')
 
-    # load machines config
-    cfg_path = os.path.join(os.getcwd(), 'config', 'machines_config.json')
-    try:
-        with open(cfg_path, 'r') as f:
-            machines = json.load(f)
-    except Exception:
-        machines = []
+    # Inicializa socketio com a app
+    socketio.init_app(app, cors_allowed_origins="*")
 
-    # instantiate a PLCController (shared service)
-    plc_controller = PLCController(socketio, machines)
-    # attach to app for controllers to access
-    app.plc_controller = plc_controller
-    app.socketio = socketio
-    app.machines = machines
-
-    # load communication map (supports per-machine files in config/comm_map/*.json)
-    comm_dir = os.path.join(os.getcwd(), 'config', 'comm_map')
-    comm_map = {}
-    if os.path.isdir(comm_dir):
-        try:
-            for fname in os.listdir(comm_dir):
-                if not fname.lower().endswith('.json'):
-                    continue
-                model = os.path.splitext(fname)[0]
-                with open(os.path.join(comm_dir, fname), 'r') as f:
-                    comm_map[model] = json.load(f)
-        except Exception:
-            comm_map = {}
-    if not comm_map:
-        # fallback to single JSON
-        comm_map_path = os.path.join(os.getcwd(), 'config', 'comm_map.json')
-        try:
-            with open(comm_map_path, 'r') as f:
-                comm_map = json.load(f)
-        except Exception:
-            comm_map = {}
-    app.comm_map = comm_map
-    plc_controller.set_comm_map(app.comm_map)
-
-    # register blueprints
-    app.register_blueprint(setups_bp, url_prefix='/api')
-    app.register_blueprint(machines_bp, url_prefix='/api')
-
-    # index route to serve dashboard
-    @app.route('/')
-    @app.route('/index')
+    # Rota principal serve o dashboard
+    @app.route("/")
     def index():
-        return render_template('dashboard.html')
+        from flask import render_template
+        return render_template("dashboard.html")
 
-    # create data dir if needed
-    data_dir = os.path.join(os.getcwd(), 'data')
-    os.makedirs(data_dir, exist_ok=True)
+    # --- Carrega configuração das máquinas ---
+    config_path = os.path.join(os.path.dirname(__file__), 'data', 'machines_config.json')
+    if os.path.exists(config_path):
+        with open(config_path, 'r') as f:
+            app.machines = json.load(f)
+    else:
+        print("[WARNING] machines_config.json não encontrado, usando lista vazia")
+        app.machines = []
+
+    # --- Inicializa PLCController ---
+    from .services.plc_controller import PLCController
+    app.plc_controller = PLCController(socketio, app.machines)
+    app.comm_map = {}
+
+    # --- Registra blueprints ---
+    try:
+        app.register_blueprint(machines_bp, url_prefix='/api')
+        app.register_blueprint(setups_bp, url_prefix='/api')
+    except AssertionError as e:
+        print(f"[WARNING] Blueprint já registrado: {e}")
+
+    # --- Tenta conectar automaticamente usando detecção inteligente ---
+    from .utils import get_local_ip, find_machine_config, detect_by_reachable_plc
+    
+    # Primeiro tenta detectar por IP local
+    local_ip = get_local_ip()
+    print(f"[INIT] IP local detectado: {local_ip}")
+    cfg = find_machine_config(local_ip, app.machines)
+    print(f"[INIT] Máquina detectada por IP local: {cfg['name'] if cfg else 'Nenhuma'}")
+    if cfg:
+        try:
+            ok, msg = app.plc_controller.set_active_machine(cfg)
+            if ok:
+                print(f"[INIT] PLC ativo por IP local: {cfg['name']} ({cfg.get('default_plc_ip')})")
+            else:
+                print(f"[INIT] Falha ao conectar {cfg['name']} por IP local: {msg}")
+                cfg = None
+        except Exception as e:
+            print(f"[INIT] Erro ao conectar {cfg['name']} por IP local: {e}")
+            cfg = None
+    
+    # Se não conseguiu por IP local, tenta detectar por PLC alcançável
+    if not cfg:
+        detected_name, reachable = detect_by_reachable_plc(app.machines)
+        if detected_name:
+            cfg = next((m for m in app.machines if m['name'] == detected_name), None)
+            if cfg:
+                try:
+                    ok, msg = app.plc_controller.set_active_machine(cfg)
+                    if ok:
+                        print(f"[INIT] PLC ativo por detecção: {cfg['name']} ({cfg.get('default_plc_ip')})")
+                    else:
+                        print(f"[INIT] Falha ao conectar {cfg['name']} por detecção: {msg}")
+                except Exception as e:
+                    print(f"[INIT] Erro ao conectar {cfg['name']} por detecção: {e}")
+    
+    # Se ainda não conseguiu, tenta a primeira máquina (fallback)
+    if not cfg and app.machines:
+        cfg = app.machines[0]
+        try:
+            ok, msg = app.plc_controller.set_active_machine(cfg)
+            if ok:
+                print(f"[INIT] PLC ativo por fallback: {cfg['name']} ({cfg.get('default_plc_ip')})")
+            else:
+                print(f"[INIT] Falha ao conectar {cfg['name']} por fallback: {msg}")
+        except Exception as e:
+            print(f"[INIT] Erro ao conectar {cfg['name']} por fallback: {e}")
 
     return app
-
-# export socketio for run.py
-# socketio is defined in app.extensions

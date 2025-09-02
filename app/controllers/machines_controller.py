@@ -18,6 +18,26 @@ def detect():
     cfg = find_machine_config(local_ip, current_app.machines or [])
     return jsonify({'local_ip': local_ip, 'detected': cfg['name'] if cfg else None})
 
+@machines_bp.route('/detect_by_ip', methods=['GET'])
+def detect_by_ip_and_switch():
+    """Detecta PLC por IP ou faixa e troca automaticamente se encontrado"""
+    ip = request.args.get('ip')
+    if ip:
+        cfg = find_machine_by_plc_ip(ip, current_app.machines or [])
+        
+        if cfg:
+            # troca ativa se detectada
+            current_app.plc_controller.set_active_machine(cfg)
+        return jsonify({'ip': ip, 'detected': cfg['name'] if cfg else None})
+
+    # Detecta o primeiro PLC alcançável
+    detected_name, reachable = detect_by_reachable_plc(current_app.machines or [])
+    cfg = next((m for m in (current_app.machines or []) if m['name'] == detected_name), None)
+    if cfg:
+        current_app.plc_controller.set_active_machine(cfg)
+    return jsonify({'detected': detected_name, 'reachable': reachable})
+
+
 @machines_bp.route('/set_machine', methods=['POST'])
 def set_machine():
     payload = request.json or {}
@@ -42,8 +62,8 @@ def features():
         return jsonify({'ok': False, 'error': 'no machine selected'}), 400
     return jsonify({'machine': cfg['name'], 'embaladoras': cfg.get('embaladoras', 0), 'features': cfg.get('features', {})})
 
-@machines_bp.route('/detect_by_ip', methods=['GET'])
-def detect_by_ip():
+@machines_bp.route('/detect_by_ip_only', methods=['GET'])
+def detect_by_ip_only():
     """Detect machine by PLC IP. If 'ip' query provided, match exactly.
     Otherwise ping known PLC IPs and pick first reachable.
     """

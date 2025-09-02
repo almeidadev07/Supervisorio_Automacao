@@ -28,6 +28,9 @@ async function ensureMachineSelected(){
         const now = Date.now();
         if(now - ENSURE_MACHINE_LAST_TS < 1500){ return; }
         ENSURE_MACHINE_LAST_TS = now;
+        // Não forçar reconexão automática após a primeira inicialização do supervisório
+        const wasInitialized = (localStorage.getItem('supervisor_machine_initialized') === '1');
+        if (wasInitialized) { return; }
         const f = await fetch('/api/features', {cache:'no-store'}).then(r=>r.json()).catch(()=>null);
         if(f && f.machine){ return; }
         const name = localStorage.getItem('supervisor_machine');

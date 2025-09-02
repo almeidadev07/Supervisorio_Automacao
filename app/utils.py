@@ -63,5 +63,16 @@ def detect_by_reachable_plc(configs):
             continue
         if ping_ip(ip):
             reachable.append({'name': c.get('name'), 'ip': ip})
-    detected = reachable[0]['name'] if reachable else None
+    
+    # Prioriza 700CX se estiver disponível
+    detected = None
+    for r in reachable:
+        if r['name'] == '700CX':
+            detected = r['name']
+            break
+    
+    # Se não encontrou 700CX, usa o primeiro disponível
+    if not detected and reachable:
+        detected = reachable[0]['name']
+    
     return detected, reachable

@@ -1,149 +1,140 @@
-async function fetchMachines(){
-  const res = await fetch('/api/machines');
-  if(!res.ok){ throw new Error(`GET /api/machines -> ${res.status}`); }
-  const ct = res.headers.get('content-type')||'';
-  if(!ct.includes('application/json')){ throw new Error('GET /api/machines -> not JSON'); }
-  return res.json();
-}
-async function detect(){
-  const res = await fetch('/api/detect');
-  if(!res.ok){ throw new Error(`GET /api/detect -> ${res.status}`); }
-  const ct = res.headers.get('content-type')||'';
-  if(!ct.includes('application/json')){ throw new Error('GET /api/detect -> not JSON'); }
-  return res.json();
-}
+// machine_select.js (versão avançada com detecção automática)
+document.addEventListener('DOMContentLoaded', () => {
+  const socket = io();
 
-function showModal(preselect){
+  const btnChangeMachine = document.getElementById('btn-change-machine');
   const modal = document.getElementById('machine-modal');
-  console.log('Opening modal', modal);
-  modal.classList.remove('hidden');
-  modal.classList.add('show');
-  // garante visibilidade mesmo sem CSS
-  modal.style.display = 'block';
   const select = document.getElementById('machine-select');
-  if(preselect) select.value = preselect;
-}
+  const btnConfirm = document.getElementById('btn-confirm-machine');
+  const btnCancel = document.getElementById('btn-cancel-machine');
+  const statusDiv = document.getElementById('machine-modal-status');
 
-function closeModal(){
-  const modal = document.getElementById('machine-modal');
-  if(!modal) return;
-  modal.classList.add('hidden');
-  modal.classList.remove('show');
-  // força esconder mesmo sem CSS das classes
-  modal.style.display = 'none';
-}
+  let activeMachine = null;
+  let machinesList = [];
 
-async function initMachinePicker(){
-  const statusEl = document.getElementById('machine-modal-status');
-  const select = document.getElementById('machine-select');
-  try {
-    const machines = await fetchMachines();
-    select.innerHTML = machines.map(m => `<option value="${m.name}">${m.name} (${m.embaladoras} embaladoras)</option>`).join('');
-  } catch(err){
-    if(statusEl){ statusEl.textContent = 'Erro ao carregar máquinas. Inicie o servidor correto (run.py)'; }
-    if(select){ select.innerHTML = ''; }
+  function showModal() {
+    modal.classList.remove('hidden');
+    statusDiv.textContent = '';
   }
 
-  // Preseleciona a máquina atual quando o modal abrir
-  const changeBtn = document.getElementById('btn-change-machine');
-  if (changeBtn){
-    changeBtn.addEventListener('click', async (e)=>{
-      e.preventDefault();
-      e.stopPropagation();
-      try{
-        const f = await fetch('/api/features', {cache:'no-store'}).then(r=>r.json()).catch(()=>null);
-        const current = f && f.machine ? f.machine : (localStorage.getItem('supervisor_machine')||'');
-        if (current){ select.value = current; }
-      }catch(_){ /* ignore */ }
-      const modal = document.getElementById('machine-modal');
-      if(modal){ modal.classList.remove('hidden'); modal.classList.add('show'); }
+  function hideModal() {
+    modal.classList.add('hidden');
+  }
+
+  function setUIVisibility(machineFeatures) {
+    const containers = {
+      'diagram-container': 'diagram',
+      'weight-range-container': 'weight_range',
+      'balance-container': 'balance',
+      'classification-container': 'classification',
+      'input-container': 'input',
+      'washer-container': 'washer'
+    };
+
+    Object.entries(containers).forEach(([id, feature]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.display = machineFeatures[feature] ? 'block' : 'none';
     });
   }
 
-  const urlParams = new URLSearchParams(location.search);
-  const urlMachine = urlParams.get('machine');
-  const saved = localStorage.getItem('supervisor_machine');
-  const wasInitialized = localStorage.getItem('supervisor_machine_initialized') === '1';
-
-  if(urlMachine){ await setMachine(urlMachine); localStorage.setItem('supervisor_machine_initialized','1'); return; }
-  if(saved){ await setMachine(saved); localStorage.setItem('supervisor_machine_initialized','1'); return; }
-
-  try{
-    const f = await fetch('/api/features', {cache:'no-store'}).then(r=>r.json()).catch(()=>null);
-    if (f && f.machine){
-      // Já há máquina ativa no servidor -> nada a fazer
-      return;
-    }
-    const det = await detect();
-    // Seleção automática apenas uma vez, no primeiro start do app
-    if(!wasInitialized && det && det.detected){
-      await setMachine(det.detected);
-      localStorage.setItem('supervisor_machine_initialized','1');
-      return;
-    }
-    // Sem auto seleção -> apenas mostrar modal com preselect
-    showModal(det && det.detected ? det.detected : undefined);
-  } catch(err){
-    if(statusEl){ statusEl.textContent = 'Detecção automática indisponível.'; }
-    showModal();
-  }
-
-  document.getElementById('btn-confirm-machine').onclick = async (e)=>{
-    e.preventDefault();
-    const name = select.value;
-    await setMachine(name);
-    console.log('Confirm clicked, closing modal');
-    closeModal();
-  };
-  document.getElementById('btn-cancel-machine').onclick = (e)=>{
-    e.preventDefault();
-    console.log('Cancel clicked, closing modal');
-    closeModal();
-  };
-
-  // Fechar com ESC
-  document.addEventListener('keydown', (e)=>{
-    if(e.key === 'Escape') closeModal();
-  });
-}
-
-
-async function setMachine(name){
-  const res = await fetch('/api/set_machine', {
-    method: 'POST',
-    headers: {'content-type': 'application/json'},
-    body: JSON.stringify({name})
-  }).then(r=>r.json());
-  if(res.ok){
-    localStorage.setItem('supervisor_machine', name);
-    const nameEl = document.getElementById('machine-name');
-    if(nameEl){ nameEl.innerText = name; }
-    const connEl = document.getElementById('conn-status');
-    if(connEl){ connEl.innerText = 'conectando...'; }
-    // Fetch and store communication map for this machine
+  async function loadMachines() {
     try {
-      const cm = await fetch('/api/comm_map').then(r=>r.json());
-      if(cm && cm.ok){
-        localStorage.setItem('supervisor_comm_map', JSON.stringify(cm.map));
-        window.supervisorCommMap = cm.map;
-      }
-    } catch(e) {
-      console.warn('comm_map fetch failed', e);
-    }
-    return true;
-  } else {
-    alert('Erro: ' + (res.error||'unknown'));
-    return false;
-  }
-}
+      const res = await fetch('/api/machines');
+      machinesList = await res.json();
+      select.innerHTML = '';
 
-window.addEventListener('DOMContentLoaded', ()=>{
-  const changeBtn = document.getElementById('btn-change-machine');
-  if(changeBtn){
-    changeBtn.addEventListener('click', ()=>{
-      const modal = document.getElementById('machine-modal');
-      if(modal){ modal.classList.remove('hidden'); }
-    });
+      machinesList.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.name;
+        opt.textContent = `${m.name} (${m.embaladoras} embaladoras)`;
+        select.appendChild(opt);
+      });
+
+      await updateActiveMachine();
+    } catch (err) {
+      console.error('Erro ao carregar máquinas:', err);
+      statusDiv.textContent = 'Erro ao carregar máquinas';
+    }
   }
-  initMachinePicker();
+
+  async function updateActiveMachine() {
+    try {
+      const activeRes = await fetch('/api/machines/features');
+      const activeData = await activeRes.json();
+      if (activeData.ok !== false && activeData.machine) {
+        activeMachine = activeData.machine;
+        select.value = activeMachine;
+        setUIVisibility(activeData.features || {});
+      }
+    } catch (err) {
+      console.error('Erro ao obter máquina ativa:', err);
+    }
+  }
+
+  async function setMachine(machineName) {
+    statusDiv.textContent = 'Conectando...';
+    btnConfirm.disabled = true;
+    btnCancel.disabled = true;
+
+    try {
+      const res = await fetch('/api/plc/set_machine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: machineName })
+      });
+      const data = await res.json();
+
+      if ((res.ok && data.ok !== false) || data.status !== 'failed') {
+        statusDiv.textContent = `Máquina "${machineName}" conectada com sucesso!`;
+        await updateActiveMachine();
+        setTimeout(hideModal, 1000);
+      } else {
+        const msg = data.msg || data.error || 'Falha ao conectar';
+        statusDiv.textContent = `Erro: ${msg}`;
+      }
+    } catch (err) {
+      console.error(err);
+      statusDiv.textContent = 'Erro na requisição';
+    } finally {
+      btnConfirm.disabled = false;
+      btnCancel.disabled = false;
+    }
+  }
+
+  // Eventos do modal
+  btnChangeMachine.addEventListener('click', () => {
+    showModal();
+    loadMachines();
+  });
+
+  btnCancel.addEventListener('click', hideModal);
+
+  btnConfirm.addEventListener('click', () => {
+    const machineName = select.value;
+    if (!machineName) return;
+    setMachine(machineName);
+  });
+
+  // Socket.IO: telemetria em tempo real
+  socket.on('telemetry', (data) => {
+    console.log('Telemetria:', data);
+  });
+
+  socket.on('plc_connection_changed', async (data) => {
+    console.log('Conexão PLC mudou:', data.connected);
+
+    // Atualiza automaticamente a lista de máquinas e UI
+    if (data.connected) {
+      await loadMachines();
+    }
+  });
+
+  socket.on('force_reload', () => {
+    console.log('Forçar reload solicitado');
+    location.reload();
+  });
+
+  // Inicializa
+  loadMachines();
 });
