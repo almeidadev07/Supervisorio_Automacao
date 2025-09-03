@@ -461,8 +461,42 @@ function bindTelemetryVelocidadeReal(){
             }
         });
         // Comando remoto para recarregar a página
-        socket.on('force_reload', () => {
+        socket.on('force_reload', (data) => {
+            console.log('[GRID] 🔔 Evento force_reload recebido:', data);
+            
+            // Evita reload se já foi feito recentemente
+            const lastReload = localStorage.getItem('lastReload');
+            const now = Date.now();
+            if (lastReload && (now - parseInt(lastReload)) < 5000) {
+                console.log('[GRID] ⚠️ Reload ignorado - muito recente');
+                return;
+            }
+            
+            console.log('[GRID] 🔄 Executando reload da página...');
+            localStorage.setItem('lastReload', now.toString());
             window.location.reload();
+        });
+        
+        // Evento quando PLC é detectado automaticamente
+        socket.on('plc_detected', (data) => {
+            console.log('[GRID] 🔔 Evento plc_detected recebido:', data);
+            if (data && data.machine) {
+                console.log(`[GRID] ✅ PLC ${data.machine} detectado automaticamente!`);
+                
+                // Verifica se já está na máquina correta para evitar reload desnecessário
+                const currentMachine = document.querySelector('.machine-name')?.textContent;
+                if (currentMachine && currentMachine.includes(data.machine)) {
+                    console.log(`[GRID] ✅ Já está na máquina correta: ${data.machine}`);
+                    return;
+                }
+                
+                console.log(`[GRID] 🎯 Recarregando página em 1 segundo...`);
+                // Força reload da página para reconhecer nova máquina
+                setTimeout(() => {
+                    console.log('[GRID] 🔄 Executando reload da página...');
+                    window.location.reload();
+                }, 1000);
+            }
         });
         // watchdog: se passar >2.5s sem dado válido, mostrar ???
         if (window.supervisorSpeedWatchdog) clearInterval(window.supervisorSpeedWatchdog);

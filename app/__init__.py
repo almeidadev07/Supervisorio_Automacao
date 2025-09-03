@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from flask import Flask, render_template
 from flask_socketio import SocketIO
 
@@ -47,7 +48,7 @@ def create_app():
     except AssertionError as e:
         print(f"[WARNING] Blueprint já registrado: {e}")
 
-    # --- Tenta conectar automaticamente usando detecção inteligente ---
+    # --- Tenta conectar automaticamente apenas se houver PLCs reais disponíveis ---
     from .utils import get_local_ip, find_machine_config, detect_by_reachable_plc
     
     # Primeiro tenta detectar por IP local
@@ -55,11 +56,26 @@ def create_app():
     print(f"[INIT] IP local detectado: {local_ip}")
     cfg = find_machine_config(local_ip, app.machines)
     print(f"[INIT] Máquina detectada por IP local: {cfg['name'] if cfg else 'Nenhuma'}")
-    if cfg:
+    
+    # Só tenta conectar se a máquina detectada por IP local for um PLC real (não mock)
+    if cfg and not cfg['name'].lower().startswith('mock'):
         try:
             ok, msg = app.plc_controller.set_active_machine(cfg)
             if ok:
                 print(f"[INIT] PLC ativo por IP local: {cfg['name']} ({cfg.get('default_plc_ip')})")
+                # Emite evento de detecção inicial para o frontend
+                try:
+                    print(f"[INIT] 🔔 Emitindo eventos Socket.IO para {cfg['name']}")
+                    socketio.emit('plc_detected', {
+                        'machine': cfg['name'],
+                        'ip': cfg.get('default_plc_ip'),
+                        'message': f'PLC {cfg["name"]} detectado na inicialização (IP local)',
+                        'timestamp': time.time()
+                    })
+                    print(f"[INIT] ✅ Evento 'plc_detected' emitido")
+                    print(f"[INIT] 🎯 Frontend notificado sobre detecção inicial de {cfg['name']}")
+                except Exception as e:
+                    print(f"[INIT] ❌ Erro ao notificar frontend: {e}")
             else:
                 print(f"[INIT] Falha ao conectar {cfg['name']} por IP local: {msg}")
                 cfg = None
@@ -69,29 +85,46 @@ def create_app():
     
     # Se não conseguiu por IP local, tenta detectar por PLC alcançável
     if not cfg:
+        print("[INIT] Tentando detecção rápida por PLC alcançável...")
         detected_name, reachable = detect_by_reachable_plc(app.machines)
-        if detected_name:
+        print(f"[INIT] Resultado da detecção: {detected_name}, alcançáveis: {reachable}")
+        
+        if detected_name and not detected_name.lower().startswith('mock'):
+            print(f"[INIT] PLC detectado: {detected_name}")
             cfg = next((m for m in app.machines if m['name'] == detected_name), None)
             if cfg:
+                print(f"[INIT] Configuração encontrada para {detected_name}: IP={cfg.get('default_plc_ip')}")
                 try:
                     ok, msg = app.plc_controller.set_active_machine(cfg)
                     if ok:
-                        print(f"[INIT] PLC ativo por detecção: {cfg['name']} ({cfg.get('default_plc_ip')})")
+                        print(f"[INIT] ✅ PLC ativo por detecção: {cfg['name']} ({cfg.get('default_plc_ip')})")
+                        # Emite evento de detecção inicial para o frontend
+                        try:
+                            print(f"[INIT] 🔔 Emitindo eventos Socket.IO para {cfg['name']}")
+                            socketio.emit('plc_detected', {
+                                'machine': cfg['name'],
+                                'ip': cfg.get('default_plc_ip'),
+                                'message': f'PLC {cfg["name"]} detectado na inicialização',
+                                'timestamp': time.time()
+                            })
+                            print(f"[INIT] ✅ Evento 'plc_detected' emitido")
+                            print(f"[INIT] 🎯 Frontend notificado sobre detecção inicial de {cfg['name']}")
+                        except Exception as e:
+                            print(f"[INIT] ❌ Erro ao notificar frontend: {e}")
                     else:
-                        print(f"[INIT] Falha ao conectar {cfg['name']} por detecção: {msg}")
+                        print(f"[INIT] ❌ Falha ao conectar {cfg['name']} por detecção: {msg}")
                 except Exception as e:
-                    print(f"[INIT] Erro ao conectar {cfg['name']} por detecção: {e}")
-    
-    # Se ainda não conseguiu, tenta a primeira máquina (fallback)
-    if not cfg and app.machines:
-        cfg = app.machines[0]
-        try:
-            ok, msg = app.plc_controller.set_active_machine(cfg)
-            if ok:
-                print(f"[INIT] PLC ativo por fallback: {cfg['name']} ({cfg.get('default_plc_ip')})")
+                    print(f"[INIT] ❌ Erro ao conectar {cfg['name']} por detecção: {e}")
             else:
-                print(f"[INIT] Falha ao conectar {cfg['name']} por fallback: {msg}")
-        except Exception as e:
-            print(f"[INIT] Erro ao conectar {cfg['name']} por fallback: {e}")
+                print(f"[INIT] ❌ Configuração não encontrada para {detected_name}")
+        else:
+            print(f"[INIT] Nenhum PLC real detectado (detected_name: {detected_name})")
+    
+    # Se não conseguiu conectar a nenhum PLC real, não cria driver mas inicia polling
+    if not cfg:
+        print("[INIT] Nenhum PLC real disponível - aguardando detecção automática...")
+        print("[INIT] O sistema detectará automaticamente quando um PLC for ligado")
+        # Inicia o polling para detectar PLCs automaticamente
+        app.plc_controller.start_polling_if_needed()
 
     return app

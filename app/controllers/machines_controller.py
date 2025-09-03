@@ -186,3 +186,27 @@ def force_reload():
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+@machines_bp.route('/force_reconnect', methods=['POST'])
+def force_reconnect():
+    """Força uma tentativa de reconexão imediata com o PLC"""
+    try:
+        success, message = current_app.plc_controller.force_reconnect()
+        if success:
+            return jsonify({'ok': True, 'message': message})
+        else:
+            return jsonify({'ok': False, 'error': message}), 500
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@machines_bp.route('/detect_plcs', methods=['POST'])
+def detect_plcs():
+    """Força a detecção de PLCs disponíveis e troca automaticamente se encontrar um melhor"""
+    try:
+        success = current_app.plc_controller._detect_and_switch_to_available_plc()
+        if success:
+            return jsonify({'ok': True, 'message': 'PLC detectado e trocado automaticamente'})
+        else:
+            return jsonify({'ok': False, 'message': 'Nenhum PLC melhor disponível'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500

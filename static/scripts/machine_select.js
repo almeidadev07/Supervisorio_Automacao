@@ -147,6 +147,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 500);
   });
 
+  socket.on('plc_detected', (data) => {
+    console.log('[MACHINE_SELECT] 🔔 Evento plc_detected recebido:', data);
+    if (data && data.machine) {
+      console.log(`[MACHINE_SELECT] ✅ PLC ${data.machine} detectado automaticamente!`);
+      
+      // Evita reload se já foi feito recentemente
+      const lastReload = localStorage.getItem('lastReload');
+      const now = Date.now();
+      if (lastReload && (now - parseInt(lastReload)) < 5000) {
+        console.log('[MACHINE_SELECT] ⚠️ Reload ignorado - muito recente');
+        return;
+      }
+      
+      console.log(`[MACHINE_SELECT] 🎯 Atualizando lista de máquinas e recarregando...`);
+      // Atualiza a lista de máquinas e recarrega a página
+      loadMachines().then(() => {
+        setTimeout(() => {
+          console.log('[MACHINE_SELECT] 🔄 Executando reload da página...');
+          localStorage.setItem('lastReload', now.toString());
+          location.reload();
+        }, 1000);
+      });
+    }
+  });
+
   // Inicializa
   loadMachines();
 });

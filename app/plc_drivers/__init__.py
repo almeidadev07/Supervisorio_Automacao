@@ -7,7 +7,10 @@ def create_driver_for_config(cfg):
     ip = cfg.get('default_plc_ip')
     if plc_type == 'siemens_s7':
         try:
+            print(f"[DRIVER] Criando SiemensS7Driver para {cfg.get('name')} em {ip}")
             return SiemensS7Driver(ip, cfg)
-        except Exception:
-            return MockSiemensDriver(ip, cfg)
+        except Exception as e:
+            print(f"[DRIVER] ❌ Erro ao criar SiemensS7Driver para {cfg.get('name')}: {e}")
+            # Não cria mock automaticamente - deixa o erro ser tratado pelo chamador
+            raise e
     raise ValueError('unknown plc type')
