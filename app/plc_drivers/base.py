@@ -24,6 +24,12 @@ class BasePLC(ABC):
         """
         return {}
 
+    def write_tags(self, tag_values):
+        """Optional: Write a dict of name->value to PLC.
+        Base implementation returns False. Drivers should override.
+        """
+        return False
+
     def is_connected(self) -> bool:
         """Return True if underlying connection is alive. Base assumes True."""
         return True

@@ -36,10 +36,26 @@ def create_app():
         print("[WARNING] machines_config.json não encontrado, usando lista vazia")
         app.machines = []
 
+    # --- Carrega comm_map ---
+    app.comm_map = {}
+    comm_map_dir = os.path.join(os.path.dirname(__file__), '..', 'config', 'comm_map')
+    if os.path.exists(comm_map_dir):
+        for filename in os.listdir(comm_map_dir):
+            if filename.endswith('.json'):
+                machine_name = filename.replace('.json', '')
+                file_path = os.path.join(comm_map_dir, filename)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        app.comm_map[machine_name] = json.load(f)
+                    print(f"[INIT] Comm map carregado para {machine_name}: {len(app.comm_map[machine_name])} tags")
+                except Exception as e:
+                    print(f"[INIT] Erro ao carregar comm_map para {machine_name}: {e}")
+    else:
+        print("[WARNING] Pasta config/comm_map não encontrada")
+
     # --- Inicializa PLCController ---
     from .services.plc_controller import PLCController
     app.plc_controller = PLCController(socketio, app.machines)
-    app.comm_map = {}
 
     # --- Registra blueprints ---
     try:

@@ -6,7 +6,8 @@ let ENSURE_MACHINE_LAST_TS = 0;
 
 // Nome da tag de velocidade
 const SPEED_TAG_PRIMARY = 'XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_REAL';
-const SPEED_TAGS = [SPEED_TAG_PRIMARY];
+const SPEED_TAG_PROGRAMMED = 'XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_PROG';
+const SPEED_TAGS = [SPEED_TAG_PRIMARY, SPEED_TAG_PROGRAMMED];
 
 // Limite de velocidade por máquina (padrão 400)
 let SPEED_MAX = 400;
@@ -396,6 +397,63 @@ function pickSpeedValue(obj){
     return null;
 }
 
+function pickSpeedProgrammedValue(obj){
+    if (!obj) return null;
+    return obj[SPEED_TAG_PROGRAMMED] || null;
+}
+
+function atualizarVelocidadeProgramadaUI(valor){
+    if (valor == null) {
+        console.log('[GRID] Velocidade programada: valor nulo');
+        return;
+    }
+    
+    console.log(`[GRID] Velocidade programada: ${valor} cx/h`);
+    
+    // Atualiza o campo de input existente
+    const velocidadeInput = document.getElementById('velocidadeInput');
+    if (velocidadeInput) {
+        velocidadeInput.value = Math.round(valor);
+    }
+    
+    // Atualiza ponteiro da velocidade programada se existir
+    const ponteiroProg = document.getElementById('ponteiroProg');
+    if (ponteiroProg) {
+        atualizarPonteiro(ponteiroProg, valor);
+    }
+}
+
+function escreverVelocidadeProgramada(valor) {
+    console.log(`[GRID] 📝 Escrevendo velocidade programada: ${valor} cx/h`);
+    
+    const payload = {
+        [SPEED_TAG_PROGRAMMED]: valor
+    };
+    
+    fetch('/api/write_tags', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.ok) {
+            console.log(`[GRID] ✅ Velocidade programada escrita com sucesso: ${valor} cx/h`);
+            // Atualiza a UI imediatamente
+            atualizarVelocidadeProgramadaUI(valor);
+        } else {
+            console.error(`[GRID] ❌ Erro ao escrever velocidade programada: ${data.error}`);
+            alert(`Erro ao escrever no PLC: ${data.error}`);
+        }
+    })
+    .catch(error => {
+        console.error(`[GRID] ❌ Erro na requisição: ${error}`);
+        alert(`Erro de comunicação: ${error.message}`);
+    });
+}
+
 // Vincula Socket.IO para receber a tag de velocidade (com fallback)
 function bindTelemetryVelocidadeReal(){
     try {
@@ -421,10 +479,19 @@ function bindTelemetryVelocidadeReal(){
             fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')), { cache: 'no-store' })
                 .then(r => r.json())
                 .then(res => {
-                    const val = res && res.ok && res.values ? pickSpeedValue(res.values) : null;
-                    if (val != null) {
-                        atualizarVelocidadeRealUI(val);
-                        SPEED_LAST_OK_TS = Date.now();
+                    if (res && res.ok && res.values) {
+                        // Processa velocidade real
+                        const valReal = pickSpeedValue(res.values);
+                        if (valReal != null) {
+                            atualizarVelocidadeRealUI(valReal);
+                            SPEED_LAST_OK_TS = Date.now();
+                        }
+                        
+                        // Processa velocidade programada
+                        const valProg = pickSpeedProgrammedValue(res.values);
+                        if (valProg != null) {
+                            atualizarVelocidadeProgramadaUI(valProg);
+                        }
                     }
                 })
                 .catch(() => {});
@@ -447,12 +514,21 @@ function bindTelemetryVelocidadeReal(){
                 fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')), { cache: 'no-store' })
                     .then(r => r.json())
                     .then(res => {
-                        const val = res && res.ok && res.values ? pickSpeedValue(res.values) : null;
-                        if (val != null) {
-                            atualizarVelocidadeRealUI(val);
-                            if (SPEED_WAS_OFFLINE) {
-                                SPEED_WAS_OFFLINE = false;
-                                setTimeout(() => window.location.reload(), 50);
+                        if (res && res.ok && res.values) {
+                            // Processa velocidade real
+                            const valReal = pickSpeedValue(res.values);
+                            if (valReal != null) {
+                                atualizarVelocidadeRealUI(valReal);
+                                if (SPEED_WAS_OFFLINE) {
+                                    SPEED_WAS_OFFLINE = false;
+                                    setTimeout(() => window.location.reload(), 50);
+                                }
+                            }
+                            
+                            // Processa velocidade programada
+                            const valProg = pickSpeedProgrammedValue(res.values);
+                            if (valProg != null) {
+                                atualizarVelocidadeProgramadaUI(valProg);
                             }
                         }
                     })
@@ -568,6 +644,11 @@ function fecharTeclado() {
         input.value = valor;
         const ponteiro = input.closest('.draggable-btn').querySelector('.ponteiro');
         if (ponteiro) atualizarPonteiro(ponteiro, valor);
+        
+        // Escreve no PLC se for o campo de velocidade programada
+        if (input.id === 'velocidadeInput') {
+            escreverVelocidadeProgramada(valor);
+        }
     }
     teclado.style.display = "none";
     valorDigitado = "";
@@ -667,14 +748,23 @@ function inicializarVelocimetro() {
                 return r.json();
             })
             .then(res => {
-                const val = res && res.ok && res.values ? pickSpeedValue(res.values) : null;
-                if (val != null) {
-                    atualizarVelocidadeRealUI(val);
-                    consecutiveFailures = 0;
-                    SPEED_LAST_OK_TS = Date.now();
-                    if (SPEED_WAS_OFFLINE) {
-                        SPEED_WAS_OFFLINE = false;
-                        setTimeout(() => window.location.reload(), 50);
+                if (res && res.ok && res.values) {
+                    // Processa velocidade real
+                    const valReal = pickSpeedValue(res.values);
+                    if (valReal != null) {
+                        atualizarVelocidadeRealUI(valReal);
+                        consecutiveFailures = 0;
+                        SPEED_LAST_OK_TS = Date.now();
+                        if (SPEED_WAS_OFFLINE) {
+                            SPEED_WAS_OFFLINE = false;
+                            setTimeout(() => window.location.reload(), 50);
+                        }
+                    }
+                    
+                    // Processa velocidade programada
+                    const valProg = pickSpeedProgrammedValue(res.values);
+                    if (valProg != null) {
+                        atualizarVelocidadeProgramadaUI(valProg);
                     }
                 } else {
                     consecutiveFailures++;
@@ -697,9 +787,18 @@ function inicializarVelocimetro() {
     fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')))
         .then(r => r.json())
         .then(res => {
-            const val = res && res.ok && res.values ? pickSpeedValue(res.values) : null;
-            if (val != null) {
-                atualizarVelocidadeRealUI(val);
+            if (res && res.ok && res.values) {
+                // Processa velocidade real
+                const valReal = pickSpeedValue(res.values);
+                if (valReal != null) {
+                    atualizarVelocidadeRealUI(valReal);
+                }
+                
+                // Processa velocidade programada
+                const valProg = pickSpeedProgrammedValue(res.values);
+                if (valProg != null) {
+                    atualizarVelocidadeProgramadaUI(valProg);
+                }
             }
         })
         .catch(() => {});

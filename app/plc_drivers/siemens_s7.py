@@ -200,6 +200,63 @@ class SiemensS7Driver(BasePLC):
                     print('[S7] Todas as tentativas de leitura falharam')
         return None
 
+    def write_tags(self, tag_values):
+        """Escreve valores nas tags do PLC"""
+        if not self.is_connected():
+            print(f"[S7] ❌ Não conectado, não é possível escrever")
+            return False
+        
+        if not tag_values:
+            return True
+        
+        try:
+            # Busca as definições das tags no comm_map
+            comm_map = self.config.get('comm_map', [])
+            tag_definitions = {tag['name']: tag for tag in comm_map}
+            
+            for tag_name, value in tag_values.items():
+                if tag_name not in tag_definitions:
+                    print(f"[S7] ❌ Tag {tag_name} não encontrada no comm_map")
+                    continue
+                
+                tag_def = tag_definitions[tag_name]
+                area = tag_def.get('area', 'DB')
+                db = tag_def.get('db', 0)
+                offset = tag_def.get('offset', 0)
+                tag_type = tag_def.get('type', 'REAL')
+                
+                print(f"[S7] 📝 Escrevendo {tag_name} = {value} (DB{db}, offset {offset}, tipo {tag_type})")
+                
+                # Converte o valor para bytes baseado no tipo
+                if tag_type == 'REAL':
+                    import struct
+                    # Converte float para bytes (big-endian)
+                    value_bytes = struct.pack('>f', float(value))
+                elif tag_type == 'WORD':
+                    import struct
+                    # Converte int para bytes (big-endian)
+                    value_bytes = struct.pack('>H', int(value))
+                elif tag_type == 'DWORD':
+                    import struct
+                    # Converte int para bytes (big-endian)
+                    value_bytes = struct.pack('>I', int(value))
+                else:
+                    print(f"[S7] ❌ Tipo {tag_type} não suportado para escrita")
+                    continue
+                
+                # Escreve no PLC
+                if area == 'DB':
+                    self.client.db_write(db, offset, value_bytes)
+                    print(f"[S7] ✅ {tag_name} = {value} escrito com sucesso")
+                else:
+                    print(f"[S7] ❌ Área {area} não suportada para escrita")
+            
+            return True
+            
+        except Exception as e:
+            print(f"[S7] ❌ Erro ao escrever tags: {e}")
+            return False
+
 class MockSiemensDriver(BasePLC):
     def __init__(self, ip, config):
         super().__init__(ip, config)

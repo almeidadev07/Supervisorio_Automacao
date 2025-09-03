@@ -61,10 +61,21 @@ class PLCController:
                 self.driver = None
 
             self.active_config = cfg
+            
+            # Adiciona o comm_map à configuração antes de criar o driver
+            machine_name = cfg.get('name')
+            if machine_name in self.comm_map_by_machine:
+                cfg_with_comm_map = cfg.copy()
+                cfg_with_comm_map['comm_map'] = self.comm_map_by_machine[machine_name]
+                print(f"[PLC] Comm map adicionado para {machine_name}: {len(cfg_with_comm_map['comm_map'])} tags")
+            else:
+                cfg_with_comm_map = cfg
+                print(f"[PLC] ⚠️ Comm map não encontrado para {machine_name}")
+            
             try:
                 print(f"[PLC] Criando driver para {cfg.get('name')} em {cfg.get('default_plc_ip')}")
                 # Cria o driver de forma mais segura para threading
-                self.driver = create_driver_for_config(cfg)
+                self.driver = create_driver_for_config(cfg_with_comm_map)
                 
                 # Conecta de forma mais robusta
                 connected = self.driver.connect()
@@ -137,6 +148,23 @@ class PLCController:
             except Exception as e:
                 print(f"[PLC] ❌ Erro na leitura de tags: {e}")
                 return {}
+
+    def write_tags(self, tag_values):
+        """Escrita de tags no PLC"""
+        if not self.driver or not self.active_config:
+            print(f"[PLC] ❌ Nenhum driver ativo para escrita de tags")
+            return False
+        
+        if not tag_values:
+            return True
+        
+        with self._io_lock:
+            try:
+                result = self.driver.write_tags(tag_values)
+                return result
+            except Exception as e:
+                print(f"[PLC] Erro na escrita de tags: {e}")
+                return False
 
     def _poll_loop(self):
         """Loop de polling contínuo para telemetria"""
@@ -360,9 +388,19 @@ class PLCController:
                                 pass
                             self.driver = None
                         
+                        # Adiciona o comm_map à configuração
+                        machine_name = new_config.get('name')
+                        if machine_name in self.comm_map_by_machine:
+                            new_config_with_comm_map = new_config.copy()
+                            new_config_with_comm_map['comm_map'] = self.comm_map_by_machine[machine_name]
+                            print(f"[PLC] Comm map adicionado para {machine_name}: {len(new_config_with_comm_map['comm_map'])} tags")
+                        else:
+                            new_config_with_comm_map = new_config
+                            print(f"[PLC] ⚠️ Comm map não encontrado para {machine_name}")
+                        
                         # Cria novo driver
                         self.active_config = new_config
-                        self.driver = create_driver_for_config(new_config)
+                        self.driver = create_driver_for_config(new_config_with_comm_map)
                         print(f"[PLC] Driver criado para {detected_name}")
                         
                         # Conecta

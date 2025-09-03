@@ -145,6 +145,40 @@ def read_tags():
     values = current_app.plc_controller.read_tags(names)
     return jsonify({'ok': True, 'values': values})
 
+@machines_bp.route('/write_tags', methods=['POST'])
+def write_tags():
+    """Escreve valores nas tags do PLC"""
+    try:
+        payload = request.json or {}
+        if not payload:
+            return jsonify({'ok': False, 'error': 'No data provided'}), 400
+        
+        # Valida se as tags existem no comm_map
+        cfg = current_app.plc_controller.active_config
+        if not cfg:
+            return jsonify({'ok': False, 'error': 'No machine selected'}), 400
+        
+        machine = cfg.get('name')
+        comm_map = (current_app.comm_map or {}).get(machine, [])
+        valid_tags = {tag['name'] for tag in comm_map}
+        
+        # Filtra apenas tags válidas
+        valid_payload = {k: v for k, v in payload.items() if k in valid_tags}
+        if not valid_payload:
+            return jsonify({'ok': False, 'error': 'No valid tags provided'}), 400
+        
+        # Escreve no PLC
+        success = current_app.plc_controller.write_tags(valid_payload)
+        
+        if success:
+            return jsonify({'ok': True, 'message': f'Tags escritas com sucesso: {list(valid_payload.keys())}'})
+        else:
+            return jsonify({'ok': False, 'error': 'Falha ao escrever tags no PLC'}), 500
+            
+    except Exception as e:
+        logger.error(f"Erro ao escrever tags: {e}")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 @machines_bp.route('/debug/db_read', methods=['GET'])
 def debug_db_read():
     """Low-level DB read to diagnose connectivity/optimized DB issues.
