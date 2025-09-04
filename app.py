@@ -17,9 +17,21 @@ socketio = supervisorio_app.socketio
 
 @app.route('/static/pdfs/<path:filename>')
 def serve_pdf(filename):
-    response = make_response(send_from_directory('static/pdfs', filename))
-    response.headers.pop('X-Frame-Options', None)
-    return response
+    try:
+        print(f"[PDF] Tentando servir: {filename}")
+        # Caminho absoluto para o diretório de PDFs
+        pdf_dir = os.path.join(os.path.dirname(__file__), 'static', 'pdfs')
+        print(f"[PDF] Diretório PDF: {pdf_dir}")
+        print(f"[PDF] Arquivo existe? {os.path.exists(os.path.join(pdf_dir, filename))}")
+        
+        response = make_response(send_from_directory(pdf_dir, filename))
+        response.headers.pop('X-Frame-Options', None)
+        response.headers['Content-Type'] = 'application/pdf'
+        print(f"[PDF] ✅ PDF servido com sucesso: {filename}")
+        return response
+    except Exception as e:
+        print(f"[PDF] ❌ Erro ao servir PDF {filename}: {e}")
+        return f"Erro ao carregar PDF: {e}", 404
 
 if __name__ == "__main__":
     host = os.environ.get('APP_HOST', '127.0.0.1')
