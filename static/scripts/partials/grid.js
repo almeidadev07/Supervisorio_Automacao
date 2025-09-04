@@ -4,6 +4,10 @@ let SPEED_LAST_OK_TS = 0;
 let SPEED_WAS_OFFLINE = false;
 let ENSURE_MACHINE_LAST_TS = 0;
 
+// Controle de estado para evitar condição de corrida na velocidade programada
+let USER_TYPING_VELOCITY = false;
+let VELOCITY_WRITE_TIMESTAMP = 0;
+
 // Nome da tag de velocidade
 const SPEED_TAG_PRIMARY = 'XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_REAL';
 const SPEED_TAG_PROGRAMMED = 'XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_PROG';
@@ -408,6 +412,19 @@ function atualizarVelocidadeProgramadaUI(valor){
         return;
     }
     
+    // Não atualiza a UI se o usuário está digitando
+    if (USER_TYPING_VELOCITY) {
+        console.log('[GRID] Velocidade programada: ignorando atualização - usuário digitando');
+        return;
+    }
+    
+    // Não atualiza se foi escrita recentemente (últimos 2 segundos)
+    const now = Date.now();
+    if (now - VELOCITY_WRITE_TIMESTAMP < 2000) {
+        console.log('[GRID] Velocidade programada: ignorando atualização - escrita recente');
+        return;
+    }
+    
     console.log(`[GRID] Velocidade programada: ${valor} cx/h`);
     
     // Atualiza o campo de input existente
@@ -426,6 +443,9 @@ function atualizarVelocidadeProgramadaUI(valor){
 function escreverVelocidadeProgramada(valor) {
     console.log(`[GRID] 📝 Escrevendo velocidade programada: ${valor} cx/h`);
     
+    // Marca timestamp da escrita para evitar leituras conflitantes
+    VELOCITY_WRITE_TIMESTAMP = Date.now();
+    
     const payload = {
         [SPEED_TAG_PROGRAMMED]: valor
     };
@@ -441,8 +461,16 @@ function escreverVelocidadeProgramada(valor) {
     .then(data => {
         if (data.ok) {
             console.log(`[GRID] ✅ Velocidade programada escrita com sucesso: ${valor} cx/h`);
-            // Atualiza a UI imediatamente
-            atualizarVelocidadeProgramadaUI(valor);
+            // Atualiza a UI imediatamente (força a atualização mesmo com as proteções)
+            const velocidadeInput = document.getElementById('velocidadeInput');
+            if (velocidadeInput) {
+                velocidadeInput.value = Math.round(valor);
+            }
+            
+            const ponteiroProg = document.getElementById('ponteiroProg');
+            if (ponteiroProg) {
+                atualizarPonteiro(ponteiroProg, valor);
+            }
         } else {
             console.error(`[GRID] ❌ Erro ao escrever velocidade programada: ${data.error}`);
             alert(`Erro ao escrever no PLC: ${data.error}`);
@@ -618,10 +646,29 @@ document.addEventListener('mousedown', function(event) {
     }
 });
 
+// Adiciona listener para ESC para cancelar digitação
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && teclado.style.display === "grid") {
+        // Cancela a digitação sem salvar
+        USER_TYPING_VELOCITY = false;
+        teclado.style.display = "none";
+        valorDigitado = "";
+        const input = document.getElementById(teclado.dataset.target);
+        if (input) {
+            input.blur();
+        }
+    }
+});
+
 
 function abrirTeclado(e) {
     const input = e.target.closest('.velocimetro-input');
     if (input) {
+        // Marca que o usuário está digitando se for o campo de velocidade programada
+        if (input.id === 'velocidadeInput') {
+            USER_TYPING_VELOCITY = true;
+        }
+        
         input.focus();
         const rect = input.getBoundingClientRect();
         teclado.style.display = "grid";
@@ -631,7 +678,6 @@ function abrirTeclado(e) {
         deveSubstituir = true;
         valorDigitado = "";
         e.stopPropagation();
-
     }
 }
 
@@ -648,6 +694,10 @@ function fecharTeclado() {
         // Escreve no PLC se for o campo de velocidade programada
         if (input.id === 'velocidadeInput') {
             escreverVelocidadeProgramada(valor);
+            // Libera o controle de digitação após um pequeno delay
+            setTimeout(() => {
+                USER_TYPING_VELOCITY = false;
+            }, 1000);
         }
     }
     teclado.style.display = "none";

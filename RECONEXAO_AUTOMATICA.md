@@ -137,7 +137,7 @@ max_retries = 3                        # Tentativas de conexão
 O sistema emite eventos para o frontend:
 
 - **`plc_connection_changed`**: Estado da conexão mudou
-- **`plc_reconnected`**: PLC foi reconectado com sucesso
+- **`plc_reconnected`**: PLC foi reconectado com sucesso'
 - **`plc_detected`**: PLC foi detectado e conectado automaticamente
 - **`force_reload`**: Força atualização da página (usado quando PLC é detectado)
 - **`telemetry`**: Dados de telemetria (inclui `plc_connected: true/false`)
