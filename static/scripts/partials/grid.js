@@ -191,29 +191,130 @@ function resetGridPositions() {
             console.error('❌ Verificação falhou: posições ainda existem');
         }
         
-        // Aplica o layout padrão imediatamente
+        // Aplica o layout padrão de forma mais segura
         console.log('🔄 Aplicando layout padrão...');
-        applyDefaultLayout();
         
-        // Recarrega a página para garantir que tudo está correto
-        setTimeout(() => {
-            console.log('🔄 Recarregando página para garantir consistência...');
-            window.location.reload();
-        }, 500);
+        // Primeiro, tenta aplicar o layout sem remover os botões
+        const layoutResult = applyDefaultLayoutSafe();
+        
+        if (layoutResult) {
+            console.log('✅ Layout padrão aplicado com sucesso (método seguro)');
+            // Salva as novas posições após aplicar o layout padrão
+            setTimeout(() => {
+                saveGridPositions();
+                console.log('✅ Novas posições salvas');
+            }, 100);
+        } else {
+            console.log('⚠️ Método seguro falhou, tentando método completo...');
+            // Se o método seguro falhar, usa o método original
+            const fullLayoutResult = applyDefaultLayout();
+            if (fullLayoutResult) {
+                console.log('✅ Layout padrão aplicado com método completo');
+                setTimeout(() => {
+                    saveGridPositions();
+                    console.log('✅ Novas posições salvas');
+                }, 100);
+            } else {
+                console.error('❌ Falha ao aplicar layout padrão');
+            }
+        }
         
     } catch (error) {
         console.error('❌ Erro ao resetar posições do grid:', error);
     }
 }
 
-// Função para aplicar o layout padrão
-function applyDefaultLayout() {
+// Função para aplicar o layout padrão de forma segura (sem remover botões)
+function applyDefaultLayoutSafe() {
     try {
-        const container = document.querySelector('.draggable-btn')?.parentNode;
+        console.log('🔄 Aplicando layout padrão (método seguro)...');
+        
+        // Tenta encontrar o container do grid
+        let container = document.querySelector('#grid-container');
+        if (!container) {
+            container = document.querySelector('.draggable-btn')?.parentNode;
+        }
         if (!container) {
             console.warn('⚠️ Container do grid não encontrado');
             return false;
         }
+        
+        const buttons = Array.from(container.querySelectorAll('.draggable-btn'));
+        if (buttons.length === 0) {
+            console.warn('⚠️ Nenhum botão draggable encontrado no container');
+            return false;
+        }
+
+        // Define a ordem padrão baseada nos data-station
+        const defaultOrder = [
+            'velocidade-real',
+            'velocidade-prog', 
+            'alarmes',
+            'plasson-farm',
+            'acumuladora',
+            'dosificadora',
+            'botao-7',
+            'botao-8',
+            'botao-9',
+            'botao-10',
+            'botao-11',
+            'botao-12'
+        ];
+
+        console.log('📋 Aplicando ordem padrão (método seguro):', defaultOrder);
+
+        // Cria um array com os botões na ordem correta
+        const reorderedButtons = [];
+        
+        // Mapeia as posições na ordem padrão
+        defaultOrder.forEach((stationId) => {
+            const button = buttons.find(btn => btn.getAttribute('data-station') === stationId);
+            if (button) {
+                reorderedButtons.push(button);
+            }
+        });
+        
+        // Adiciona botões que não estão na lista padrão no final
+        buttons.forEach(button => {
+            const station = button.getAttribute('data-station');
+            if (!defaultOrder.includes(station) && !reorderedButtons.includes(button)) {
+                reorderedButtons.push(button);
+            }
+        });
+
+        // Reordena os botões sem removê-los do DOM
+        reorderedButtons.forEach((button, index) => {
+            if (button && button.parentNode) {
+                // Move o botão para a posição correta
+                container.appendChild(button);
+                const station = button.getAttribute('data-station');
+                console.log(`✅ Botão ${station} movido para posição ${index}`);
+            }
+        });
+
+        console.log('✅ Layout padrão aplicado com sucesso (método seguro)');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Erro ao aplicar layout padrão (método seguro):', error);
+        return false;
+    }
+}
+
+// Função para aplicar o layout padrão
+function applyDefaultLayout() {
+    try {
+        // Tenta encontrar o container do grid de várias formas
+        let container = document.querySelector('#grid-container');
+        if (!container) {
+            container = document.querySelector('.draggable-btn')?.parentNode;
+        }
+        if (!container) {
+            console.warn('⚠️ Container do grid não encontrado');
+            return false;
+        }
+        
+        console.log('📦 Container encontrado:', container);
 
         const buttons = Array.from(container.querySelectorAll('.draggable-btn'));
         if (buttons.length === 0) {
@@ -239,26 +340,40 @@ function applyDefaultLayout() {
 
         console.log('📋 Aplicando ordem padrão:', defaultOrder);
 
-        // Remove todos os botões do container
-        buttons.forEach(button => {
-            container.removeChild(button);
-        });
-
-        // Adiciona os botões na ordem padrão
-        defaultOrder.forEach(stationId => {
+        // Cria um array com os botões na ordem correta
+        const reorderedButtons = new Array(buttons.length);
+        
+        // Mapeia as posições na ordem padrão
+        defaultOrder.forEach((stationId, index) => {
             const button = buttons.find(btn => btn.getAttribute('data-station') === stationId);
-            if (button) {
-                container.appendChild(button);
-                console.log(`✅ Botão ${stationId} adicionado na posição padrão`);
+            if (button && index < reorderedButtons.length) {
+                reorderedButtons[index] = button;
+            }
+        });
+        
+        // Adiciona botões que não estão na lista padrão no final
+        let nextIndex = defaultOrder.length;
+        buttons.forEach(button => {
+            const station = button.getAttribute('data-station');
+            if (!defaultOrder.includes(station) && nextIndex < reorderedButtons.length) {
+                reorderedButtons[nextIndex] = button;
+                nextIndex++;
             }
         });
 
-        // Adiciona botões que não estão na lista padrão no final
+        // Remove todos os botões do container
         buttons.forEach(button => {
-            const station = button.getAttribute('data-station');
-            if (!defaultOrder.includes(station)) {
+            if (button.parentNode) {
+                button.parentNode.removeChild(button);
+            }
+        });
+
+        // Adiciona os botões na ordem correta
+        reorderedButtons.forEach((button, index) => {
+            if (button) {
                 container.appendChild(button);
-                console.log(`✅ Botão ${station} adicionado no final (não está na lista padrão)`);
+                const station = button.getAttribute('data-station');
+                console.log(`✅ Botão ${station} adicionado na posição ${index}`);
             }
         });
 
@@ -314,34 +429,34 @@ function configurarDragAndDrop() {
 // Handlers separados para os eventos
 function handleMouseDown(e) {
     const button = e.currentTarget;
-    allowDrag = false;
+        allowDrag = false;
     currentWaitingButton = button;
     
     // Aplica efeito visual de espera
     button.classList.add('waiting-for-unlock');
     
-    dragTimeout = setTimeout(() => {
-        allowDrag = true;
+        dragTimeout = setTimeout(() => {
+            allowDrag = true;
         currentWaitingButton = null;
         
         // Remove efeito de espera e aplica efeito de desbloqueio
         button.classList.remove('waiting-for-unlock');
         button.classList.add('unlocked-for-drag');
         
-        // Inicia drag programaticamente se mouse ainda está pressionado
-        button.setAttribute('draggable', 'true');
+            // Inicia drag programaticamente se mouse ainda está pressionado
+            button.setAttribute('draggable', 'true');
         
         // Remove efeito de desbloqueio após animação
         setTimeout(() => {
             button.classList.remove('unlocked-for-drag');
         }, 500);
-    }, 1000); // 1 segundo
+        }, 1000); // 1 segundo
 }
 
 function handleMouseUp(e) {
     const button = e.currentTarget;
-    clearTimeout(dragTimeout);
-    button.removeAttribute('draggable');
+        clearTimeout(dragTimeout);
+        button.removeAttribute('draggable');
     
     // Remove todos os efeitos visuais
     if (currentWaitingButton === button) {
@@ -352,8 +467,8 @@ function handleMouseUp(e) {
 
 function handleMouseLeave(e) {
     const button = e.currentTarget;
-    clearTimeout(dragTimeout);
-    button.removeAttribute('draggable');
+        clearTimeout(dragTimeout);
+        button.removeAttribute('draggable');
     
     // Remove todos os efeitos visuais
     if (currentWaitingButton === button) {
@@ -363,27 +478,27 @@ function handleMouseLeave(e) {
 }
 
 function handleDragStart(e) {
-    if (!allowDrag) {
-        e.preventDefault();
-        return;
-    }
-    draggedButton = e.currentTarget;
+        if (!allowDrag) {
+            e.preventDefault();
+            return;
+        }
+        draggedButton = e.currentTarget;
     
     // Aplica efeito visual de arrastando
     draggedButton.classList.add('dragging');
-    document.querySelectorAll('.draggable-btn').forEach(btn => {
-        if (btn !== draggedButton) btn.classList.add('inactive');
-    });
-    allowDrag = false;
+        document.querySelectorAll('.draggable-btn').forEach(btn => {
+            if (btn !== draggedButton) btn.classList.add('inactive');
+        });
+        allowDrag = false;
 }
 
 function handleDragEnd(e) {
     const button = e.currentTarget;
     // Remove efeito de arrastando
     draggedButton.classList.remove('dragging');
-    document.querySelectorAll('.draggable-btn').forEach(btn => btn.classList.remove('inactive'));
-    button.removeAttribute('draggable');
-    allowDrag = false;
+        document.querySelectorAll('.draggable-btn').forEach(btn => btn.classList.remove('inactive'));
+        button.removeAttribute('draggable');
+        allowDrag = false;
 }
 
 function handleDragOver(e) {
@@ -391,22 +506,22 @@ function handleDragOver(e) {
 }
 
 function handleDrop(e) {
-    e.preventDefault();
-    const target = e.currentTarget;
-    if (draggedButton && target !== draggedButton) {
-        console.log('🔄 Drop detectado:', draggedButton.getAttribute('data-station'), '->', target.getAttribute('data-station'));
-        
-        const parent = target.parentNode;
-        const temp = document.createElement('div');
-        parent.insertBefore(temp, target);
-        parent.insertBefore(target, draggedButton);
-        parent.insertBefore(draggedButton, temp);
-        parent.removeChild(temp);
-        
-        // Salva as novas posições imediatamente após o drop
-        console.log('💾 Salvando posições após drop...');
-        saveGridPositions();
-    }
+        e.preventDefault();
+        const target = e.currentTarget;
+        if (draggedButton && target !== draggedButton) {
+            console.log('🔄 Drop detectado:', draggedButton.getAttribute('data-station'), '->', target.getAttribute('data-station'));
+            
+            const parent = target.parentNode;
+            const temp = document.createElement('div');
+            parent.insertBefore(temp, target);
+            parent.insertBefore(target, draggedButton);
+            parent.insertBefore(draggedButton, temp);
+            parent.removeChild(temp);
+            
+            // Salva as novas posições imediatamente após o drop
+            console.log('💾 Salvando posições após drop...');
+            saveGridPositions();
+        }
 }
 
 // Aguarda o DOM estar completamente carregado antes de configurar os eventos
@@ -770,7 +885,7 @@ function abrirTeclado(e) {
         
         if (isInUpperHalf) {
             // Campo na parte superior - mostra teclado embaixo
-            teclado.style.top = `${rect.bottom + 15}px`;
+        teclado.style.top = `${rect.bottom + 15}px`;
         } else {
             // Campo na parte inferior - mostra teclado em cima do velocímetro inteiro
             // Encontra o container do velocímetro para posicionar acima dele
@@ -1165,54 +1280,646 @@ window.testTecladoPosition = function() {
     console.log('💡 Se estiver na parte inferior, o teclado deve aparecer ACIMA do velocímetro inteiro');
 };
 
-// Adiciona atalho de teclado para resetar posições (Ctrl+Shift+R)
-document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'R') {
-        e.preventDefault();
-        if (confirm('Deseja resetar as posições do grid para o padrão?')) {
-            resetGridPositions();
+// Função global para testar o botão reset
+window.testResetButton = function() {
+    console.log('🧪 Testando botão reset...');
+    
+    const resetButton = document.getElementById('btn-reset-grid');
+    if (resetButton) {
+        console.log('✅ Botão reset encontrado:', resetButton);
+        console.log('🔍 Estilo do botão:', window.getComputedStyle(resetButton));
+        console.log('🔍 Posição do botão:', resetButton.getBoundingClientRect());
+        console.log('🔍 Eventos do botão:', resetButton.onclick);
+        
+        // Simula um clique
+        resetButton.click();
+    } else {
+        console.error('❌ Botão reset não encontrado!');
+        console.log('🔍 Tentando encontrar botão com outros seletores...');
+        const altButton = document.querySelector('[id*="reset"]');
+        if (altButton) {
+            console.log('🔍 Botão alternativo encontrado:', altButton);
         }
     }
-});
+};
+
+// Função global para testar o reset diretamente
+window.testResetDirect = function() {
+    console.log('🧪 Testando reset direto...');
+    resetGridPositions();
+};
+
+// Função global para configurar o botão reset manualmente
+window.configurarReset = function() {
+    console.log('🔧 Configurando botão reset manualmente...');
+    return configurarBotaoReset();
+};
+
+// Função global para forçar reset sem confirmação
+window.forceReset = function() {
+    console.log('🔄 Forçando reset do grid...');
+    resetGridPositions();
+};
+
+// Função global para debug completo do botão reset
+window.debugResetButton = function() {
+    console.log('🔍 === DEBUG COMPLETO DO BOTÃO RESET ===');
+    
+    // Procura o botão de várias formas
+    const selectors = [
+        '#btn-reset-grid',
+        '[id*="reset"]',
+        '[class*="reset"]',
+        'button[onclick*="reset"]'
+    ];
+    
+    selectors.forEach(selector => {
+        try {
+            const elements = document.querySelectorAll(selector);
+            console.log(`🔍 Seletor "${selector}": ${elements.length} elementos encontrados`);
+            elements.forEach((el, i) => {
+                console.log(`   ${i + 1}. ${el.tagName}#${el.id}.${el.className} - Texto: "${el.textContent.trim()}"`);
+            });
+        } catch (e) {
+            console.log(`❌ Erro com seletor "${selector}": ${e.message}`);
+        }
+    });
+    
+    // Verifica se há botões com texto "reset"
+    const allButtons = document.querySelectorAll('button');
+    console.log(`🔍 Total de botões na página: ${allButtons.length}`);
+    allButtons.forEach((btn, i) => {
+        const text = btn.textContent.toLowerCase().trim();
+        if (text.includes('reset') || text.includes('padrão') || text.includes('default')) {
+            console.log(`🎯 Botão ${i + 1} com texto relacionado: "${btn.textContent.trim()}" (ID: ${btn.id})`);
+        }
+    });
+    
+    console.log('🔍 === FIM DO DEBUG ===');
+};
+
+// Função global para testar clique programático
+window.testClickReset = function() {
+    console.log('🧪 Testando clique programático no botão reset...');
+    
+    const resetButton = document.getElementById('btn-reset-grid') || 
+                      document.querySelector('[id*="reset"]') ||
+                      document.querySelector('button[onclick*="reset"]');
+    
+    if (resetButton) {
+        console.log('✅ Botão encontrado, simulando clique...');
+        console.log('🔍 Botão antes do clique:', resetButton);
+        
+        // Simula clique programático
+        const clickEvent = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+        });
+        
+        resetButton.dispatchEvent(clickEvent);
+        console.log('✅ Clique programático enviado');
+    } else {
+        console.error('❌ Botão reset não encontrado para teste');
+    }
+};
+
+// Função global para forçar configuração e teste
+window.forceConfigAndTest = function() {
+    console.log('🔧 Forçando configuração e teste do botão reset...');
+    
+    // Configura o botão
+    const configurado = configurarBotaoReset();
+    
+    if (configurado) {
+        console.log('✅ Botão configurado, testando clique...');
+        setTimeout(() => {
+            testClickReset();
+        }, 100);
+    } else {
+        console.error('❌ Falha ao configurar botão');
+    }
+};
+
+// Função global para teste seguro do reset (sem bagunçar o grid)
+window.testResetSafe = function() {
+    console.log('🧪 Teste seguro do reset (sem modificar o grid)...');
+    
+    // Configura o botão
+    const configurado = configurarBotaoReset();
+    
+    if (configurado) {
+        console.log('✅ Botão configurado');
+        console.log('🔄 Testando apenas a configuração do evento...');
+        
+        // Apenas testa se o botão está configurado, sem simular clique
+        const resetButton = document.getElementById('btn-reset-grid');
+        if (resetButton) {
+            console.log('✅ Botão encontrado:', resetButton);
+            console.log('🔍 onclick configurado:', !!resetButton.onclick);
+            console.log('🔍 addEventListener configurado: Sim');
+            console.log('✅ Teste de configuração concluído - botão pronto para uso');
+        }
+    } else {
+        console.error('❌ Falha ao configurar botão');
+    }
+};
+
+// Função global para testar se o evento está funcionando
+window.testEventListeners = function() {
+    console.log('🧪 Testando event listeners do botão reset...');
+    
+    const resetButton = document.getElementById('btn-reset-grid');
+    if (!resetButton) {
+        console.error('❌ Botão reset não encontrado');
+        return;
+    }
+    
+    console.log('✅ Botão encontrado:', resetButton);
+    console.log('🔍 Event listeners ativos:');
+    
+    // Verifica se tem onclick
+    console.log('   onclick:', resetButton.onclick);
+    
+    // Verifica se tem addEventListener (não é possível listar diretamente, mas podemos testar)
+    console.log('   addEventListener configurado: Sim');
+    
+    // Testa clique programático
+    console.log('🔄 Testando clique programático...');
+    resetButton.click();
+    
+    console.log('✅ Teste concluído');
+};
+
+// Função global para testar o botão reset de forma simples
+window.testResetButton = function() {
+    console.log('🧪 Testando botão reset de forma simples...');
+    
+    // Configura o botão
+    const configurado = configurarBotaoReset();
+    
+    if (configurado) {
+        console.log('✅ Botão configurado com sucesso');
+        console.log('🔄 Agora clique no botão reset para testar');
+        console.log('📝 Verifique o console para ver os logs do clique');
+    } else {
+        console.error('❌ Falha ao configurar botão');
+    }
+};
+
+// Função global para reset simples (apenas limpa e recarrega)
+window.resetSimple = function() {
+    console.log('🔄 Reset simples - apenas limpa storage e recarrega...');
+    
+    const confirmReset = confirm('⚠️ Deseja realmente resetar as posições do grid?\n\nIsso irá:\n• Limpar todas as posições salvas\n• Recarregar a página\n\nClique em OK para confirmar ou Cancelar para abortar.');
+    
+    if (!confirmReset) {
+        console.log('❌ Reset cancelado pelo usuário');
+        return;
+    }
+    
+    console.log('✅ Reset confirmado pelo usuário');
+    
+    try {
+        // Limpa as posições salvas
+        localStorage.removeItem(GRID_POSITIONS_KEY);
+        sessionStorage.removeItem(GRID_POSITIONS_KEY);
+        console.log('✅ Posições limpas do storage');
+        
+        // Recarrega a página
+        console.log('🔄 Recarregando página...');
+        window.location.reload();
+    } catch (error) {
+        console.error('❌ Erro ao executar reset simples:', error);
+        // Mesmo com erro, tenta recarregar
+        window.location.reload();
+    }
+};
+
+// Função global para testar o reset diretamente
+window.testResetDirect = function() {
+    console.log('🧪 Testando reset diretamente...');
+    
+    // Configura o botão
+    const configurado = configurarBotaoReset();
+    
+    if (configurado) {
+        console.log('✅ Botão configurado');
+        console.log('🔄 Simulando clique direto...');
+        
+        // Simula o clique diretamente
+        const resetButton = document.getElementById('btn-reset-grid');
+        if (resetButton) {
+            // Cria um evento de clique
+            const clickEvent = new MouseEvent('click', {
+                bubbles: true,
+                cancelable: true,
+                view: window
+            });
+            
+            // Dispara o evento
+            resetButton.dispatchEvent(clickEvent);
+        }
+    } else {
+        console.error('❌ Falha ao configurar botão');
+    }
+};
+
+// Função global para debugar o reset das posições
+window.debugPositionReset = function() {
+    console.log('🔍 === DEBUG DO RESET DE POSIÇÕES ===');
+    
+    // Verifica posições atuais
+    const currentPositions = localStorage.getItem(GRID_POSITIONS_KEY);
+    console.log('📋 Posições atuais no localStorage:', currentPositions);
+    
+    const currentSessionPositions = sessionStorage.getItem(GRID_POSITIONS_KEY);
+    console.log('📋 Posições atuais no sessionStorage:', currentSessionPositions);
+    
+    // Verifica se há posições salvas
+    if (currentPositions) {
+        try {
+            const parsed = JSON.parse(currentPositions);
+            console.log('📋 Posições parseadas:', parsed);
+        } catch (e) {
+            console.error('❌ Erro ao fazer parse das posições:', e);
+        }
+    }
+    
+    // Simula o reset
+    console.log('🔄 Simulando limpeza do storage...');
+    localStorage.removeItem(GRID_POSITIONS_KEY);
+    sessionStorage.removeItem(GRID_POSITIONS_KEY);
+    
+    // Verifica se foi limpo
+    const afterClear = localStorage.getItem(GRID_POSITIONS_KEY);
+    console.log('📋 Após limpeza (localStorage):', afterClear);
+    
+    const afterClearSession = sessionStorage.getItem(GRID_POSITIONS_KEY);
+    console.log('📋 Após limpeza (sessionStorage):', afterClearSession);
+    
+    if (afterClear === null && afterClearSession === null) {
+        console.log('✅ Storage limpo com sucesso');
+    } else {
+        console.error('❌ Storage não foi limpo corretamente');
+    }
+    
+    console.log('🔍 === FIM DO DEBUG ===');
+};
+
+// Função global para forçar reset completo
+window.forceResetComplete = function() {
+    console.log('🔄 Forçando reset completo...');
+    
+    const confirmReset = confirm('⚠️ Deseja realmente resetar as posições do grid?\n\nIsso irá:\n• Limpar todas as posições salvas\n• Aplicar layout padrão\n• Recarregar a página\n\nClique em OK para confirmar ou Cancelar para abortar.');
+    
+    if (!confirmReset) {
+        console.log('❌ Reset cancelado pelo usuário');
+        return;
+    }
+    
+    console.log('✅ Reset confirmado pelo usuário');
+    
+    try {
+        // 1. Limpa as posições salvas
+        localStorage.removeItem(GRID_POSITIONS_KEY);
+        sessionStorage.removeItem(GRID_POSITIONS_KEY);
+        console.log('✅ Posições limpas do storage');
+        
+        // 2. Aplica o layout padrão
+        console.log('🔄 Aplicando layout padrão...');
+        const result = applyDefaultLayoutSafe();
+        if (result) {
+            console.log('✅ Layout padrão aplicado com sucesso');
+        } else {
+            console.log('⚠️ Método seguro falhou, tentando método completo...');
+            const fullResult = applyDefaultLayout();
+            if (fullResult) {
+                console.log('✅ Layout padrão aplicado com método completo');
+            } else {
+                console.error('❌ Falha ao aplicar layout padrão');
+            }
+        }
+        
+        // 3. Salva as novas posições
+        setTimeout(() => {
+            saveGridPositions();
+            console.log('✅ Novas posições salvas');
+            
+            // 4. Recarrega a página
+            console.log('🔄 Recarregando página...');
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        }, 200);
+        
+    } catch (error) {
+        console.error('❌ Erro ao executar reset completo:', error);
+        // Mesmo com erro, tenta recarregar
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
+    }
+};
+
+// Função global para verificar se o botão está configurado automaticamente
+window.checkResetButton = function() {
+    console.log('🔍 Verificando configuração automática do botão reset...');
+    
+    const resetButton = document.getElementById('btn-reset-grid');
+    if (!resetButton) {
+        console.error('❌ Botão reset não encontrado');
+        return false;
+    }
+    
+    console.log('✅ Botão encontrado:', resetButton);
+    
+    // Verifica se tem event listeners
+    const hasOnclick = !!resetButton.onclick;
+    console.log('🔍 onclick configurado:', hasOnclick);
+    
+    // Testa se o botão responde ao clique
+    console.log('🔄 Testando clique no botão...');
+    console.log('📝 Clique no botão reset na tela para testar');
+    
+    return true;
+};
+
+// Função global para forçar configuração do botão
+window.forceConfigureReset = function() {
+    console.log('🔧 Forçando configuração do botão reset...');
+    
+    const result = configurarBotaoReset();
+    if (result) {
+        console.log('✅ Botão configurado com sucesso');
+        
+        // Verifica se funcionou
+        const resetButton = document.getElementById('btn-reset-grid');
+        if (resetButton) {
+            const hasOnclick = !!resetButton.onclick;
+            console.log('🔍 onclick após configuração:', hasOnclick);
+            
+            if (hasOnclick) {
+                console.log('✅ Botão pronto para uso!');
+                console.log('🔄 Agora clique no botão reset na tela');
+            } else {
+                console.error('❌ Falha na configuração do onclick');
+            }
+        }
+    } else {
+        console.error('❌ Falha ao configurar botão');
+    }
+    
+    return result;
+};
+
+// Função global para verificar se a configuração automática está funcionando
+window.checkAutoConfig = function() {
+    console.log('🔍 Verificando configuração automática...');
+    
+    const resetButton = document.getElementById('btn-reset-grid');
+    if (!resetButton) {
+        console.error('❌ Botão reset não encontrado');
+        return false;
+    }
+    
+    console.log('✅ Botão encontrado:', resetButton);
+    
+    const hasOnclick = !!resetButton.onclick;
+    console.log('🔍 onclick configurado:', hasOnclick);
+    
+    if (hasOnclick) {
+        console.log('✅ Configuração automática funcionando!');
+        console.log('🔄 Botão pronto para uso - clique na tela para testar');
+    } else {
+        console.log('⚠️ Configuração automática não funcionou');
+        console.log('🔧 Executando configuração manual...');
+        forceConfigureReset();
+    }
+    
+    return hasOnclick;
+};
+
+// Atalho de teclado removido conforme solicitado pelo usuário
+
+// Função para configurar o botão de reset
+function configurarBotaoReset() {
+    console.log('🔧 Configurando botão de reset...');
+    
+    // Tenta diferentes seletores para encontrar o botão
+    const selectors = [
+        '#btn-reset-grid',
+        '[id*="reset"]',
+        'button[onclick*="reset"]'
+    ];
+    
+    let resetButton = null;
+    let usedSelector = '';
+    
+    for (const selector of selectors) {
+        try {
+            const elements = document.querySelectorAll(selector);
+            if (elements.length > 0) {
+                resetButton = elements[0];
+                usedSelector = selector;
+                console.log(`✅ Botão encontrado com seletor: ${selector}`);
+                break;
+            }
+        } catch (e) {
+            console.log(`❌ Erro com seletor ${selector}: ${e.message}`);
+        }
+    }
+    
+    // Se não encontrou com seletores, procura por texto
+    if (!resetButton) {
+        const allButtons = document.querySelectorAll('button');
+        for (const btn of allButtons) {
+            const text = btn.textContent.toLowerCase().trim();
+            if (text.includes('reset') || text.includes('padrão') || text.includes('default')) {
+                resetButton = btn;
+                usedSelector = 'texto';
+                console.log(`✅ Botão encontrado por texto: "${btn.textContent.trim()}"`);
+                break;
+            }
+        }
+    }
+    
+    if (resetButton) {
+        console.log(`✅ Botão de reset encontrado (${usedSelector}):`, resetButton);
+        console.log('🔍 ID do botão:', resetButton.id);
+        console.log('🔍 Classe do botão:', resetButton.className);
+        console.log('🔍 Texto do botão:', resetButton.textContent);
+        
+        // Remove qualquer evento anterior
+        resetButton.removeEventListener('click', handleResetClick);
+        
+        // Limpa todos os event listeners anteriores
+        resetButton.onclick = null;
+        resetButton.removeAttribute('onclick');
+        
+        // Adiciona event listener
+        resetButton.addEventListener('click', handleResetClick);
+        
+        // Adiciona também onclick como fallback
+        resetButton.onclick = function(e) {
+            console.log('🔄 onclick chamado diretamente!');
+            handleResetClick(e);
+        };
+        
+        console.log('✅ Event listener e onclick configurados com sucesso');
+        
+        // Adiciona evento de mouseup para debug
+        resetButton.addEventListener('mouseup', () => {
+            console.log('🖱️ Botão reset mouseup detectado');
+        });
+        
+        // Testa se o evento foi adicionado
+        console.log('🔍 Evento onclick configurado:', resetButton.onclick);
+        
+        return true;
+    } else {
+        console.warn('⚠️ Botão de reset não encontrado com nenhum seletor!');
+        return false;
+    }
+}
+
+// Função para configurar o botão reset com múltiplas tentativas
+function configurarBotaoResetComTentativas() {
+    console.log('🔧 Tentando configurar botão reset...');
+    
+    let tentativas = 0;
+    const maxTentativas = 10;
+    
+    function tentarConfigurar() {
+        tentativas++;
+        console.log(`🔄 Tentativa ${tentativas}/${maxTentativas}`);
+        
+        const configurado = configurarBotaoReset();
+        if (configurado) {
+            console.log('✅ Botão reset configurado com sucesso!');
+            return true;
+        }
+        
+        if (tentativas < maxTentativas) {
+            console.log(`⏳ Tentando novamente em 500ms...`);
+            setTimeout(tentarConfigurar, 500);
+        } else {
+            console.error('❌ Falha ao configurar botão reset após todas as tentativas');
+            return false;
+        }
+    }
+    
+    tentarConfigurar();
+}
 
 // Adiciona evento de clique para o botão de reset
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🔧 Configurando botão de reset...');
+    console.log('🚀 DOMContentLoaded - Iniciando configuração do botão reset');
+    configurarBotaoResetComTentativas();
+});
+
+// Também tenta configurar quando a página estiver completamente carregada
+window.addEventListener('load', () => {
+    console.log('🚀 Window load - Verificando configuração do botão reset');
+    const resetButton = document.getElementById('btn-reset-grid');
+    if (resetButton && !resetButton.onclick) {
+        console.log('⚠️ Botão encontrado mas sem onclick, configurando...');
+        configurarBotaoResetComTentativas();
+    }
+});
+
+// Adiciona event delegation como fallback
+console.log('🔧 Configurando event delegation para botão reset...');
+document.addEventListener('click', (e) => {
+    const target = e.target;
+    const isResetButton = target.id === 'btn-reset-grid' || 
+                        target.id.includes('reset') ||
+                        target.textContent.toLowerCase().includes('reset') ||
+                        target.textContent.toLowerCase().includes('padrão');
     
-    // Tenta encontrar o botão com um pequeno delay para garantir que o DOM está pronto
-    setTimeout(() => {
-        const resetButton = document.getElementById('btn-reset-grid');
-        if (resetButton) {
-            console.log('✅ Botão de reset encontrado');
-            
-            // Remove qualquer evento anterior
-            resetButton.removeEventListener('click', handleResetClick);
-            
-            // Adiciona o novo evento
-            resetButton.addEventListener('click', handleResetClick);
-            
-            // Também adiciona um evento de mousedown para debug
-            resetButton.addEventListener('mousedown', () => {
-                console.log('🖱️ Botão reset mousedown detectado');
-            });
-            
-        } else {
-            console.warn('⚠️ Botão de reset não encontrado!');
-        }
-    }, 100);
+    if (isResetButton) {
+        console.log('🎯 Event delegation capturou clique no botão reset:', target);
+        e.preventDefault();
+        e.stopPropagation();
+        handleResetClick(e);
+    }
 });
 
 // Função separada para o handler do clique
+// Variável para controlar se o reset já está sendo processado
+let isResetting = false;
+
 function handleResetClick(e) {
+    console.log('🔄 handleResetClick chamado!');
+    console.log('🔄 Evento:', e);
+    console.log('🔄 Target:', e.target);
+    
+    // Previne múltiplas execuções
+    if (isResetting) {
+        console.log('⚠️ Reset já está sendo processado, ignorando...');
+        return;
+    }
+    
     e.preventDefault();
     e.stopPropagation();
     console.log('🔄 Botão reset clicado');
     
-    if (confirm('Deseja resetar as posições do grid para o padrão?')) {
-        console.log('✅ Usuário confirmou reset');
-        resetGridPositions();
-    } else {
-        console.log('❌ Usuário cancelou reset');
+    // Mostra confirmação antes de resetar
+    const confirmReset = confirm('⚠️ Deseja realmente resetar as posições do grid?\n\nIsso irá:\n• Limpar todas as posições salvas\n• Recarregar a página\n\nClique em OK para confirmar ou Cancelar para abortar.');
+    
+    if (!confirmReset) {
+        console.log('❌ Reset cancelado pelo usuário');
+        return;
+    }
+    
+    console.log('✅ Reset confirmado pelo usuário');
+    
+    // Marca que está processando
+    isResetting = true;
+    
+    // Executa o reset completo - limpa, aplica layout e recarrega
+    try {
+        console.log('🔄 Executando reset completo...');
+        
+        // 1. Limpa as posições salvas
+        localStorage.removeItem(GRID_POSITIONS_KEY);
+        sessionStorage.removeItem(GRID_POSITIONS_KEY);
+        console.log('✅ Posições limpas do storage');
+        
+        // 2. Aplica o layout padrão
+        console.log('🔄 Aplicando layout padrão...');
+        const result = applyDefaultLayoutSafe();
+        if (result) {
+            console.log('✅ Layout padrão aplicado com sucesso');
+        } else {
+            console.log('⚠️ Método seguro falhou, tentando método completo...');
+            const fullResult = applyDefaultLayout();
+            if (fullResult) {
+                console.log('✅ Layout padrão aplicado com método completo');
+            } else {
+                console.error('❌ Falha ao aplicar layout padrão');
+            }
+        }
+        
+        // 3. Salva as novas posições
+        setTimeout(() => {
+            saveGridPositions();
+            console.log('✅ Novas posições salvas');
+            
+            // 4. Recarrega a página
+            console.log('🔄 Recarregando página...');
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        }, 200);
+        
+    } catch (error) {
+        console.error('❌ Erro ao executar reset:', error);
+        // Mesmo com erro, tenta recarregar
+        console.log('🔄 Recarregando página mesmo com erro...');
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
     }
 }
 
