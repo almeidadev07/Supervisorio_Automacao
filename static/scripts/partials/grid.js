@@ -274,9 +274,10 @@ function applyDefaultLayout() {
 // Trava para só permitir drag após segurar por 1 segundo
 let dragTimeout = null;
 let allowDrag = false;
+let currentWaitingButton = null;
 
-// Aguarda o DOM estar completamente carregado antes de configurar os eventos
-document.addEventListener('DOMContentLoaded', () => {
+// Função para configurar eventos de drag and drop
+function configurarDragAndDrop() {
     console.log('🔧 Configurando eventos de drag and drop...');
     
     const draggableButtons = document.querySelectorAll('.draggable-btn');
@@ -286,70 +287,131 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('⚠️ Nenhum botão .draggable-btn encontrado! Verificando seletor alternativo...');
         const alternativeButtons = document.querySelectorAll('[data-station]');
         console.log('🔍 Botões com data-station encontrados:', alternativeButtons.length);
+        return;
     }
-});
 
-document.querySelectorAll('.draggable-btn').forEach(button => {
-    // Impede drag imediato
-    button.addEventListener('mousedown', (e) => {
-        allowDrag = false;
-        dragTimeout = setTimeout(() => {
-            allowDrag = true;
-            // Inicia drag programaticamente se mouse ainda está pressionado
-            button.setAttribute('draggable', 'true');
-        }, 1000); // 1 segundo
+    draggableButtons.forEach(button => {
+        // Remove event listeners existentes para evitar duplicação
+        button.removeEventListener('mousedown', handleMouseDown);
+        button.removeEventListener('mouseup', handleMouseUp);
+        button.removeEventListener('mouseleave', handleMouseLeave);
+        button.removeEventListener('dragstart', handleDragStart);
+        button.removeEventListener('dragend', handleDragEnd);
+        button.removeEventListener('dragover', handleDragOver);
+        button.removeEventListener('drop', handleDrop);
+        
+        // Adiciona os novos event listeners
+        button.addEventListener('mousedown', handleMouseDown);
+        button.addEventListener('mouseup', handleMouseUp);
+        button.addEventListener('mouseleave', handleMouseLeave);
+        button.addEventListener('dragstart', handleDragStart);
+        button.addEventListener('dragend', handleDragEnd);
+        button.addEventListener('dragover', handleDragOver);
+        button.addEventListener('drop', handleDrop);
     });
+}
 
-    button.addEventListener('mouseup', (e) => {
-        clearTimeout(dragTimeout);
-        button.removeAttribute('draggable');
-    });
+// Handlers separados para os eventos
+function handleMouseDown(e) {
+    const button = e.currentTarget;
+    allowDrag = false;
+    currentWaitingButton = button;
+    
+    // Aplica efeito visual de espera
+    button.classList.add('waiting-for-unlock');
+    
+    dragTimeout = setTimeout(() => {
+        allowDrag = true;
+        currentWaitingButton = null;
+        
+        // Remove efeito de espera e aplica efeito de desbloqueio
+        button.classList.remove('waiting-for-unlock');
+        button.classList.add('unlocked-for-drag');
+        
+        // Inicia drag programaticamente se mouse ainda está pressionado
+        button.setAttribute('draggable', 'true');
+        
+        // Remove efeito de desbloqueio após animação
+        setTimeout(() => {
+            button.classList.remove('unlocked-for-drag');
+        }, 500);
+    }, 1000); // 1 segundo
+}
 
-    button.addEventListener('mouseleave', (e) => {
-        clearTimeout(dragTimeout);
-        button.removeAttribute('draggable');
-    });
+function handleMouseUp(e) {
+    const button = e.currentTarget;
+    clearTimeout(dragTimeout);
+    button.removeAttribute('draggable');
+    
+    // Remove todos os efeitos visuais
+    if (currentWaitingButton === button) {
+        currentWaitingButton = null;
+    }
+    button.classList.remove('waiting-for-unlock', 'unlocked-for-drag');
+}
 
-    button.addEventListener('dragstart', (e) => {
-        if (!allowDrag) {
-            e.preventDefault();
-            return;
-        }
-        draggedButton = e.currentTarget;
-        draggedButton.style.opacity = '0.5';
-        document.querySelectorAll('.draggable-btn').forEach(btn => {
-            if (btn !== draggedButton) btn.classList.add('inactive');
-        });
-        allowDrag = false;
-    });
+function handleMouseLeave(e) {
+    const button = e.currentTarget;
+    clearTimeout(dragTimeout);
+    button.removeAttribute('draggable');
+    
+    // Remove todos os efeitos visuais
+    if (currentWaitingButton === button) {
+        currentWaitingButton = null;
+    }
+    button.classList.remove('waiting-for-unlock', 'unlocked-for-drag');
+}
 
-    button.addEventListener('dragend', () => {
-        draggedButton.style.opacity = '1';
-        document.querySelectorAll('.draggable-btn').forEach(btn => btn.classList.remove('inactive'));
-        button.removeAttribute('draggable');
-        allowDrag = false;
-    });
-
-    button.addEventListener('dragover', (e) => e.preventDefault());
-
-    button.addEventListener('drop', (e) => {
+function handleDragStart(e) {
+    if (!allowDrag) {
         e.preventDefault();
-        const target = e.currentTarget;
-        if (draggedButton && target !== draggedButton) {
-            console.log('🔄 Drop detectado:', draggedButton.getAttribute('data-station'), '->', target.getAttribute('data-station'));
-            
-            const parent = target.parentNode;
-            const temp = document.createElement('div');
-            parent.insertBefore(temp, target);
-            parent.insertBefore(target, draggedButton);
-            parent.insertBefore(draggedButton, temp);
-            parent.removeChild(temp);
-            
-            // Salva as novas posições imediatamente após o drop
-            console.log('💾 Salvando posições após drop...');
-            saveGridPositions();
-        }
+        return;
+    }
+    draggedButton = e.currentTarget;
+    
+    // Aplica efeito visual de arrastando
+    draggedButton.classList.add('dragging');
+    document.querySelectorAll('.draggable-btn').forEach(btn => {
+        if (btn !== draggedButton) btn.classList.add('inactive');
     });
+    allowDrag = false;
+}
+
+function handleDragEnd(e) {
+    const button = e.currentTarget;
+    // Remove efeito de arrastando
+    draggedButton.classList.remove('dragging');
+    document.querySelectorAll('.draggable-btn').forEach(btn => btn.classList.remove('inactive'));
+    button.removeAttribute('draggable');
+    allowDrag = false;
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    const target = e.currentTarget;
+    if (draggedButton && target !== draggedButton) {
+        console.log('🔄 Drop detectado:', draggedButton.getAttribute('data-station'), '->', target.getAttribute('data-station'));
+        
+        const parent = target.parentNode;
+        const temp = document.createElement('div');
+        parent.insertBefore(temp, target);
+        parent.insertBefore(target, draggedButton);
+        parent.insertBefore(draggedButton, temp);
+        parent.removeChild(temp);
+        
+        // Salva as novas posições imediatamente após o drop
+        console.log('💾 Salvando posições após drop...');
+        saveGridPositions();
+    }
+}
+
+// Aguarda o DOM estar completamente carregado antes de configurar os eventos
+document.addEventListener('DOMContentLoaded', () => {
+    configurarDragAndDrop();
 });
 
 // Funções do velocímetro
@@ -769,6 +831,9 @@ function inicializarVelocimetro() {
             console.log('💾 Salvando posições padrão...');
             saveGridPositions();
         }
+        
+        // Configura eventos de drag and drop após o grid estar pronto
+        configurarDragAndDrop();
     }, 100);
 
     // Inicialização dos velocímetros
@@ -912,6 +977,42 @@ window.testDefaultLayout = function() {
 
 // Função global para aplicar layout padrão
 window.applyDefaultLayout = applyDefaultLayout;
+
+// Função global para testar efeitos visuais
+window.testDragEffects = function() {
+    console.log('🧪 Testando efeitos visuais de drag and drop...');
+    
+    const buttons = document.querySelectorAll('.draggable-btn');
+    if (buttons.length === 0) {
+        console.error('❌ Nenhum botão encontrado para testar');
+        return;
+    }
+    
+    const firstButton = buttons[0];
+    console.log('🔘 Testando no primeiro botão:', firstButton.getAttribute('data-station'));
+    
+    // Testa efeito de espera
+    console.log('⏳ Aplicando efeito de espera...');
+    firstButton.classList.add('waiting-for-unlock');
+    
+    setTimeout(() => {
+        console.log('🔓 Aplicando efeito de desbloqueio...');
+        firstButton.classList.remove('waiting-for-unlock');
+        firstButton.classList.add('unlocked-for-drag');
+        
+        setTimeout(() => {
+            console.log('🎯 Aplicando efeito de arrastando...');
+            firstButton.classList.remove('unlocked-for-drag');
+            firstButton.classList.add('dragging');
+            
+            setTimeout(() => {
+                console.log('✅ Removendo todos os efeitos...');
+                firstButton.classList.remove('dragging');
+                console.log('✅ Teste de efeitos concluído!');
+            }, 1000);
+        }, 1000);
+    }, 1000);
+};
 
 // Adiciona atalho de teclado para resetar posições (Ctrl+Shift+R)
 document.addEventListener('keydown', (e) => {

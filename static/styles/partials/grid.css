@@ -26,7 +26,7 @@
     position: relative;
     width: 100%;
     height: 100%;
-    background-color: rgb(150, 150, 150);
+    background-color: rgb(180, 180, 180);
     color: white;
     border: none;
     cursor: grab;
@@ -35,7 +35,7 @@
     justify-content: center;
     font-size: 20px;
     border-radius: 6px;
-    transition: transform 0.2s;
+    transition: all 0.3s ease;
     pointer-events: all;
 }
 .draggable-btn:active {
@@ -45,6 +45,56 @@
 .draggable-btn.inactive {
     background-color: #ccc;
     cursor: not-allowed;
+}
+
+/* Estados visuais para drag and drop */
+.draggable-btn.waiting-for-unlock {
+    background-color: rgb(200, 200, 200);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    transform: scale(1.02);
+    animation: pulse-waiting 1s ease-in-out;
+}
+
+.draggable-btn.unlocked-for-drag {
+    background-color: rgb(160, 160, 160);
+    box-shadow: 0 0 15px rgba(0, 150, 255, 0.4);
+    transform: scale(1.05);
+    border: 2px solid rgba(0, 150, 255, 0.6);
+    animation: unlock-flash 0.5s ease-out;
+}
+
+.draggable-btn.dragging {
+    opacity: 0.7;
+    transform: scale(1.1) rotate(2deg);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+/* Animações */
+@keyframes pulse-waiting {
+    0%, 100% { 
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        transform: scale(1.02);
+    }
+    50% { 
+        box-shadow: 0 0 15px rgba(255, 165, 0, 0.4);
+        transform: scale(1.03);
+    }
+}
+
+@keyframes unlock-flash {
+    0% { 
+        background-color: rgb(160, 160, 160);
+        box-shadow: 0 0 15px rgba(0, 150, 255, 0.4);
+    }
+    50% { 
+        background-color: rgb(140, 200, 255);
+        box-shadow: 0 0 25px rgba(0, 150, 255, 0.8);
+    }
+    100% { 
+        background-color: rgb(160, 160, 160);
+        box-shadow: 0 0 15px rgba(0, 150, 255, 0.4);
+    }
 }
 
 /* ========== Velocímetros ========== */
