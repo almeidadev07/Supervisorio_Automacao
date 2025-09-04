@@ -8,61 +8,29 @@
     align-items: center;
     z-index: 10;
 }
+
 #menu {
     display: flex;
     justify-content: center;
     align-items: center;
-    position: fixed;  /* Mantém o menu fixo na tela */
+    position: fixed;
     left: 0;
-    bottom: 0;       /* Fixa o menu na base da tela */
+    bottom: 0;
     overflow: hidden;
     width: 100%;
     padding: 0 10px;
-    gap: 20px;       /* Espaçamento entre os grupos */
+    gap: 20px;
     transition: transform 0.8s ease-in-out;
-    background-color: #fff; /* Garante que o fundo do menu seja visível */
-    box-shadow: 0 -2px 5px rgba(0,0,0,0.1); /* Adiciona sombra sutil na parte superior */
-    z-index: 1000;   /* Garante que o menu fique sobre outros elementos */
-}
-
-.menu-btn {
-    width: 70px;
-    height: 70px;
-    display: flex;                /* centraliza o ícone */
-    justify-content: center;
-    align-items: center;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    border: none;
-    cursor: pointer;
-    transition: transform 0.3s ease, opacity 0.3s ease;
-    opacity: 0;
-    transform-origin: center center;
-    overflow: hidden;             /* garante que nada ultrapasse */
-}
-
-.menu-btn.zoomed {
-    z-index: 50;
-}
-
-
-
-
-.logo-btn {
-    position: relative;
-    z-index: 10;
-    cursor: pointer;
-    border: none !important;
-    outline: none !important;
-    background: transparent;
+    background-color: #fff;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+    z-index: 1000;
 }
 
 .menu-left,
 .menu-right {
     display: flex;
     align-items: center;
-    gap: 1px;
+    gap: 2px; /* Reduzido de 1px para 2px para melhor visualização */
 }
 
 .menu-left {
@@ -73,16 +41,125 @@
     justify-content: flex-start;
 }
 
+.menu-btn {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(145deg, #dc2626, #b91c1c); /* Vermelho Ferrari */
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform-origin: center center;
+    overflow: hidden;
+    box-shadow: 
+        0 4px 8px rgba(220, 38, 38, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    position: relative;
+    min-width: 80px;
+    flex-shrink: 0;
+    /* Garante que o background cubra toda a área do botão */
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.menu-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 6px 12px rgba(220, 38, 38, 0.4),
+        0 4px 8px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.menu-btn:active {
+    transform: translateY(0);
+    box-shadow: 
+        0 2px 4px rgba(220, 38, 38, 0.3),
+        0 1px 2px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.menu-btn.zoomed {
+    z-index: 50;
+    transform: scale(1.1);
+}
+
 .menu-icon {
-    max-width: 70%;               /* ícone sempre proporcional */
-    max-height: 70%;
-    object-fit: contain;          /* mantém proporção */
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    margin-bottom: 4px;
+    z-index: 2; /* Garante que o ícone fique sobre o background */
+    position: relative;
+}
+
+.menu-text {
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+    text-align: center;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    z-index: 2; /* Garante que o texto fique sobre o background */
+    position: relative;
+}
+
+/* Botão de desligar no canto esquerdo */
+.shutdown-btn {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(145deg, #dc2626, #b91c1c);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 
+        0 4px 8px rgba(220, 38, 38, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 1001;
+}
+
+.shutdown-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 6px 12px rgba(220, 38, 38, 0.4),
+        0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.shutdown-btn:active {
+    transform: translateY(0);
+    box-shadow: 
+        0 2px 4px rgba(220, 38, 38, 0.3),
+        0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.shutdown-icon {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    filter: brightness(0) invert(1); /* Torna o ícone branco */
 }
 
 /* Estilos responsivos */
 @media screen and (max-width: 768px) {
     #menu {
-        height: var(--menu-height, 70px); /* Menu menor em telas pequenas */
+        height: var(--menu-height, 70px);
         padding: 0 5px;
         gap: 15px;
     }
@@ -92,19 +169,29 @@
         height: 60px;
     }
 
-    .logo-btn img {
-        width: 60px;
-        height: 60px;
-    }
-
     .menu-icon {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
+        z-index: 2;
+        position: relative;
     }
 
-    .menu-left,
-    .menu-right {
-        gap: 2px;
+    .menu-text {
+        font-size: 8px;
+        z-index: 2;
+        position: relative;
+    }
+
+    .shutdown-btn {
+        width: 50px;
+        height: 50px;
+        bottom: 15px;
+        left: 15px;
+    }
+
+    .shutdown-icon {
+        width: 20px;
+        height: 20px;
     }
 }
 
@@ -120,19 +207,29 @@
         height: 50px;
     }
 
-    .logo-btn img {
-        width: 50px;
-        height: 50px;
-    }
-
     .menu-icon {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
+        z-index: 2;
+        position: relative;
     }
 
-    .menu-left,
-    .menu-right {
-        gap: 1px;
+    .menu-text {
+        font-size: 7px;
+        z-index: 2;
+        position: relative;
+    }
+
+    .shutdown-btn {
+        width: 45px;
+        height: 45px;
+        bottom: 10px;
+        left: 10px;
+    }
+
+    .shutdown-icon {
+        width: 18px;
+        height: 18px;
     }
 }
 
@@ -148,14 +245,29 @@
         height: 45px;
     }
 
-    .logo-btn img {
-        width: 45px;
-        height: 45px;
+    .menu-icon {
+        width: 18px;
+        height: 18px;
+        z-index: 2;
+        position: relative;
     }
 
-    .menu-icon {
-        width: 20px;
-        height: 20px;
+    .menu-text {
+        font-size: 6px;
+        z-index: 2;
+        position: relative;
+    }
+
+    .shutdown-btn {
+        width: 40px;
+        height: 40px;
+        bottom: 8px;
+        left: 8px;
+    }
+
+    .shutdown-icon {
+        width: 16px;
+        height: 16px;
     }
 }
 
@@ -172,18 +284,28 @@
         height: 40px;
     }
 
-    .logo-btn img {
-        width: 40px;
-        height: 40px;
-    }
-
     .menu-icon {
         width: 16px;
         height: 16px;
+        z-index: 2;
+        position: relative;
     }
 
-    .menu-left,
-    .menu-right {
-        gap: 0px;
+    .menu-text {
+        font-size: 6px;
+        z-index: 2;
+        position: relative;
+    }
+
+    .shutdown-btn {
+        width: 35px;
+        height: 35px;
+        bottom: 5px;
+        left: 5px;
+    }
+
+    .shutdown-icon {
+        width: 14px;
+        height: 14px;
     }
 }

@@ -2,35 +2,50 @@
 <button class="menu-toggle" onclick="toggleMenu()" aria-label="Abrir menu">
     <span></span>
 </button>
+
+<!-- Botão de desligar no canto esquerdo -->
+<button class="shutdown-btn" onclick="confirmShutdown()" title="Desligar Sistema">
+    <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Desligar.png') }}" alt="Desligar" class="shutdown-icon">
+</button>
+
 <nav id="menu">
     <!-- Botões da esquerda -->
     <div class="menu-left">
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="showGrid(event);zoomButton(this)">
+        <button class="menu-btn" onclick="showGrid(event);zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Inicio.png') }}" alt="Ícone Início" class="menu-icon">
+            <span class="menu-text">Início</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="showAlarm(event);zoomButton(this)">
+        <button class="menu-btn" onclick="showAlarm(event);zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Alarme.png') }}" alt="Ícone Alarme" class="menu-icon">
+            <span class="menu-text">Alarmes</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="showWeightRange(event);zoomButton(this)">
+        <button class="menu-btn" onclick="showWeightRange(event);zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Faixa_Peso.png') }}" alt="Ícone Faixa Peso" class="menu-icon">
+            <span class="menu-text">Faixa Peso</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="showBalance(event);zoomButton(this)">
+        <button class="menu-btn" onclick="showBalance(event);zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Balanca.png') }}" alt="Ícone Balança" class="menu-icon">
+            <span class="menu-text">Balança</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="showClassification(event);zoomButton(this)">
+        <button class="menu-btn" onclick="showClassification(event);zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Classificacao.png') }}" alt="Ícone Classificação" class="menu-icon">
+            <span class="menu-text">Classificação</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="zoomButton(this)">
+        <button class="menu-btn" onclick="zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Grafico.png') }}" alt="Ícone Gráfico" class="menu-icon">
+            <span class="menu-text">Gráficos</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="showInput(event);zoomButton(this)">
+        <button class="menu-btn" onclick="showInput(event);zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Entradas.png') }}" alt="Ícone Entradas" class="menu-icon">
+            <span class="menu-text">Entradas</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="showWasher(event);zoomButton(this)">
+        <button class="menu-btn" onclick="showWasher(event);zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Lavadora.png') }}" alt="Ícone Lavadora" class="menu-icon">
+            <span class="menu-text">Lavadora</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="zoomButton(this)">
+        <button class="menu-btn" onclick="zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Secadora.png') }}" alt="Ícone Secadora" class="menu-icon">
+            <span class="menu-text">Secadora</span>
         </button>
     </div>
     
@@ -41,32 +56,41 @@
     
     <!-- Botões da direita -->
     <div class="menu-right">
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="zoomButton(this)">
+        <button class="menu-btn" onclick="zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Amostras.png') }}" alt="Ícone Amostras" class="menu-icon">
+            <span class="menu-text">Amostras</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="showDiagram(event);zoomButton(this)">
+        <button class="menu-btn" onclick="showDiagram(event);zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Diagrama_Eletrico.png') }}" alt="Diagrama Elétrico" class="menu-icon">
+            <span class="menu-text">Diagramas</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="showWindows(event);zoomButton(this)">
+        <button class="menu-btn" onclick="zoomButton(this)">
+            <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Sinc.png') }}" alt="Sincronismo" class="menu-icon">
+            <span class="menu-text">Sincronismo</span>
+        </button>
+        <button class="menu-btn" onclick="showWindows(event);zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Janela.png') }}" alt="Ícone Janela" class="menu-icon">
+            <span class="menu-text">Janelas</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="zoomButton(this)">
+        <button class="menu-btn" onclick="zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Acionamento.png') }}" alt="Ícone Acionamento" class="menu-icon">
+            <span class="menu-text">Solenoides</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="zoomButton(this)">
+        <button class="menu-btn" onclick="zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Painel.png') }}" alt="Ícone Painel" class="menu-icon">
+            <span class="menu-text">Painéis</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="zoomButton(this)">
+        <button class="menu-btn" onclick="zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Consumo.png') }}" alt="Ícone Consumo" class="menu-icon">
+            <span class="menu-text">Consumo</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="zoomButton(this)">
+        <button class="menu-btn" onclick="zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Placas.png') }}" alt="Ícone Placas" class="menu-icon">
+            <span class="menu-text">Placas</span>
         </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="zoomButton(this)">
+        <button class="menu-btn" onclick="zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Informacao.png') }}" alt="Ícone Informação" class="menu-icon">
-        </button>
-        <button class="menu-btn" style="background-image: url('{{ url_for('static', filename='images/menu/boxs/00_Botao_Aux.png') }}');" onclick="handleLogout();zoomButton(this)">
-            <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Desliga.png') }}" alt="Desligar" class="menu-icon">
+            <span class="menu-text">Informações</span>
         </button>
     </div>
 </nav>
