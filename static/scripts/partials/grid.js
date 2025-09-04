@@ -444,6 +444,7 @@ function atualizarVelocidadeRealUI(valor){
 }
 
 function mostrarVelocidadeIndisponivel(){
+    // Velocidade real
     const valorEl = document.querySelector('#valorReal .valor');
     if (valorEl) {
         valorEl.textContent = '???';
@@ -453,6 +454,16 @@ function mostrarVelocidadeIndisponivel(){
     }
     const ponteiro = document.getElementById('ponteiroReal');
     if (ponteiro) atualizarPonteiro(ponteiro, 0);
+    
+    // Velocidade programada
+    const velocidadeInput = document.getElementById('velocidadeInput');
+    if (velocidadeInput) {
+        velocidadeInput.value = '???';
+    }
+    const ponteiroProg = document.getElementById('ponteiroProg');
+    if (ponteiroProg) {
+        atualizarPonteiro(ponteiroProg, 0);
+    }
 }
 
 function pickSpeedValue(obj){
@@ -722,6 +733,21 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
+// Reposiciona o teclado quando a janela for redimensionada
+window.addEventListener('resize', function() {
+    if (teclado.style.display === "grid") {
+        const input = document.getElementById(teclado.dataset.target);
+        if (input) {
+            // Simula um novo clique para reposicionar o teclado
+            const event = new MouseEvent('click', {
+                bubbles: true,
+                cancelable: true
+            });
+            input.dispatchEvent(event);
+        }
+    }
+});
+
 
 function abrirTeclado(e) {
     const input = e.target.closest('.velocimetro-input');
@@ -733,9 +759,58 @@ function abrirTeclado(e) {
         
         input.focus();
         const rect = input.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const tecladoHeight = 200; // Altura aproximada do teclado
+        
         teclado.style.display = "grid";
         teclado.style.left = `${rect.left}px`;
-        teclado.style.top = `${rect.bottom + 15}px`;
+        
+        // Detecta se o campo está na parte superior ou inferior da tela
+        const isInUpperHalf = rect.top < (viewportHeight / 2);
+        
+        if (isInUpperHalf) {
+            // Campo na parte superior - mostra teclado embaixo
+            teclado.style.top = `${rect.bottom + 15}px`;
+        } else {
+            // Campo na parte inferior - mostra teclado em cima do velocímetro inteiro
+            // Encontra o container do velocímetro para posicionar acima dele
+            const velocimetroContainer = input.closest('.draggable-btn');
+            if (velocimetroContainer) {
+                const containerRect = velocimetroContainer.getBoundingClientRect();
+                teclado.style.top = `${containerRect.top - tecladoHeight - 15}px`;
+            } else {
+                // Fallback: usa a posição do input
+                teclado.style.top = `${rect.top - tecladoHeight - 15}px`;
+            }
+        }
+        
+        // Ajusta posição horizontal para manter dentro da tela
+        const tecladoWidth = 300; // Largura aproximada do teclado
+        const viewportWidth = window.innerWidth;
+        
+        if (!isInUpperHalf) {
+            // Quando o teclado está em cima, centraliza em relação ao velocímetro
+            const velocimetroContainer = input.closest('.draggable-btn');
+            if (velocimetroContainer) {
+                const containerRect = velocimetroContainer.getBoundingClientRect();
+                const centerX = containerRect.left + (containerRect.width / 2) - (tecladoWidth / 2);
+                teclado.style.left = `${Math.max(10, Math.min(centerX, viewportWidth - tecladoWidth - 10))}px`;
+            }
+        } else {
+            // Quando o teclado está embaixo, usa a posição do input
+            if (rect.left + tecladoWidth > viewportWidth) {
+                teclado.style.left = `${viewportWidth - tecladoWidth - 10}px`;
+            }
+        }
+        
+        // Ajusta posição vertical se o teclado sair da tela
+        const finalTop = parseInt(teclado.style.top);
+        if (finalTop < 10) {
+            teclado.style.top = '10px';
+        } else if (finalTop + tecladoHeight > viewportHeight - 10) {
+            teclado.style.top = `${viewportHeight - tecladoHeight - 10}px`;
+        }
+        
         teclado.dataset.target = input.id;
         deveSubstituir = true;
         valorDigitado = "";
@@ -1012,6 +1087,82 @@ window.testDragEffects = function() {
             }, 1000);
         }, 1000);
     }, 1000);
+};
+
+// Função global para testar perda de conexão
+window.testConnectionLoss = function() {
+    console.log('🧪 Testando perda de conexão com PLC...');
+    mostrarVelocidadeIndisponivel();
+    console.log('✅ Velocidade real e programada devem mostrar "???"');
+};
+
+// Função global para restaurar velocidades
+window.restoreVelocities = function() {
+    console.log('🔄 Restaurando velocidades...');
+    
+    // Restaura velocidade real
+    const valorEl = document.querySelector('#valorReal .valor');
+    if (valorEl) {
+        valorEl.textContent = '0';
+    } else {
+        const root = document.getElementById('valorReal');
+        if (root) root.textContent = '0';
+    }
+    const ponteiro = document.getElementById('ponteiroReal');
+    if (ponteiro) atualizarPonteiro(ponteiro, 0);
+    
+    // Restaura velocidade programada
+    const velocidadeInput = document.getElementById('velocidadeInput');
+    if (velocidadeInput) {
+        velocidadeInput.value = '0';
+    }
+    const ponteiroProg = document.getElementById('ponteiroProg');
+    if (ponteiroProg) {
+        atualizarPonteiro(ponteiroProg, 0);
+    }
+    
+    console.log('✅ Velocidades restauradas para 0');
+};
+
+// Função global para testar posicionamento do teclado
+window.testTecladoPosition = function() {
+    console.log('🧪 Testando posicionamento do teclado...');
+    
+    const velocidadeInput = document.getElementById('velocidadeInput');
+    if (!velocidadeInput) {
+        console.error('❌ Campo de velocidade programada não encontrado');
+        return;
+    }
+    
+    const rect = velocidadeInput.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const isInUpperHalf = rect.top < (viewportHeight / 2);
+    
+    // Informações do velocímetro container
+    const velocimetroContainer = velocidadeInput.closest('.draggable-btn');
+    let containerInfo = 'Não encontrado';
+    if (velocimetroContainer) {
+        const containerRect = velocimetroContainer.getBoundingClientRect();
+        containerInfo = `Posição: ${containerRect.left}, ${containerRect.top} | Tamanho: ${containerRect.width} x ${containerRect.height}`;
+    }
+    
+    console.log('📊 Informações do campo:');
+    console.log(`   Posição: ${rect.left}, ${rect.top}`);
+    console.log(`   Tamanho da tela: ${window.innerWidth} x ${window.innerHeight}`);
+    console.log(`   Está na parte superior: ${isInUpperHalf}`);
+    console.log(`   Posição relativa: ${((rect.top / viewportHeight) * 100).toFixed(1)}%`);
+    console.log('📊 Informações do velocímetro:');
+    console.log(`   ${containerInfo}`);
+    
+    // Simula abertura do teclado
+    const event = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true
+    });
+    velocidadeInput.dispatchEvent(event);
+    
+    console.log('✅ Teclado aberto - verifique se está posicionado corretamente');
+    console.log('💡 Se estiver na parte inferior, o teclado deve aparecer ACIMA do velocímetro inteiro');
 };
 
 // Adiciona atalho de teclado para resetar posições (Ctrl+Shift+R)
