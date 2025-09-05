@@ -22,9 +22,60 @@
     max-width: 100%;
     padding: 10px 20px;
     gap: 8px;
-    transition: transform 0.8s ease-in-out;
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     background-color: transparent;
     z-index: 1000;
+}
+
+/* Estado inicial - menu fechado (todos os botões no centro) */
+#menu.closed {
+    transform: translateX(-50%) scale(0.9);
+    opacity: 0.8;
+}
+
+#menu.closed .menu-btn {
+    animation: none;
+    transform: scale(0) translateY(30px);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#menu.closed .logo-btn {
+    transform: scale(1);
+    opacity: 1;
+    animation: logoPulse 2s ease-in-out infinite;
+}
+
+/* Estado aberto - menu expandido (botões se movem para os cantos) */
+#menu.open {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+}
+
+#menu.open .menu-btn {
+    animation: none;
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#menu.open .logo-btn {
+    transform: scale(1.05);
+    opacity: 1;
+    animation: none;
+}
+
+/* Classe para ativar animação de expansão */
+#menu.expanding .menu-left .menu-btn:nth-child(1) { --btn-delay: 0s; }
+#menu.expanding .menu-left .menu-btn:nth-child(2) { --btn-delay: 0.1s; }
+#menu.expanding .menu-left .menu-btn:nth-child(3) { --btn-delay: 0.2s; }
+#menu.expanding .menu-right .menu-btn:nth-child(1) { --btn-delay: 0.1s; }
+#menu.expanding .menu-right .menu-btn:nth-child(2) { --btn-delay: 0.2s; }
+#menu.expanding .menu-right .menu-btn:nth-child(3) { --btn-delay: 0.3s; }
+
+/* Classe para ativar animação de fechamento */
+#menu.closing .menu-btn {
+    animation: slideOutToCenter 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .menu-left,
@@ -55,8 +106,9 @@
     border: none;
     border-radius: 12px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 0;
+    transform: scale(0) translateY(20px);
     transform-origin: center center;
     position: relative;
     min-width: 80px;
@@ -64,6 +116,29 @@
     padding: 0;
     margin: 0;
     box-shadow: none;
+}
+
+/* Animação de entrada dos botões do menu esquerdo */
+#menu.expanding .menu-left .menu-btn {
+    animation: slideInFromLeft 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    animation-delay: calc(0.2s + var(--btn-delay, 0s));
+}
+
+/* Animação de entrada dos botões do menu direito */
+#menu.expanding .menu-right .menu-btn {
+    animation: slideInFromRight 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    animation-delay: calc(0.2s + var(--btn-delay, 0s));
+}
+
+/* Efeito de hover melhorado */
+.menu-btn:hover {
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.menu-btn:hover::before {
+    background: #7f1d1d;
+    transform: scale(1.05);
 }
 
 .menu-btn::before {
@@ -97,6 +172,61 @@
     transform: scale(1.1);
 }
 
+/* Keyframes para animações do menu */
+@keyframes slideInFromLeft {
+    0% {
+        transform: scale(0) translateX(-100px) translateY(20px);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(0.8) translateX(-20px) translateY(10px);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1) translateX(0) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromRight {
+    0% {
+        transform: scale(0) translateX(100px) translateY(20px);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(0.8) translateX(20px) translateY(10px);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1) translateX(0) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutToCenter {
+    0% {
+        transform: scale(1) translateX(0) translateY(0);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(0.8) translateX(0) translateY(10px);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(0) translateX(0) translateY(20px);
+        opacity: 0;
+    }
+}
+
+@keyframes logoPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
 /* Botão logo central */
 .logo-btn {
     width: 80px;
@@ -108,12 +238,13 @@
     border: none;
     border-radius: 12px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     z-index: 10;
     flex-shrink: 0;
     margin: 0 5px;
     padding: 0;
+    animation: logoPulse 2s ease-in-out infinite;
 }
 
 .logo-btn:hover {
@@ -215,6 +346,26 @@
     filter: brightness(0) invert(1); /* Torna o ícone branco */
 }
 
+/* Estados de transição do menu */
+#menu.transitioning {
+    pointer-events: none;
+}
+
+#menu.transitioning .menu-btn {
+    pointer-events: none;
+}
+
+/* Efeito de ripple no logo quando clicado */
+.logo-btn.clicked {
+    animation: logoClick 0.3s ease-out;
+}
+
+@keyframes logoClick {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(1.05); }
+}
+
 /* Estilos responsivos */
 @media screen and (max-width: 768px) {
     #menu {
@@ -224,6 +375,37 @@
         left: 50%;
         transform: translateX(-50%);
         background-color: transparent;
+    }
+    
+    /* Ajustar animações para telas menores */
+    @keyframes slideInFromLeft {
+        0% {
+            transform: scale(0) translateX(-60px) translateY(15px);
+            opacity: 0;
+        }
+        50% {
+            transform: scale(0.8) translateX(-15px) translateY(8px);
+            opacity: 0.7;
+        }
+        100% {
+            transform: scale(1) translateX(0) translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideInFromRight {
+        0% {
+            transform: scale(0) translateX(60px) translateY(15px);
+            opacity: 0;
+        }
+        50% {
+            transform: scale(0.8) translateX(15px) translateY(8px);
+            opacity: 0.7;
+        }
+        100% {
+            transform: scale(1) translateX(0) translateY(0);
+            opacity: 1;
+        }
     }
 
     .menu-btn {
