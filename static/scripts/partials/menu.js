@@ -15,7 +15,7 @@ function toggleMenu() {
     const logoBtn = document.querySelector('.logo-btn');
     
     const totalButtons = buttons.length;
-    const baseOffset = 12; // Reduzido para não ultrapassar os ícones dos cantos
+    const baseOffset = 1; // Reduzido ainda mais para espremer o menu
 
     if (!isMenuOpen) {
         // Aplica zoom ao abrir o menu
@@ -23,7 +23,7 @@ function toggleMenu() {
         
         // Anima botões da esquerda (limitado para não ultrapassar o ícone de desligar)
         const leftButtons = document.querySelectorAll('.menu-left .menu-btn');
-        const maxLeftOffset = 80; // Limite para não ultrapassar o ícone de desligar
+        const maxLeftOffset = 30; // Reduzido para dar mais espaço ao ícone de desligar
         leftButtons.forEach((button, index) => {
             const offset = Math.min((index - leftButtons.length + 1) * baseOffset, maxLeftOffset);
             button.style.opacity = 1;
@@ -32,7 +32,7 @@ function toggleMenu() {
         
         // Anima botões da direita (limitado para não ultrapassar o ícone de login)
         const rightButtons = document.querySelectorAll('.menu-right .menu-btn');
-        const maxRightOffset = 80; // Limite para não ultrapassar o ícone de login
+        const maxRightOffset = 30; // Reduzido para dar mais espaço ao ícone de login
         rightButtons.forEach((button, index) => {
             const offset = Math.min((index + 1) * baseOffset, maxRightOffset);
             button.style.opacity = 1;
@@ -55,16 +55,25 @@ function toggleMenu() {
 function zoomButton(clickedButton) {
     const buttons = document.querySelectorAll('.menu-btn');
     
+    // Remove todas as classes de seleção e zoom
     buttons.forEach(button => {
-        if (button !== clickedButton) {
-            button.style.transform = button.style.transform.replace(/scale\([^)]+\)/, '');
-        }
+        button.classList.remove('selected', 'zoomed');
+        button.style.transform = button.style.transform.replace(/scale\([^)]+\)/, '');
     });
 
+    // Adiciona classe de seleção apenas ao botão clicado
+    clickedButton.classList.add('selected');
+    
+    // Aplica zoom apenas ao botão clicado
     const currentTransform = clickedButton.style.transform;
     clickedButton.style.transform = currentTransform.includes('scale(1.4)') 
         ? currentTransform.replace(/scale\(1\.4\)/, '') 
         : `${currentTransform} scale(1.4)`;
+    
+    // Adiciona classe zoomed para controle de z-index
+    if (clickedButton.style.transform.includes('scale(1.4)')) {
+        clickedButton.classList.add('zoomed');
+    }
 }
 
 // Função para confirmar desligamento do sistema

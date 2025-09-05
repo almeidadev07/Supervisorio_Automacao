@@ -14,15 +14,16 @@
     justify-content: center;
     align-items: center;
     position: fixed;
-    left: 0;
+    left: 50%;
     bottom: 0;
+    transform: translateX(-50%);
     overflow: hidden;
-    width: 100%;
-    padding: 0 10px;
-    gap: 20px;
+    width: auto;
+    max-width: 100%;
+    padding: 10px 20px;
+    gap: 8px;
     transition: transform 0.8s ease-in-out;
-    background-color: #fff;
-    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+    background-color: transparent;
     z-index: 1000;
 }
 
@@ -30,15 +31,17 @@
 .menu-right {
     display: flex;
     align-items: center;
-    gap: 2px; /* Reduzido de 1px para 2px para melhor visualização */
+    gap: 8px; /* Espaçamento consistente entre botões */
 }
 
 .menu-left {
     justify-content: flex-end;
+    margin-right: 15px; /* Espaço entre grupo esquerdo e logo */
 }
 
 .menu-right {
     justify-content: flex-start;
+    margin-left: 15px; /* Espaço entre logo e grupo direito */
 }
 
 .menu-btn {
@@ -48,41 +51,45 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(145deg, #dc2626, #b91c1c); /* Vermelho Ferrari */
+    background: transparent;
     border: none;
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
     opacity: 0;
     transform-origin: center center;
-    overflow: hidden;
-    box-shadow: 
-        0 4px 8px rgba(220, 38, 38, 0.3),
-        0 2px 4px rgba(0, 0, 0, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
     position: relative;
     min-width: 80px;
     flex-shrink: 0;
-    /* Garante que o background cubra toda a área do botão */
-    background-size: 100% 100%;
-    background-repeat: no-repeat;
-    background-position: center;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
 }
 
-.menu-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 
-        0 6px 12px rgba(220, 38, 38, 0.4),
-        0 4px 8px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+.menu-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #dc2626; /* Vermelho claro padrão */
+    border-radius: 12px;
+    z-index: 1;
+    transition: all 0.3s ease;
 }
 
-.menu-btn:active {
-    transform: translateY(0);
-    box-shadow: 
-        0 2px 4px rgba(220, 38, 38, 0.3),
-        0 1px 2px rgba(0, 0, 0, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+.menu-btn:hover::before {
+    background: #7f1d1d; /* Vermelho escuro no hover */
+}
+
+.menu-btn:active::before {
+    background: #7f1d1d; /* Vermelho escuro no active */
+}
+
+/* Estado selecionado - apenas o botão clicado fica vermelho escuro */
+.menu-btn.selected::before {
+    background: #7f1d1d; /* Vermelho escuro para botão selecionado */
 }
 
 .menu-btn.zoomed {
@@ -90,13 +97,45 @@
     transform: scale(1.1);
 }
 
+/* Botão logo central */
+.logo-btn {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
+    margin: 0 5px;
+    padding: 0;
+}
+
+.logo-btn:hover {
+    transform: scale(1.05);
+}
+
+.logo-btn img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border-radius: 12px;
+    display: block;
+}
+
 .menu-icon {
     width: 32px;
     height: 32px;
     object-fit: contain;
     margin-bottom: 4px;
-    z-index: 2; /* Garante que o ícone fique sobre o background */
+    display: block;
     position: relative;
+    z-index: 2;
 }
 
 .menu-text {
@@ -110,8 +149,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
-    z-index: 2; /* Garante que o texto fique sobre o background */
+    display: block;
     position: relative;
+    z-index: 2;
 }
 
 /* Botão de desligar no canto esquerdo */
@@ -130,7 +170,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 
-        0 4px 8px rgba(220, 38, 38, 0.3),
+        0 4px 8px rgba(127, 29, 29, 0.3),
         0 2px 4px rgba(0, 0, 0, 0.2);
     z-index: 1001;
 }
@@ -145,7 +185,7 @@
 .shutdown-btn:active {
     transform: translateY(0);
     box-shadow: 
-        0 2px 4px rgba(220, 38, 38, 0.3),
+        0 2px 4px rgba(127, 29, 29, 0.3),
         0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
@@ -160,8 +200,11 @@
 @media screen and (max-width: 768px) {
     #menu {
         height: var(--menu-height, 70px);
-        padding: 0 5px;
-        gap: 15px;
+        padding: 8px 15px;
+        gap: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: transparent;
     }
 
     .menu-btn {
@@ -198,8 +241,11 @@
 @media screen and (max-width: 480px) {
     #menu {
         height: var(--menu-height, 60px);
-        padding: 0 2px;
-        gap: 10px;
+        padding: 6px 10px;
+        gap: 4px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: transparent;
     }
 
     .menu-btn {
@@ -237,7 +283,10 @@
 @media screen and (max-height: 480px) and (orientation: landscape) {
     #menu {
         height: var(--menu-height, 50px);
-        gap: 8px;
+        gap: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: transparent;
     }
 
     .menu-btn {
@@ -275,8 +324,11 @@
 @media screen and (max-width: 320px) {
     #menu {
         height: var(--menu-height, 50px);
-        padding: 0 1px;
-        gap: 5px;
+        padding: 4px 8px;
+        gap: 3px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: transparent;
     }
 
     .menu-btn {
