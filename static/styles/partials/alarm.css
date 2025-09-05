@@ -9,20 +9,25 @@ html, body {
 /* O alarmScreen ocupa toda a tela disponível abaixo do menu */
 #alarmScreen {
     display: flex;
-    height: calc(100vh - var(--menu-height, 100px));
-    padding: 0;
+    height: calc(100vh - var(--menu-height, 100px) - 20px);
+    padding: 20px;
     margin: 0;
-    background-color: #f9f9f9;
+    background: #f8f9fa;
     position: relative;
     overflow: hidden;
-    padding-bottom: var(--menu-height, 100px); /* Adiciona padding para o menu fixo */
+    box-sizing: border-box;
 }
 
 /* Container que mantém os dois painéis lado a lado com altura total */
 .alarm-container {
     display: flex;
-    gap: 20px;
+    gap: 24px;
     height: 100%;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 /* Container da lista de alarmes */
@@ -32,6 +37,13 @@ html, body {
     flex-direction: column;
     height: 100%;
     min-width: 0; /* Previne overflow */
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 /* Container dos controles */
@@ -39,11 +51,17 @@ html, body {
     flex: 0 0 20%;
     display: flex;
     flex-direction: column;
-    padding: 80px;
-    
+    padding: 24px;
     height: 100%;
-    min-width: 150px;
-    max-width: 200px; /* Adiciona largura máxima */
+    min-width: 200px;
+    max-width: 280px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 
@@ -59,24 +77,31 @@ html, body {
 /* Abas de filtro no topo */
 .filter-tabs {
     display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
+    gap: 12px;
+    margin-bottom: 20px;
     flex-wrap: wrap; /* Permite quebra de linha se necessário */
     flex: 0 0 auto; /* Não cresce ou encolhe */
+    padding: 20px 24px 0 24px;
 }
 
 /* Lista de alarmes - ocupa todo o espaço vertical disponível */
 .alarm-list {
     flex: 1;
     overflow-y: auto;
-    border: 1px solid #ddd;
-    border-radius: 5px;
+    border: none;
+    border-radius: 0;
     padding: 0;
-    background-color: rgb(255, 255, 255);
+    background: transparent;
     display: flex;
     flex-direction: column;
     width: 100%;
     height: 100%;
+    margin: 0 24px 24px 24px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    max-height: calc(100% - 20px);
 }
 
 
@@ -94,34 +119,65 @@ html, body {
 .priority-legend {
     width: 100%;
     flex: 1;
-    background-color: transparent;
-    font-size: 18px;
-    white-space: nowrap;
-    padding-right: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
     box-sizing: border-box;
     overflow-y: auto;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.priority-legend h3 {
+    color: #2d3748;
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 20px 0;
+    text-align: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 /* Itens da legenda */
 .legend-item {
     display: flex;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.legend-item:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateX(4px);
+}
+
+.legend-text {
+    color: #4a5568;
+    font-weight: 600;
+    font-size: 14px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 /* Estilos dos botões */
 .filtro-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 40px;
-
-    padding: 8px 16px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background: white;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 20px;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.8);
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
 }
 
 .filtro-btn .color-indicator {
@@ -132,53 +188,56 @@ html, body {
 }
 
 .filtro-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    background-color: rgb(148, 148, 148);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.1);
 }
 
 .filtro-btn.active {
-    border-color: #ff0000;
-    background-color: rgb(255, 0, 0);
-    color: white; /* Added white text color */
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    color: white;
+    font-weight: 700;
 }
 
 /* Estado ativo específico para cada tipo de botão */
 .filtro-btn[data-prioridade="emergency"].active {
+    background: linear-gradient(135deg, #ff4444, #cc0000);
     border-color: #ff4444;
-    background-color: rgb(255, 68, 68);
-    color: white;
+    box-shadow: 0 8px 25px rgba(255, 68, 68, 0.4);
 }
 
 .filtro-btn[data-prioridade="drives"].active {
+    background: linear-gradient(135deg, #ff9900, #cc7700);
     border-color: #ff9900;
-    background-color: rgb(255, 153, 0);
-    color: white;
+    box-shadow: 0 8px 25px rgba(255, 153, 0, 0.4);
 }
 
 .filtro-btn[data-prioridade="thermal"].active {
+    background: linear-gradient(135deg, #ffdd00, #ccaa00);
     border-color: #ffdd00;
-    background-color: rgb(255, 221, 0);
-    color: white;
+    box-shadow: 0 8px 25px rgba(255, 221, 0, 0.4);
+    color: #333;
 }
 
 .filtro-btn[data-prioridade="hardware"].active {
+    background: linear-gradient(135deg, #aa66cc, #8844aa);
     border-color: #aa66cc;
-    background-color: rgb(170, 102, 204);
-    color: white;
+    box-shadow: 0 8px 25px rgba(170, 102, 204, 0.4);
 }
 
 .filtro-btn[data-prioridade="process"].active {
+    background: linear-gradient(135deg, #4285f4, #1a73e8);
     border-color: #4285f4;
-    background-color: rgb(66, 134, 244);
-    color: white;
+    box-shadow: 0 8px 25px rgba(66, 134, 244, 0.4);
 }
 
 /* Botão 'Todos' */
 .filtro-btn[data-prioridade="todas"].active {
+    background: linear-gradient(135deg, #666666, #444444);
     border-color: #666666;
-    background-color: rgb(102, 102, 102);
-    color: white;
+    box-shadow: 0 8px 25px rgba(102, 102, 102, 0.4);
 }
 
 /* Cores para os indicadores */
@@ -192,42 +251,49 @@ html, body {
 /* Cabeçalho da lista - fixa no topo */
 /* Cabeçalho da lista - estilo limpo e fixo */
 .alarm-header {
-    display: flex;
+    display: grid;
+    grid-template-columns: 14px 120px 1fr;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
     font-weight: 700;
-    background-color: rgb(87, 87, 87);
-    padding: 10px 14px;
-    height: 56px;
-    border-radius: 6px 6px 0 0;
+    background: #2d3748;
+    padding: 16px 24px;
+    height: 60px;
+    border-radius: 12px 12px 0 0;
     position: sticky;
     top: 0;
     z-index: 10;
     color: white;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-.alarm-header .col-time { width: 110px; flex: 0 0 110px; }
-.alarm-header .col-desc { flex: 1 1 auto; }
 
 
 /* Itens da lista */
 /* Item de alarme: indicador colorido à esquerda + conteúdo */
 .alarme-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: 14px 120px 1fr;
     align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
-    border-bottom: 1px solid rgba(0,0,0,0.06);
-    background-color: #fff;
-    align-items: flex-start;
-    min-height: 56px;
+    gap: 16px;
+    padding: 12px 24px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    background: #ffffff;
+    min-height: 50px;
     box-sizing: border-box;
-    transition: background-color 0.12s, box-shadow 0.12s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    border-left: 4px solid transparent;
 }
 
 .alarme-item:hover {
-    background-color: #f7f8fb;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+    background: #f8f9fa;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+    border-left-color: #667eea;
 }
 
 /* small colored dot / badge that indicates alarm type */
@@ -235,29 +301,46 @@ html, body {
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    flex: 0 0 14px;
-    margin-top: 6px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.06) inset;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    border: 2px solid rgba(255,255,255,0.8);
+    position: relative;
+    justify-self: center;
+}
+
+.alarm-type-dot::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
 /* Ajuste para texto dentro dos itens */
 
 .alarm-time {
-    width: 120px;
-    flex: 0 0 120px;
-    color: #333;
-    font-weight: 600;
-    font-size: 0.95em;
+    color: #4a5568;
+    font-weight: 700;
+    font-size: 14px;
     white-space: nowrap;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    letter-spacing: 0.5px;
+    justify-self: start;
 }
 
 .alarm-description {
-    flex: 1 1 auto;
-    color: #222;
-    font-size: 1em;
-    line-height: 1.15;
+    color: #2d3748;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.3;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    justify-self: start;
 }
 
 /* Ajuste para texto dentro dos itens */
@@ -278,11 +361,27 @@ html, body {
 
 /* Cores da legenda */
 .color-box {
-    width: 20px;
-    height: 20px;
-    border-radius: 5px;
-    margin-right: 10px;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    margin-right: 12px;
     flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    border: 2px solid rgba(255,255,255,0.8);
+    position: relative;
+}
+
+.color-box::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
 .emergency { background-color: #ff4444; }
@@ -303,25 +402,30 @@ html, body {
     position: relative;
     width: 100%;
     max-width: 100%; /* Garante que não ultrapasse o container */
-    padding: 15px;
-    border: 2px solid #ff0000;
-    border-radius: 8px;
-    background-color: white;
+    padding: 20px;
+    border: 2px solid #667eea;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7));
     cursor: pointer;
     overflow: hidden;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-sizing: border-box; /* Inclui padding e border na largura total */
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .toggle-text {
     position: relative;
     z-index: 2;
-    color: #ff0000;
-    font-weight: bold;
-    font-size: 18px; /* Reduz um pouco o tamanho da fonte */
+    color: #667eea;
+    font-weight: 700;
+    font-size: 16px;
     transition: color 0.3s ease;
     white-space: nowrap; /* Evita quebra de linha */
     text-align: center; /* Centraliza o texto */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .toggle-slider {
@@ -330,8 +434,9 @@ html, body {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: #ff0000;
-    transition: left 0.3s ease;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
 /* Estado ativo do botão */
