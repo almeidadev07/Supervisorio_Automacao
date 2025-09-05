@@ -178,6 +178,17 @@ class SiemensS7Driver(BasePLC):
                     else:
                         result[name] = None
                         
+                elif t == 'WORD':
+                    offset = int(tag.get('offset') or 0)
+                    
+                    # Tenta ler com retry automático
+                    data = self._read_with_retry(lambda: self.client.db_read(db, offset, 2))
+                    if data is not None:
+                        # Converte bytes para WORD (16 bits, little-endian)
+                        result[name] = int.from_bytes(data, byteorder='little')
+                    else:
+                        result[name] = None
+                        
             except Exception as e:
                 result[name] = None
         

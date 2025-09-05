@@ -4,6 +4,7 @@ import time
 import json
 import os
 from ..plc_drivers import create_driver_for_config
+from .alarm_processor import alarm_processor
 
 class PLCController:
     def __init__(self, socketio, machines_config):
@@ -260,6 +261,22 @@ class PLCController:
 
                 connected_now = bool(self.driver and self.driver.is_connected() and connection_ok)
                 telemetry['plc_connected'] = connected_now
+
+                # Processa alarmes se conectado
+                if connected_now and machine:
+                    try:
+                        active_alarms = alarm_processor.process_alarm_data(telemetry, machine)
+                        alarm_summary = alarm_processor.get_alarm_summary(active_alarms)
+                        
+                        # Adiciona dados de alarmes à telemetria
+                        telemetry['active_alarms'] = active_alarms
+                        telemetry['alarm_summary'] = alarm_summary
+                        
+                        print(f"[ALARM] {len(active_alarms)} alarmes ativos, resumo: {alarm_summary}")
+                    except Exception as e:
+                        print(f"[ALARM] Erro no processamento de alarmes: {e}")
+                        telemetry['active_alarms'] = []
+                        telemetry['alarm_summary'] = {"emergency": 0, "drives": 0, "thermal": 0, "hardware": 0, "process": 0, "total": 0}
 
                 # envia socketio se mudou estado de conexão
                 if self.socketio:

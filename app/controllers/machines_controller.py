@@ -1,6 +1,7 @@
 # app/controllers/machines_controller.py
 from flask import Blueprint, jsonify, request, current_app, Response
 import logging
+import time
 from ..utils import get_local_ip, find_machine_config, find_machine_by_plc_ip, detect_by_reachable_plc
 
 logger = logging.getLogger(__name__)
@@ -242,5 +243,54 @@ def detect_plcs():
             return jsonify({'ok': True, 'message': 'PLC detectado e trocado automaticamente'})
         else:
             return jsonify({'ok': False, 'message': 'Nenhum PLC melhor disponível'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@machines_bp.route('/alarms', methods=['GET'])
+def get_alarms():
+    """Retorna os alarmes ativos da máquina conectada"""
+    try:
+        cfg = current_app.plc_controller.active_config
+        if not cfg:
+            return jsonify({'ok': False, 'error': 'no machine selected'}), 400
+        
+        # Verifica se o driver está conectado
+        is_connected = False
+        if current_app.plc_controller.driver:
+            try:
+                is_connected = current_app.plc_controller.driver.is_connected()
+            except:
+                is_connected = False
+        
+        if not is_connected:
+            return jsonify({'ok': False, 'error': 'PLC not connected'}), 400
+        
+        # Lê dados atuais do PLC
+        try:
+            machine = cfg.get('name')
+            tag_defs = current_app.plc_controller.comm_map_by_machine.get(machine, [])
+            
+            if not tag_defs:
+                return jsonify({'ok': False, 'error': 'no communication map loaded'}), 400
+            
+            # Lê tags do PLC
+            plc_data = current_app.plc_controller.driver.read_tags(tag_defs)
+            
+            # Processa alarmes
+            from ..services.alarm_processor import alarm_processor
+            active_alarms = alarm_processor.process_alarm_data(plc_data, machine)
+            alarm_summary = alarm_processor.get_alarm_summary(active_alarms)
+            
+            return jsonify({
+                'ok': True,
+                'machine': machine,
+                'active_alarms': active_alarms,
+                'alarm_summary': alarm_summary,
+                'timestamp': time.time()
+            })
+            
+        except Exception as e:
+            return jsonify({'ok': False, 'error': f'Error reading PLC data: {str(e)}'}), 500
+            
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500

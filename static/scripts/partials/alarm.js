@@ -40,6 +40,9 @@ function inicializarAlarmes() {
     alarmesInicializados = true;
     console.log('Tela de alarmes inicializada com sucesso!');
     
+    // Inicializa SocketIO para alarmes em tempo real
+    inicializarSocketAlarmes();
+    
     // Carrega os alarmes iniciais
     carregarAlarmes('instantaneos');
 }
@@ -72,48 +75,159 @@ function aplicarFiltro(prioridade) {
     });
 }
 
+// Variáveis globais para armazenar alarmes
+let currentAlarms = [];
+let alarmSocket = null;
+
 function carregarAlarmes(tipo) {
     console.log(`Carregando alarmes ${tipo}...`);
-    const alarmList = document.getElementById('alarmList');
     
-    // Dados simulados para cada tipo
-    const alarmes = tipo === 'instantaneos' ? [
-        { hora: "14:32", descricao: "Falha no Motor Principal", prioridade: "emergency" },
-        { hora: "14:35", descricao: "Drive 1 com erro", prioridade: "drives" },
-        { hora: "14:38", descricao: "Temperatura alta", prioridade: "thermal" },
-        { hora: "14:40", descricao: "Erro de Comunicação com PLC", prioridade: "hardware" },
-        { hora: "14:42", descricao: "Processo interrompido", prioridade: "process" }
-    ] : [
+    if (tipo === 'instantaneos') {
+        // Carrega alarmes reais do PLC
+        carregarAlarmesReais();
+    } else {
+        // Para histórico, usa dados simulados por enquanto
+        carregarAlarmesHistoricos();
+    }
+}
+
+function carregarAlarmesReais() {
+    console.log('Carregando alarmes reais do PLC...');
+    
+    // Tenta carregar via API
+    fetch('/api/alarms')
+        .then(response => response.json())
+        .then(data => {
+            if (data.ok && data.active_alarms) {
+                console.log(`[ALARM] ${data.active_alarms.length} alarmes recebidos do PLC`);
+                currentAlarms = data.active_alarms;
+                atualizarInterfaceAlarmes();
+                atualizarContadoresAlarmes(data.alarm_summary);
+            } else {
+                console.log('[ALARM] Nenhum alarme ativo ou erro na API:', data.error);
+                currentAlarms = [];
+                atualizarInterfaceAlarmes();
+            }
+        })
+        .catch(error => {
+            console.error('[ALARM] Erro ao carregar alarmes:', error);
+            // Em caso de erro, mostra mensagem
+            mostrarMensagemErroAlarmes();
+        });
+}
+
+function carregarAlarmesHistoricos() {
+    // Dados simulados para histórico
+    const alarmes = [
         { hora: "13:15", descricao: "Histórico: Falha de rede", prioridade: "hardware" },
         { hora: "12:20", descricao: "Histórico: Processo interrompido", prioridade: "process" },
         { hora: "11:30", descricao: "Histórico: Erro de comunicação", prioridade: "hardware" },
         { hora: "10:45", descricao: "Histórico: Motor travado", prioridade: "emergency" },
         { hora: "09:20", descricao: "Histórico: Drive com falha", prioridade: "drives" }
     ];
+    
+    currentAlarms = alarmes;
+    atualizarInterfaceAlarmes();
+}
 
-    // Gera o HTML dos alarmes
-    const alarmeItems = alarmes.map(alarme => `
-        <div class="alarme-item ${alarme.prioridade}">
-            <div class="alarm-type-dot ${alarme.prioridade}"></div>
-            <span class="alarm-time">${alarme.hora}</span>
-            <span class="alarm-description">${alarme.descricao}</span>
-        </div>
-    `).join('');
+function atualizarInterfaceAlarmes() {
+    const alarmList = document.getElementById('alarmList');
+    if (!alarmList) return;
+    
+    if (currentAlarms.length === 0) {
+        alarmList.innerHTML = `
+            <div class="alarm-header">
+                <span></span>
+                <span>Hora de Ativação</span>
+                <span>Descrição do Alarme</span>
+            </div>
+            <div class="no-alarms">
+                <span>Nenhum alarme ativo</span>
+            </div>
+        `;
+    } else {
+        // Gera o HTML dos alarmes
+        const alarmeItems = currentAlarms.map(alarme => `
+            <div class="alarme-item ${alarme.priority}">
+                <div class="alarm-type-dot ${alarme.priority}"></div>
+                <span class="alarm-time">${alarme.timestamp || '--:--'}</span>
+                <span class="alarm-description">${alarme.description}</span>
+            </div>
+        `).join('');
 
-    // Atualiza a lista mantendo o cabeçalho
+        // Atualiza a lista mantendo o cabeçalho
+        alarmList.innerHTML = `
+            <div class="alarm-header">
+                <span></span>
+                <span>Hora de Ativação</span>
+                <span>Descrição do Alarme</span>
+            </div>
+            ${alarmeItems}
+        `;
+    }
+
+    // Reaplica o filtro atual
+    const filtroAtivo = document.querySelector('.filtro-btn.active');
+    if (filtroAtivo) {
+        aplicarFiltro(filtroAtivo.dataset.prioridade);
+    }
+}
+
+function atualizarContadoresAlarmes(summary) {
+    // Atualiza os contadores na interface (se existirem)
+    if (summary) {
+        console.log('[ALARM] Resumo dos alarmes:', summary);
+        // Aqui você pode atualizar elementos da UI com os contadores
+        // Por exemplo, se houver elementos com classes como .alarm-count-emergency, etc.
+    }
+}
+
+function mostrarMensagemErroAlarmes() {
+    const alarmList = document.getElementById('alarmList');
+    if (!alarmList) return;
+    
     alarmList.innerHTML = `
         <div class="alarm-header">
             <span></span>
             <span>Hora de Ativação</span>
             <span>Descrição do Alarme</span>
         </div>
-        ${alarmeItems}
+        <div class="alarm-error">
+            <span>Erro ao carregar alarmes do PLC</span>
+        </div>
     `;
+}
 
-    // Reaplica o filtro atual
-    const filtroAtivo = document.querySelector('.filtro-btn.active');
-    if (filtroAtivo) {
-        aplicarFiltro(filtroAtivo.dataset.prioridade);
+// Inicializa SocketIO para receber alarmes em tempo real
+function inicializarSocketAlarmes() {
+    if (alarmSocket) return; // Já inicializado
+    
+    try {
+        alarmSocket = io();
+        
+        alarmSocket.on('telemetry', (data) => {
+            if (data && data.active_alarms) {
+                console.log('[ALARM] Alarmes recebidos via SocketIO:', data.active_alarms.length);
+                currentAlarms = data.active_alarms;
+                atualizarInterfaceAlarmes();
+                atualizarContadoresAlarmes(data.alarm_summary);
+            }
+        });
+        
+        alarmSocket.on('plc_connection_changed', (data) => {
+            if (data && data.connected) {
+                console.log('[ALARM] PLC conectado, recarregando alarmes...');
+                carregarAlarmesReais();
+            } else {
+                console.log('[ALARM] PLC desconectado, limpando alarmes...');
+                currentAlarms = [];
+                atualizarInterfaceAlarmes();
+            }
+        });
+        
+        console.log('[ALARM] SocketIO inicializado para alarmes');
+    } catch (error) {
+        console.error('[ALARM] Erro ao inicializar SocketIO:', error);
     }
 }
 

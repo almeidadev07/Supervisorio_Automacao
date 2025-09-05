@@ -605,6 +605,32 @@ html, body {
     }
 }
 
+/* Mensagens de estado dos alarmes */
+.no-alarms, .alarm-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+    grid-column: 1 / -1;
+    text-align: center;
+}
+
+.alarm-error {
+    color: #e74c3c;
+    background-color: rgba(231, 76, 60, 0.1);
+    border-radius: 4px;
+    margin: 10px;
+}
+
+.no-alarms {
+    color: #27ae60;
+    background-color: rgba(39, 174, 96, 0.1);
+    border-radius: 4px;
+    margin: 10px;
+}
+
 /* Responsividade para o novo container */
 @media screen and (max-width: 768px) {
     .control-box {
