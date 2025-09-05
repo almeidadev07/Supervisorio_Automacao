@@ -157,10 +157,10 @@
 /* Botão de desligar no canto esquerdo */
 .shutdown-btn {
     position: fixed;
-    bottom: 20px;
-    left: 20px;
-    width: 60px;
-    height: 60px;
+    bottom: 36px;
+    left: 19px;
+    width: 50px;
+    height: 50px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -173,6 +173,23 @@
         0 4px 8px rgba(127, 29, 29, 0.3),
         0 2px 4px rgba(0, 0, 0, 0.2);
     z-index: 1001;
+}
+
+.shutdown-btn::after {
+    content: 'Desligar';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: #000;
+    font-weight: 700;
+    margin-top: 6px;
+    white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.8);
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 
 .shutdown-btn:hover {
@@ -226,8 +243,8 @@
     }
 
     .shutdown-btn {
-        width: 50px;
-        height: 50px;
+        width: 40px;
+        height: 40px;
         bottom: 15px;
         left: 15px;
     }
