@@ -302,9 +302,9 @@ button.capture-btn.completed::after {
 
 #windows-container .capture-icon,
 .capture-icon {
-    font-size: 180px !important;
-    width: 1.2em !important;
-    height: 1.2em !important;
+    font-size: 64px !important;
+    width: 1em !important;
+    height: 1em !important;
     min-width: 0 !important;
     min-height: 0 !important;
     margin-bottom: 5px !important;
