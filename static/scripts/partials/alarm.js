@@ -209,17 +209,15 @@ function atualizarInterfaceAlarmes() {
 // Normaliza prioridade separando NR12 de Emergência
 function normalizarPrioridade(alarme) {
     try {
-        const desc = (alarme.description || '').toLowerCase();
-        const varName = (alarme.var_name || '').toLowerCase();
+        // Prioriza o campo 'type' vindo do backend (definido por índice/overrides)
+        const tipo = (alarme.type || '').toLowerCase();
+        if (tipo) return tipo;
+
+        // Fallback para prioridade do backend
         const basePriority = (alarme.priority || '').toLowerCase();
+        if (basePriority) return basePriority;
 
-        // Se mencionar explicitamente NR12, classifica como nr12
-        if (desc.includes('nr12') || varName.includes('nr12')) {
-            return 'nr12';
-        }
-
-        // Senão mantém prioridade calculada (emergency/drives/thermal/hardware/process)
-        return basePriority || 'hardware';
+        return 'hardware';
     } catch (e) {
         return 'hardware';
     }

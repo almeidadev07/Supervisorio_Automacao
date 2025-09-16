@@ -7,6 +7,7 @@ Converte dados WORD do PLC em alarmes individuais com descrições
 import json
 import os
 from typing import Dict, List, Any, Optional
+from collections import OrderedDict
 from datetime import datetime
 
 class AlarmProcessor:
@@ -14,8 +15,12 @@ class AlarmProcessor:
         self.comm_map_path = comm_map_path
         self.alarm_descriptions = {}
         self.priority_overrides: Dict[str, Dict[int, str]] = {}
+        self.type_overrides: Dict[str, Dict[int, str]] = {}
+        self._type_overrides_path = os.path.join("alarmes", "tipos_overrides.json")
+        self._type_overrides_mtime: Optional[float] = None
         self._load_alarm_descriptions()
         self._load_priority_overrides()
+        self._load_type_overrides(write_back=True)
     
     def _load_alarm_descriptions(self):
         """Carrega as descrições dos alarmes dos arquivos gerados.
@@ -116,6 +121,136 @@ class AlarmProcessor:
             print(f"[ALARM] Overrides de prioridade carregados: {len(self.priority_overrides)} bases")
         except Exception as e:
             print(f"[ALARM] Falha ao ler prioridades_overrides.json: {e}")
+
+    def _load_type_overrides(self, write_back: bool = False):
+        """Carrega arquivo opcional de overrides de type por bit.
+        Formato esperado (JSON): { "DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL": { "1": "nr12", ... } }
+        """
+        overrides_path = self._type_overrides_path
+        existing: Dict[str, Dict[str, str]] = {}
+        if os.path.exists(overrides_path):
+            try:
+                with open(overrides_path, "r", encoding="utf-8") as f:
+                    existing = json.load(f) or {}
+            except Exception as e:
+                print(f"[ALARM] Falha ao ler tipos_overrides.json (será regenerado/mesclado): {e}")
+
+        if write_back:
+            # Constrói base padrão a partir das descrições carregadas (apenas para preencher faltantes)
+            generated: Dict[str, Dict[str, str]] = {}
+            for base, indexes in self.alarm_descriptions.items():
+                gen_map: Dict[str, str] = {}
+                for idx, desc in indexes.items():
+                    gen_map[str(idx)] = self._classify_type_from_description(desc)
+                if gen_map:
+                    generated[base] = gen_map
+
+            # Mescla: existente tem precedência; completa faltantes com gerado
+            merged: Dict[str, Dict[str, str]] = {}
+            all_bases = set(generated.keys()) | set(existing.keys())
+            for base in all_bases:
+                merged[base] = {}
+                if base in generated:
+                    merged[base].update(generated[base])
+                if base in existing:
+                    # sobrescreve com explicitamente definido pelo usuário
+                    merged[base].update(existing[base])
+        else:
+            # Apenas usa o existente, sem gerar/mesclar
+            merged = existing
+
+        # Atualiza em memória como mapa int->str
+        parsed: Dict[str, Dict[int, str]] = {}
+        for base, mapping in merged.items():
+            parsed[base] = {}
+            for k, v in mapping.items():
+                try:
+                    parsed[base][int(k)] = v
+                except ValueError:
+                    continue
+        self.type_overrides = parsed
+        print(f"[ALARM] Types por índice disponíveis: {len(self.type_overrides)} bases")
+
+        if write_back:
+            # Persiste arquivo mesclado/gerado para edição manual futura (ordenado)
+            try:
+                os.makedirs(os.path.dirname(overrides_path), exist_ok=True)
+                # Converte de volta para chaves string para JSON
+                # Ordena bases priorizando grupos fixos e EMB01..EMB24 em ordem numérica
+                def _emb_number(b: str) -> Optional[int]:
+                    try:
+                        if "_EMB" in b:
+                            tail = b.split("_EMB", 1)[1]
+                            num = ""
+                            for ch in tail:
+                                if ch.isdigit():
+                                    num += ch
+                                else:
+                                    break
+                            return int(num) if num else None
+                        return None
+                    except Exception:
+                        return None
+
+                fixed_groups = [
+                    "DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL",
+                    "DB04_PRINCIPAL_EMERG_LAVADORA",
+                    "DB04_PRINCIPAL_EMERG_EST_INTELIGENTES",
+                    "DB04_PRINCIPAL_EMERG_ALIMENTADOR",
+                    "DB04_PRINCIPAL_EMERG_OVOSCOPIA",
+                    "DB04_PRINCIPAL_EMERG_PRESELECIONADOR",
+                ]
+
+                all_bases = list(self.type_overrides.keys())
+                fixed_in_order = [b for b in fixed_groups if b in self.type_overrides]
+                emb_bases = [b for b in all_bases if _emb_number(b) is not None]
+                emb_bases.sort(key=lambda b: _emb_number(b) or 0)
+                remaining_bases = [b for b in all_bases if b not in fixed_in_order and b not in emb_bases]
+                # Coloca DB1 depois dos DB04
+                db1_bases = [b for b in remaining_bases if b.startswith("DB1_") or b.startswith("DB01_")]
+                other_bases = [b for b in remaining_bases if b not in db1_bases]
+                other_bases.sort()
+                db1_bases.sort()
+
+                ordered_bases = fixed_in_order + emb_bases + other_bases + db1_bases
+
+                ordered_to_write: "OrderedDict[str, Dict[str, str]]" = OrderedDict()
+                for base in ordered_bases:
+                    mapping = self.type_overrides[base]
+                    ordered_to_write[base] = {str(k): mapping[k] for k in sorted(mapping.keys())}
+
+                with open(overrides_path, "w", encoding="utf-8") as f:
+                    json.dump(ordered_to_write, f, ensure_ascii=False, indent=2)
+                try:
+                    self._type_overrides_mtime = os.path.getmtime(overrides_path)
+                except Exception:
+                    self._type_overrides_mtime = None
+            except Exception as e:
+                print(f"[ALARM] Não foi possível gravar tipos_overrides.json: {e}")
+
+    def _classify_type_from_description(self, description: str) -> str:
+        """Classifica um tipo funcional a partir da descrição do índice.
+        Não utiliza nome da tag. Pode ser ajustado conforme necessidade.
+        """
+        text = (description or "").lower()
+        if "nr12" in text:
+            return "nr12"
+        if "emerg" in text or "emergência" in text or "emergencia" in text:
+            return "emergency"
+        if "drive" in text or "inversor" in text:
+            return "drives"
+        if "thermal" in text or "térmico" in text or "termico" in text or "temperatura" in text:
+            return "thermal"
+        if (
+            "lavadora" in text
+            or "esteira" in text
+            or "alimentador" in text
+            or "ovoscopia" in text
+            or "preselec" in text
+            or "emb" in text
+        ):
+            return "process"
+        return "hardware"
     
     def process_alarm_data(self, plc_data: Dict[str, Any], machine: str) -> List[Dict[str, Any]]:
         """
@@ -198,17 +333,35 @@ class AlarmProcessor:
             # Determina prioridade (com override por bit se configurado)
             priority = self._get_priority_with_overrides(base_name, bit_index)
             if not priority:
-                priority = self._determine_priority(var_name, bit_index)
+                # Classifica pela descrição do índice (não pelo nome da tag)
+                priority = self._determine_priority_from_description(description)
+
+            # Determina type independente (não depende do nome da tag nem descrição se override existir)
+            alarm_type = self._get_type_with_overrides(base_name, bit_index)
+            if not alarm_type:
+                # Se não houver type específico, usa a mesma lógica de prioridade como fallback
+                alarm_type = priority
+
+            # Mantém prioridade alinhada ao type para refletir na UI/contadores
+            priority = alarm_type
             
             # Cria o ID único do alarme
             alarm_id = f"{var_name}_bit_{bit_index}"
             
+            # Log simples para depuração
+            try:
+                print(f"[ALARM] base={base_name} bit={bit_index} type={alarm_type} priority={priority}")
+            except Exception:
+                pass
+
             return {
                 "id": alarm_id,
                 "var_name": var_name,
                 "bit_index": bit_index,
+                "base_name": base_name,
                 "description": description,
                 "priority": priority,
+                "type": alarm_type,
                 "machine": machine,
                 "timestamp": datetime.now().strftime("%H:%M"),
                 "active": True
@@ -235,6 +388,38 @@ class AlarmProcessor:
             if mapping and bit_index in mapping:
                 return mapping[bit_index]
         return None
+
+    def _get_type_with_overrides(self, base_name: str, bit_index: int) -> Optional[str]:
+        """Retorna type via overrides JSON, considerando DB01/DB04 equivalência."""
+        # Recarrega dinamicamente se o arquivo mudou
+        self._maybe_reload_type_overrides()
+        mapping = self.type_overrides.get(base_name)
+        if mapping and bit_index in mapping:
+            return mapping[bit_index]
+        candidates = []
+        if base_name.startswith("DB01_"):
+            candidates.append(base_name.replace("DB01_", "DB04_", 1))
+        if base_name.startswith("DB04_"):
+            candidates.append(base_name.replace("DB04_", "DB01_", 1))
+        for cand in candidates:
+            mapping = self.type_overrides.get(cand)
+            if mapping and bit_index in mapping:
+                return mapping[bit_index]
+        return None
+
+    def _maybe_reload_type_overrides(self) -> None:
+        """Recarrega tipos_overrides.json se houver alteração no arquivo."""
+        try:
+            if not self._type_overrides_path:
+                return
+            if not os.path.exists(self._type_overrides_path):
+                return
+            current_mtime = os.path.getmtime(self._type_overrides_path)
+            if self._type_overrides_mtime is None or current_mtime > self._type_overrides_mtime:
+                # Recarrega sem sobrescrever arquivo (respeita edição manual)
+                self._load_type_overrides(write_back=False)
+        except Exception:
+            pass
     
     def _get_alarm_description(self, base_name: str, bit_index: int) -> str:
         """Obtém a descrição do alarme"""
@@ -256,26 +441,28 @@ class AlarmProcessor:
         # Fallback para descrição genérica
         return f"{base_name} - Bit {bit_index}"
     
-    def _determine_priority(self, var_name: str, bit_index: int) -> str:
-        """Determina a prioridade do alarme baseada no tipo"""
-        var_lower = var_name.lower()
+    def _determine_priority_from_description(self, description: str) -> str:
+        """Determina a prioridade baseada no texto da descrição do índice."""
+        text = (description or "").lower()
         
-        if "nr12" in var_lower:
+        if "nr12" in text:
             return "nr12"
-        if "emerg" in var_lower or "emergencia" in var_lower:
+        if "emerg" in text or "emergência" in text or "emergencia" in text:
             return "emergency"
-        elif "alarmes_alto" in var_lower:
-            return "emergency"
-        elif "auxiliar" in var_lower:
-            return "emergency"
-        elif "emb" in var_lower:
+        if "drive" in text or "inversor" in text:
+            return "drives"
+        if "thermal" in text or "térmico" in text or "termico" in text or "temperatura" in text:
+            return "thermal"
+        if (
+            "lavadora" in text
+            or "esteira" in text
+            or "alimentador" in text
+            or "ovoscopia" in text
+            or "preselec" in text
+            or "emb" in text
+        ):
             return "process"
-        elif "lavadora" in var_lower or "esteira" in var_lower:
-            return "process"
-        elif "alimentador" in var_lower or "ovoscopia" in var_lower:
-            return "process"
-        else:
-            return "hardware"
+        return "hardware"
     
     def get_alarm_summary(self, active_alarms: List[Dict[str, Any]]) -> Dict[str, int]:
         """Retorna resumo dos alarmes por prioridade"""
