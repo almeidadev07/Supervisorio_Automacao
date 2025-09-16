@@ -209,6 +209,12 @@ html, body {
     box-shadow: 0 8px 25px rgba(255, 68, 68, 0.4);
 }
 
+.filtro-btn[data-prioridade="nr12"].active {
+    background: linear-gradient(135deg, #ff6b6b, #d90429);
+    border-color: #ff6b6b;
+    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+}
+
 .filtro-btn[data-prioridade="drives"].active {
     background: linear-gradient(135deg, #ff9900, #cc7700);
     border-color: #ff9900;
@@ -243,6 +249,7 @@ html, body {
 
 /* Cores para os indicadores */
 .color-indicator.emergency { background-color: #ff4444 }
+.color-indicator.nr12 { background-color: #ff6b6b }
 .color-indicator.drives { background-color: #ff9900 }
 .color-indicator.thermal { background-color: #ffdd00 }
 .color-indicator.hardware { background-color: #aa66cc }
@@ -386,6 +393,7 @@ html, body {
 }
 
 .emergency { background-color: #ff4444; }
+.nr12 { background-color: #ff6b6b; }
 .drives { background-color: #ff9900; }
 .thermal { background-color: #ffdd00; }
 .hardware { background-color: #aa66cc; }
@@ -393,6 +401,7 @@ html, body {
 
 /* Map dot colors to types */
 .alarme-item .alarm-type-dot.emergency { background-color: #ff4444; }
+.alarme-item .alarm-type-dot.nr12 { background-color: #ff6b6b; }
 .alarme-item .alarm-type-dot.drives { background-color: #ff9900; }
 .alarme-item .alarm-type-dot.thermal { background-color: #ffdd00; }
 .alarme-item .alarm-type-dot.hardware { background-color: #aa66cc; }

@@ -78,6 +78,8 @@ function aplicarFiltro(prioridade) {
 // Variáveis globais para armazenar alarmes
 let currentAlarms = [];
 let alarmSocket = null;
+let alarmPollIntervalId = null;
+const ALARM_POLL_MS = 1000; // Intervalo ideal para atualização de alarmes
 
 function carregarAlarmes(tipo) {
     console.log(`Carregando alarmes ${tipo}...`);
@@ -88,6 +90,35 @@ function carregarAlarmes(tipo) {
     } else {
         // Para histórico, usa dados simulados por enquanto
         carregarAlarmesHistoricos();
+    }
+}
+
+function startAlarmAutoRefresh() {
+    try {
+        // Evita múltiplos intervals
+        if (alarmPollIntervalId) {
+            return;
+        }
+        // Atualiza imediatamente e depois a cada intervalo
+        carregarAlarmesReais();
+        alarmPollIntervalId = setInterval(() => {
+            carregarAlarmesReais();
+        }, ALARM_POLL_MS);
+        console.log(`[ALARM] Auto refresh iniciado (${ALARM_POLL_MS} ms)`);
+    } catch (e) {
+        console.error('[ALARM] Erro ao iniciar auto refresh:', e);
+    }
+}
+
+function stopAlarmAutoRefresh() {
+    try {
+        if (alarmPollIntervalId) {
+            clearInterval(alarmPollIntervalId);
+            alarmPollIntervalId = null;
+            console.log('[ALARM] Auto refresh parado');
+        }
+    } catch (e) {
+        console.error('[ALARM] Erro ao parar auto refresh:', e);
     }
 }
 
@@ -147,13 +178,15 @@ function atualizarInterfaceAlarmes() {
         `;
     } else {
         // Gera o HTML dos alarmes
-        const alarmeItems = currentAlarms.map(alarme => `
-            <div class="alarme-item ${alarme.priority}">
-                <div class="alarm-type-dot ${alarme.priority}"></div>
+        const alarmeItems = currentAlarms.map(alarme => {
+            const prioridade = normalizarPrioridade(alarme);
+            return `
+            <div class="alarme-item ${prioridade}">
+                <div class="alarm-type-dot ${prioridade}"></div>
                 <span class="alarm-time">${alarme.timestamp || '--:--'}</span>
                 <span class="alarm-description">${alarme.description}</span>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
 
         // Atualiza a lista mantendo o cabeçalho
         alarmList.innerHTML = `
@@ -170,6 +203,25 @@ function atualizarInterfaceAlarmes() {
     const filtroAtivo = document.querySelector('.filtro-btn.active');
     if (filtroAtivo) {
         aplicarFiltro(filtroAtivo.dataset.prioridade);
+    }
+}
+
+// Normaliza prioridade separando NR12 de Emergência
+function normalizarPrioridade(alarme) {
+    try {
+        const desc = (alarme.description || '').toLowerCase();
+        const varName = (alarme.var_name || '').toLowerCase();
+        const basePriority = (alarme.priority || '').toLowerCase();
+
+        // Se mencionar explicitamente NR12, classifica como nr12
+        if (desc.includes('nr12') || varName.includes('nr12')) {
+            return 'nr12';
+        }
+
+        // Senão mantém prioridade calculada (emergency/drives/thermal/hardware/process)
+        return basePriority || 'hardware';
+    } catch (e) {
+        return 'hardware';
     }
 }
 
@@ -226,6 +278,10 @@ function inicializarSocketAlarmes() {
         });
         
         console.log('[ALARM] SocketIO inicializado para alarmes');
+        // Mantém o polling como fallback caso o socket não emita com frequência
+        if (!alarmPollIntervalId) {
+            startAlarmAutoRefresh();
+        }
     } catch (error) {
         console.error('[ALARM] Erro ao inicializar SocketIO:', error);
     }
@@ -289,3 +345,5 @@ function determinarPrioridade(name, description) {
 // Exporta a função para o escopo global
 window.inicializarAlarmes = inicializarAlarmes;
 window.carregarAlarmesDoCommMap = carregarAlarmesDoCommMap;
+window.startAlarmAutoRefresh = startAlarmAutoRefresh;
+window.stopAlarmAutoRefresh = stopAlarmAutoRefresh;

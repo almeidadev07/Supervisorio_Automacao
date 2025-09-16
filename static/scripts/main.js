@@ -69,6 +69,11 @@ function showGrid(event) {
     const grid = document.getElementById('grid-container');
     if (grid) grid.style.display = 'block';
 
+    // Parar atualização de alarmes ao sair da tela de alarmes
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
+
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
     if (event && event.currentTarget) {
         event.currentTarget.classList.add('active');
@@ -89,12 +94,22 @@ function showAlarm(event) {
     if (window.inicializarAlarmes) {
         window.inicializarAlarmes();
     }
+
+    // Iniciar atualização automática dos alarmes quando a tela estiver visível
+    if (window.startAlarmAutoRefresh) {
+        window.startAlarmAutoRefresh();
+    }
 }
 
 function showWeightRange(event) {
     hideAllContainers();
     const weightContainer = document.getElementById('weight-range-container');
     if (weightContainer) weightContainer.style.display = 'block';
+
+    // Parar atualização de alarmes ao sair da tela de alarmes
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
 
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
     if (event && event.currentTarget) {
@@ -110,6 +125,10 @@ function showBalance(event) {
     hideAllContainers();
     const balanceContainer = document.getElementById('balance-container');
     if (balanceContainer) balanceContainer.style.display = 'block';
+
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
 
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
     if (event && event.currentTarget) {
@@ -129,6 +148,10 @@ function showClassification(event) {
         classificationContainer.style.zIndex = '1';
     }
 
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
+
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
     if (event && event.currentTarget) {
         event.currentTarget.classList.add('active');
@@ -143,6 +166,10 @@ function showInput(event) {
     hideAllContainers();
     const inputContainer = document.getElementById('input-container');
     if (inputContainer) inputContainer.style.display = 'block';
+
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
 
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
     if (event && event.currentTarget) {
@@ -160,6 +187,10 @@ function showWasher(event) {
     const washerContainer = document.getElementById('washer-container');
     if (washerContainer) {
         washerContainer.style.display = 'block';
+    }
+
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
     }
 
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
@@ -183,6 +214,10 @@ function showDiagram(event) {
         diagramContainer.style.display = 'block';
     }
 
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
+
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
     if (event?.currentTarget) {
         event.currentTarget.classList.add('active');
@@ -202,6 +237,10 @@ function showWindows(event) {
     const windowsContainer = document.getElementById('windows-container');
     if (windowsContainer) {
         windowsContainer.style.display = 'block';
+    }
+
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
     }
 
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
