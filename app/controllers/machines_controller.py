@@ -294,3 +294,26 @@ def get_alarms():
             
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+@machines_bp.route('/alarms/history', methods=['GET'])
+def get_alarm_history():
+    """Retorna o histórico de alarmes"""
+    try:
+        from ..services.alarm_processor import alarm_processor
+        
+        # Parâmetro opcional para limitar quantidade
+        limit = request.args.get('limit', 100, type=int)
+        if limit > 1000:
+            limit = 1000
+        
+        history = alarm_processor.get_alarm_history(limit)
+        
+        return jsonify({
+            'ok': True,
+            'history': history,
+            'count': len(history),
+            'timestamp': time.time()
+        })
+        
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500

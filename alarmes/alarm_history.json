@@ -1,0 +1,392 @@
+[
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_2",
+    "action": "cleared",
+    "timestamp": "17:39",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 2 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:39:23.880615"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_2",
+    "action": "activated",
+    "timestamp": "17:39",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 2 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:39:18.788732"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_1",
+    "action": "cleared",
+    "timestamp": "17:38",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 1 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:38:56.950770"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_1",
+    "action": "activated",
+    "timestamp": "17:38",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 1 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:38:49.852963"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_2",
+    "action": "cleared",
+    "timestamp": "17:36",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 2 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:36:06.495688"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_1",
+    "action": "cleared",
+    "timestamp": "17:36",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 1 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:36:02.436402"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_1",
+    "action": "activated",
+    "timestamp": "17:35",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 1 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:35:52.495547"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_EST_INTELIGENTES_bit_0",
+    "action": "activated",
+    "timestamp": "17:30",
+    "description": "EMERGÊNCIA ZONA DOSIFICADO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:30:25.734388"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_2",
+    "action": "activated",
+    "timestamp": "17:30",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 2 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:30:25.734384"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_14",
+    "action": "activated",
+    "timestamp": "17:30",
+    "description": "ALIMENTAÇÃO 2 - EMBALADORA 06 Á EMBALADORA 11",
+    "priority": "process",
+    "type": "process",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:30:25.734380"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_13",
+    "action": "activated",
+    "timestamp": "17:30",
+    "description": "LINHA L500.3 / L600.3 ABERTA",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:30:25.734377"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_2",
+    "action": "activated",
+    "timestamp": "17:30",
+    "description": "RELÊ DE EMERGÊNCIA  !!!",
+    "priority": "emergency",
+    "type": "emergency",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:30:25.734368"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_0",
+    "action": "activated",
+    "timestamp": "17:30",
+    "description": "ALARME NÍVEL ALTO ATIVO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:30:25.734316"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_1",
+    "action": "cleared",
+    "timestamp": "17:28",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 1 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:28:30.184343"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_1",
+    "action": "activated",
+    "timestamp": "17:28",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 1 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:28:17.309625"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_1",
+    "action": "cleared",
+    "timestamp": "17:24",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 1 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:24:05.140294"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_EMB01_bit_8",
+    "action": "cleared",
+    "timestamp": "17:23",
+    "description": "EMERGÊNCIA - EMBALADORA 01 - FRENTE !!!",
+    "priority": "emergency",
+    "type": "emergency",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:23:24.884052"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_EMB01_bit_8",
+    "action": "activated",
+    "timestamp": "17:23",
+    "description": "EMERGÊNCIA - EMBALADORA 01 - FRENTE !!!",
+    "priority": "emergency",
+    "type": "emergency",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:23:07.902117"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_EST_INTELIGENTES_bit_0",
+    "action": "activated",
+    "timestamp": "17:20",
+    "description": "EMERGÊNCIA ZONA DOSIFICADO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:20:23.483694"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_2",
+    "action": "activated",
+    "timestamp": "17:20",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 2 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:20:23.483690"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_1",
+    "action": "activated",
+    "timestamp": "17:20",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 1 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:20:23.483686"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_14",
+    "action": "activated",
+    "timestamp": "17:20",
+    "description": "ALIMENTAÇÃO 2 - EMBALADORA 06 Á EMBALADORA 11",
+    "priority": "process",
+    "type": "process",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:20:23.483683"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_13",
+    "action": "activated",
+    "timestamp": "17:20",
+    "description": "LINHA L500.3 / L600.3 ABERTA",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:20:23.483677"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_2",
+    "action": "activated",
+    "timestamp": "17:20",
+    "description": "RELÊ DE EMERGÊNCIA  !!!",
+    "priority": "emergency",
+    "type": "emergency",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:20:23.483672"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_0",
+    "action": "activated",
+    "timestamp": "17:20",
+    "description": "ALARME NÍVEL ALTO ATIVO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:20:23.483656"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_EST_INTELIGENTES_bit_0",
+    "action": "activated",
+    "timestamp": "17:19",
+    "description": "EMERGÊNCIA ZONA DOSIFICADO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:19:56.494089"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_2",
+    "action": "activated",
+    "timestamp": "17:19",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 2 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:19:56.494086"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_1",
+    "action": "activated",
+    "timestamp": "17:19",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 1 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:19:56.494083"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_14",
+    "action": "activated",
+    "timestamp": "17:19",
+    "description": "ALIMENTAÇÃO 2 - EMBALADORA 06 Á EMBALADORA 11",
+    "priority": "process",
+    "type": "process",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:19:56.494080"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_13",
+    "action": "activated",
+    "timestamp": "17:19",
+    "description": "LINHA L500.3 / L600.3 ABERTA",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:19:56.494076"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_2",
+    "action": "activated",
+    "timestamp": "17:19",
+    "description": "RELÊ DE EMERGÊNCIA  !!!",
+    "priority": "emergency",
+    "type": "emergency",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:19:56.494071"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_0",
+    "action": "activated",
+    "timestamp": "17:19",
+    "description": "ALARME NÍVEL ALTO ATIVO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:19:56.494057"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_EST_INTELIGENTES_bit_0",
+    "action": "activated",
+    "timestamp": "17:19",
+    "description": "EMERGÊNCIA ZONA DOSIFICADO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:19:39.294469"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_2",
+    "action": "activated",
+    "timestamp": "17:19",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 2 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:19:39.294465"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_1",
+    "action": "activated",
+    "timestamp": "17:19",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 1 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:19:39.294459"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_14",
+    "action": "activated",
+    "timestamp": "17:19",
+    "description": "ALIMENTAÇÃO 2 - EMBALADORA 06 Á EMBALADORA 11",
+    "priority": "process",
+    "type": "process",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:19:39.294435"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_13",
+    "action": "activated",
+    "timestamp": "17:19",
+    "description": "LINHA L500.3 / L600.3 ABERTA",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:19:39.294428"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_2",
+    "action": "activated",
+    "timestamp": "17:19",
+    "description": "RELÊ DE EMERGÊNCIA  !!!",
+    "priority": "emergency",
+    "type": "emergency",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:19:39.294419"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_0",
+    "action": "activated",
+    "timestamp": "17:19",
+    "description": "ALARME NÍVEL ALTO ATIVO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-16T17:19:39.294399"
+  }
+]

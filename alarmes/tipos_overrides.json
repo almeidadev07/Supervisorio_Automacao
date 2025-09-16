@@ -1,22 +1,4 @@
 {
-  "DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS": {
-    "0": "hardware",
-    "1": "emergency",
-    "2": "emergency",
-    "3": "emergency",
-    "4": "emergency",
-    "5": "hardware",
-    "6": "hardware",
-    "7": "process",
-    "8": "process",
-    "9": "process",
-    "10": "process",
-    "11": "hardware",
-    "12": "hardware",
-    "13": "hardware",
-    "14": "process",
-    "15": "process"
-  },
   "DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL": {
     "0": "emergency",
     "1": "nr12",
@@ -556,5 +538,26 @@
     "13": "nr12",
     "14": "nr12",
     "15": "emergency"
+  },
+  "DB04_PRINCIPAL EMERG EMБ17": {
+    "11": "emergency"
+  },
+  "DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS": {
+    "0": "hardware",
+    "1": "emergency",
+    "2": "emergency",
+    "3": "emergency",
+    "4": "emergency",
+    "5": "hardware",
+    "6": "hardware",
+    "7": "process",
+    "8": "process",
+    "9": "process",
+    "10": "process",
+    "11": "hardware",
+    "12": "hardware",
+    "13": "hardware",
+    "14": "process",
+    "15": "process"
   }
 }

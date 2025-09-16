@@ -18,6 +18,8 @@ class AlarmProcessor:
         self.type_overrides: Dict[str, Dict[int, str]] = {}
         self._type_overrides_path = os.path.join("alarmes", "tipos_overrides.json")
         self._type_overrides_mtime: Optional[float] = None
+        self._history_path = os.path.join("alarmes", "alarm_history.json")
+        self._last_alarm_state: Dict[str, Any] = {}
         self._load_alarm_descriptions()
         self._load_priority_overrides()
         self._load_type_overrides(write_back=True)
@@ -315,6 +317,9 @@ class AlarmProcessor:
                             if alarm_info:
                                 active_alarms.append(alarm_info)
         
+        # Registra mudanças no histórico
+        self._update_alarm_history(active_alarms, machine)
+        
         return active_alarms
     
     def _is_bit_set(self, value: int, bit_index: int) -> bool:
@@ -481,6 +486,113 @@ class AlarmProcessor:
                 summary[priority] += 1
         
         return summary
+
+    def _update_alarm_history(self, active_alarms: List[Dict[str, Any]], machine: str) -> None:
+        """Atualiza o histórico de alarmes detectando mudanças de estado"""
+        try:
+            # Cria chave única para cada alarme
+            current_state = {}
+            for alarm in active_alarms:
+                alarm_id = alarm["id"]
+                current_state[alarm_id] = {
+                    "timestamp": alarm["timestamp"],
+                    "description": alarm["description"],
+                    "priority": alarm["priority"],
+                    "type": alarm["type"],
+                    "machine": alarm["machine"]
+                }
+            
+            # Detecta alarmes que acabaram de ativar (não estavam no estado anterior)
+            new_alarms = []
+            for alarm_id, alarm_data in current_state.items():
+                if alarm_id not in self._last_alarm_state:
+                    new_alarms.append({
+                        "id": alarm_id,
+                        "action": "activated",
+                        "timestamp": alarm_data["timestamp"],
+                        "description": alarm_data["description"],
+                        "priority": alarm_data["priority"],
+                        "type": alarm_data["type"],
+                        "machine": alarm_data["machine"]
+                    })
+            
+            # Detecta alarmes que acabaram de desativar (estavam no estado anterior mas não estão mais)
+            cleared_alarms = []
+            for alarm_id in self._last_alarm_state:
+                if alarm_id not in current_state:
+                    old_data = self._last_alarm_state[alarm_id]
+                    cleared_alarms.append({
+                        "id": alarm_id,
+                        "action": "cleared",
+                        "timestamp": datetime.now().strftime("%H:%M"),
+                        "description": old_data["description"],
+                        "priority": old_data["priority"],
+                        "type": old_data["type"],
+                        "machine": old_data["machine"]
+                    })
+            
+            # Atualiza estado atual
+            self._last_alarm_state = current_state
+            
+            # Salva mudanças no histórico se houver
+            if new_alarms or cleared_alarms:
+                print(f"[ALARM] Detectadas mudanças: {len(new_alarms)} novos, {len(cleared_alarms)} limpos")
+                self._save_to_history(new_alarms + cleared_alarms)
+                
+        except Exception as e:
+            print(f"[ALARM] Erro ao atualizar histórico: {e}")
+
+    def _save_to_history(self, alarm_events: List[Dict[str, Any]]) -> None:
+        """Salva eventos de alarme no histórico com limite de 1 semana"""
+        try:
+            # Carrega histórico existente
+            history = []
+            if os.path.exists(self._history_path):
+                with open(self._history_path, 'r', encoding='utf-8') as f:
+                    history = json.load(f) or []
+            
+            # Adiciona novos eventos
+            for event in alarm_events:
+                event["full_timestamp"] = datetime.now().isoformat()
+                history.append(event)
+            
+            # Remove eventos antigos (mais de 7 dias)
+            cutoff_date = datetime.now().timestamp() - (7 * 24 * 60 * 60)
+            history = [
+                event for event in history 
+                if datetime.fromisoformat(event["full_timestamp"]).timestamp() > cutoff_date
+            ]
+            
+            # Ordena por timestamp (mais recente primeiro)
+            history.sort(key=lambda x: x["full_timestamp"], reverse=True)
+            
+            # Limita a 1000 eventos para evitar arquivo muito grande
+            if len(history) > 1000:
+                history = history[:1000]
+            
+            # Salva histórico
+            os.makedirs(os.path.dirname(self._history_path), exist_ok=True)
+            with open(self._history_path, 'w', encoding='utf-8') as f:
+                json.dump(history, f, ensure_ascii=False, indent=2)
+                
+        except Exception as e:
+            print(f"[ALARM] Erro ao salvar histórico: {e}")
+
+    def get_alarm_history(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Retorna histórico de alarmes"""
+        try:
+            if not os.path.exists(self._history_path):
+                return []
+            
+            with open(self._history_path, 'r', encoding='utf-8') as f:
+                history = json.load(f) or []
+            
+            # Retorna os eventos mais recentes
+            return history[:limit]
+            
+        except Exception as e:
+            print(f"[ALARM] Erro ao carregar histórico: {e}")
+            return []
 
 # Instância global do processador
 alarm_processor = AlarmProcessor()

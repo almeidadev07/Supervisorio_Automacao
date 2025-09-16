@@ -54,10 +54,17 @@ function toggleAlarmView(button) {
     if (currentState === 'instantaneos') {
         button.setAttribute('data-state', 'historicos');
         toggleText.textContent = 'Histórico';
-        carregarAlarmes('historicos');
+        currentViewMode = 'historicos';
+        // Para o polling automático quando em histórico
+        stopAlarmAutoRefresh();
+        // Força recarregamento do histórico
+        carregarAlarmesHistoricos();
     } else {
         button.setAttribute('data-state', 'instantaneos');
         toggleText.textContent = 'Instantâneo';
+        currentViewMode = 'instantaneos';
+        // Reinicia o polling quando volta para instantâneo
+        startAlarmAutoRefresh();
         carregarAlarmes('instantaneos');
     }
 }
@@ -79,6 +86,7 @@ function aplicarFiltro(prioridade) {
 let currentAlarms = [];
 let alarmSocket = null;
 let alarmPollIntervalId = null;
+let currentViewMode = 'instantaneos'; // Controla se está em modo instantâneo ou histórico
 const ALARM_POLL_MS = 1000; // Intervalo ideal para atualização de alarmes
 
 function carregarAlarmes(tipo) {
@@ -148,17 +156,41 @@ function carregarAlarmesReais() {
 }
 
 function carregarAlarmesHistoricos() {
-    // Dados simulados para histórico
-    const alarmes = [
-        { hora: "13:15", descricao: "Histórico: Falha de rede", prioridade: "hardware" },
-        { hora: "12:20", descricao: "Histórico: Processo interrompido", prioridade: "process" },
-        { hora: "11:30", descricao: "Histórico: Erro de comunicação", prioridade: "hardware" },
-        { hora: "10:45", descricao: "Histórico: Motor travado", prioridade: "emergency" },
-        { hora: "09:20", descricao: "Histórico: Drive com falha", prioridade: "drives" }
-    ];
+    console.log('Carregando histórico de alarmes...');
     
-    currentAlarms = alarmes;
-    atualizarInterfaceAlarmes();
+    // Carrega histórico real via API
+    fetch('/api/alarms/history?limit=200')
+        .then(response => response.json())
+        .then(data => {
+            if (data.ok && data.history) {
+                console.log(`[ALARM] ${data.history.length} eventos de histórico carregados`);
+                
+                // Converte eventos do histórico para o mesmo formato da lista ativa
+                const alarmes = data.history.map(event => ({
+                    id: event.id,
+                    var_name: event.var_name || '',
+                    bit_index: event.bit_index || 0,
+                    description: `${event.action === 'activated' ? 'ATIVADO' : 'LIMPO'}: ${event.description}`,
+                    priority: event.priority,
+                    type: event.type,
+                    machine: event.machine,
+                    timestamp: event.timestamp,
+                    active: event.action === 'activated'
+                }));
+                
+                currentAlarms = alarmes;
+                atualizarInterfaceAlarmes();
+            } else {
+                console.log('[ALARM] Nenhum histórico disponível ou erro na API:', data.error);
+                currentAlarms = [];
+                atualizarInterfaceAlarmes();
+            }
+        })
+        .catch(error => {
+            console.error('[ALARM] Erro ao carregar histórico:', error);
+            // Em caso de erro, mostra mensagem
+            mostrarMensagemErroAlarmes();
+        });
 }
 
 function atualizarInterfaceAlarmes() {
@@ -258,20 +290,27 @@ function inicializarSocketAlarmes() {
         alarmSocket.on('telemetry', (data) => {
             if (data && data.active_alarms) {
                 console.log('[ALARM] Alarmes recebidos via SocketIO:', data.active_alarms.length);
-                currentAlarms = data.active_alarms;
-                atualizarInterfaceAlarmes();
-                atualizarContadoresAlarmes(data.alarm_summary);
+                // Só atualiza se estiver no modo instantâneo
+                if (currentViewMode === 'instantaneos') {
+                    currentAlarms = data.active_alarms;
+                    atualizarInterfaceAlarmes();
+                    atualizarContadoresAlarmes(data.alarm_summary);
+                }
             }
         });
         
         alarmSocket.on('plc_connection_changed', (data) => {
             if (data && data.connected) {
                 console.log('[ALARM] PLC conectado, recarregando alarmes...');
-                carregarAlarmesReais();
+                if (currentViewMode === 'instantaneos') {
+                    carregarAlarmesReais();
+                }
             } else {
                 console.log('[ALARM] PLC desconectado, limpando alarmes...');
-                currentAlarms = [];
-                atualizarInterfaceAlarmes();
+                if (currentViewMode === 'instantaneos') {
+                    currentAlarms = [];
+                    atualizarInterfaceAlarmes();
+                }
             }
         });
         
