@@ -2,6 +2,66 @@
   {
     "id": "XLCLASS_DB04_PRINCIPAL_EMERG_EST_INTELIGENTES_bit_0",
     "action": "activated",
+    "timestamp": "17:54",
+    "description": "EMERGÊNCIA ZONA DOSIFICADO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T17:54:18.207855"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_1",
+    "action": "activated",
+    "timestamp": "17:54",
+    "description": "EMERGÊNCIA - ZONA DE PESAGEM - NR12 - TAMPA ESQUERDA 1 !!!",
+    "priority": "nr12",
+    "type": "nr12",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T17:54:18.207851"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_14",
+    "action": "activated",
+    "timestamp": "17:54",
+    "description": "ALIMENTAÇÃO 2 - EMBALADORA 06 Á EMBALADORA 11",
+    "priority": "process",
+    "type": "process",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T17:54:18.207847"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_13",
+    "action": "activated",
+    "timestamp": "17:54",
+    "description": "LINHA L500.3 / L600.3 ABERTA",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T17:54:18.207842"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_2",
+    "action": "activated",
+    "timestamp": "17:54",
+    "description": "RELÊ DE EMERGÊNCIA  !!!",
+    "priority": "emergency",
+    "type": "emergency",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T17:54:18.207836"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_0",
+    "action": "activated",
+    "timestamp": "17:54",
+    "description": "ALARME NÍVEL ALTO ATIVO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T17:54:18.207815"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_EST_INTELIGENTES_bit_0",
+    "action": "activated",
     "timestamp": "17:32",
     "description": "EMERGÊNCIA ZONA DOSIFICADO !!!",
     "priority": "hardware",
