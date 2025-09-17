@@ -257,6 +257,26 @@ html, body {
 
 
 /* Cabeçalho da lista - fixa no topo */
+/* Indicador de alarme ativo nas abas (piscar) */
+@keyframes blink-emergency { 0%,100% { box-shadow: 0 0 0 0 rgba(255,68,68,0.0) } 50% { box-shadow: 0 0 0 8px rgba(255,68,68,0.35) } }
+@keyframes blink-nr12 { 0%,100% { box-shadow: 0 0 0 0 rgba(255,107,107,0.0) } 50% { box-shadow: 0 0 0 8px rgba(255,107,107,0.35) } }
+@keyframes blink-drives { 0%,100% { box-shadow: 0 0 0 0 rgba(255,153,0,0.0) } 50% { box-shadow: 0 0 0 8px rgba(255,153,0,0.35) } }
+@keyframes blink-thermal { 0%,100% { box-shadow: 0 0 0 0 rgba(255,221,0,0.0) } 50% { box-shadow: 0 0 0 8px rgba(255,221,0,0.35) } }
+@keyframes blink-hardware { 0%,100% { box-shadow: 0 0 0 0 rgba(170,102,204,0.0) } 50% { box-shadow: 0 0 0 8px rgba(170,102,204,0.35) } }
+@keyframes blink-process { 0%,100% { box-shadow: 0 0 0 0 rgba(66,133,244,0.0) } 50% { box-shadow: 0 0 0 8px rgba(66,133,244,0.35) } }
+
+/* Aplica o piscar apenas quando houver alarme e a aba não estiver selecionada */
+.filtro-btn.has-alarms:not(.active) { border-width: 2px; }
+.filtro-btn[data-prioridade="emergency"].has-alarms:not(.active) { border-color: #ff4444; animation: blink-emergency 1s infinite; }
+.filtro-btn[data-prioridade="nr12"].has-alarms:not(.active) { border-color: #ff6b6b; animation: blink-nr12 1.1s infinite; }
+.filtro-btn[data-prioridade="drives"].has-alarms:not(.active) { border-color: #ff9900; animation: blink-drives 1.05s infinite; }
+.filtro-btn[data-prioridade="thermal"].has-alarms:not(.active) { border-color: #ffdd00; animation: blink-thermal 1.15s infinite; }
+.filtro-btn[data-prioridade="hardware"].has-alarms:not(.active) { border-color: #aa66cc; animation: blink-hardware 1.1s infinite; }
+.filtro-btn[data-prioridade="process"].has-alarms:not(.active) { border-color: #4285f4; animation: blink-process 1.05s infinite; }
+
+/* Realça o ponto de cor quando há alarme */
+.filtro-btn.has-alarms .color-indicator { transform: scale(1.1); box-shadow: 0 0 10px rgba(0,0,0,0.2); }
+
 /* Cabeçalho da lista - estilo limpo e fixo */
 .alarm-header {
     display: grid;

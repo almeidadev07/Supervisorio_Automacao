@@ -236,6 +236,9 @@ function atualizarInterfaceAlarmes() {
     if (filtroAtivo) {
         aplicarFiltro(filtroAtivo.dataset.prioridade);
     }
+
+    // Atualiza indicadores nas abas
+    atualizarIndicadoresAbas();
 }
 
 // Normaliza prioridade separando NR12 de Emergência
@@ -295,6 +298,7 @@ function inicializarSocketAlarmes() {
                     currentAlarms = data.active_alarms;
                     atualizarInterfaceAlarmes();
                     atualizarContadoresAlarmes(data.alarm_summary);
+                    atualizarIndicadoresAbas();
                 }
             }
         });
@@ -323,6 +327,38 @@ function inicializarSocketAlarmes() {
         console.error('[ALARM] Erro ao inicializar SocketIO:', error);
     }
 }
+
+// Determina quais tipos possuem alarmes ativos e marca as abas correspondentes
+function atualizarIndicadoresAbas() {
+    try {
+        const tiposAtivos = new Set();
+        currentAlarms.forEach(alarme => {
+            const tipo = normalizarPrioridade(alarme);
+            if (tipo) tiposAtivos.add(tipo);
+        });
+
+        const tabs = document.querySelectorAll('.filtro-btn');
+        tabs.forEach(tab => {
+            const prioridade = tab.getAttribute('data-prioridade');
+            if (!prioridade || prioridade === 'todas') {
+                tab.classList.remove('has-alarms');
+                return;
+            }
+            if (tiposAtivos.has(prioridade)) {
+                tab.classList.add('has-alarms');
+            } else {
+                tab.classList.remove('has-alarms');
+            }
+        });
+    } catch (e) {
+        console.error('[ALARM] Erro ao atualizar indicadores de abas:', e);
+    }
+}
+
+// Atualiza ao trocar modo de visualização
+document.addEventListener('DOMContentLoaded', () => {
+    atualizarIndicadoresAbas();
+});
 
 // Função para carregar alarmes do comm_map.json
 async function carregarAlarmesDoCommMap() {

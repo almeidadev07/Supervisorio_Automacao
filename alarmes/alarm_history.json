@@ -1,5 +1,155 @@
 [
   {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_EST_INTELIGENTES_bit_0",
+    "action": "activated",
+    "timestamp": "12:33",
+    "description": "EMERGÊNCIA ZONA DOSIFICADO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T12:33:29.496991"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_14",
+    "action": "activated",
+    "timestamp": "12:33",
+    "description": "ALIMENTAÇÃO 2 - EMBALADORA 06 Á EMBALADORA 11",
+    "priority": "process",
+    "type": "process",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T12:33:29.496983"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_13",
+    "action": "activated",
+    "timestamp": "12:33",
+    "description": "LINHA L500.3 / L600.3 ABERTA",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T12:33:29.496976"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_2",
+    "action": "activated",
+    "timestamp": "12:33",
+    "description": "RELÊ DE EMERGÊNCIA  !!!",
+    "priority": "emergency",
+    "type": "emergency",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T12:33:29.496965"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_0",
+    "action": "activated",
+    "timestamp": "12:33",
+    "description": "ALARME NÍVEL ALTO ATIVO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T12:33:29.496948"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_EST_INTELIGENTES_bit_0",
+    "action": "cleared",
+    "timestamp": "12:01",
+    "description": "EMERGÊNCIA ZONA DOSIFICADO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T12:01:52.016123"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_14",
+    "action": "cleared",
+    "timestamp": "12:01",
+    "description": "ALIMENTAÇÃO 2 - EMBALADORA 06 Á EMBALADORA 11",
+    "priority": "process",
+    "type": "process",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T12:01:52.016119"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_13",
+    "action": "cleared",
+    "timestamp": "12:01",
+    "description": "LINHA L500.3 / L600.3 ABERTA",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T12:01:52.016114"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_2",
+    "action": "cleared",
+    "timestamp": "12:01",
+    "description": "RELÊ DE EMERGÊNCIA  !!!",
+    "priority": "emergency",
+    "type": "emergency",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T12:01:52.016110"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_0",
+    "action": "cleared",
+    "timestamp": "12:01",
+    "description": "ALARME NÍVEL ALTO ATIVO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T12:01:52.016095"
+  },
+  {
+    "id": "XLCLASS_DB04_PRINCIPAL_EMERG_EST_INTELIGENTES_bit_0",
+    "action": "activated",
+    "timestamp": "09:44",
+    "description": "EMERGÊNCIA ZONA DOSIFICADO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T09:44:49.713509"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_14",
+    "action": "activated",
+    "timestamp": "09:44",
+    "description": "ALIMENTAÇÃO 2 - EMBALADORA 06 Á EMBALADORA 11",
+    "priority": "process",
+    "type": "process",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T09:44:49.713507"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_13",
+    "action": "activated",
+    "timestamp": "09:44",
+    "description": "LINHA L500.3 / L600.3 ABERTA",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T09:44:49.713504"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_2",
+    "action": "activated",
+    "timestamp": "09:44",
+    "description": "RELÊ DE EMERGÊNCIA  !!!",
+    "priority": "emergency",
+    "type": "emergency",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T09:44:49.713501"
+  },
+  {
+    "id": "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS_bit_0",
+    "action": "activated",
+    "timestamp": "09:44",
+    "description": "ALARME NÍVEL ALTO ATIVO !!!",
+    "priority": "hardware",
+    "type": "hardware",
+    "machine": "700CX",
+    "full_timestamp": "2025-09-17T09:44:49.713490"
+  },
+  {
     "id": "XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL_bit_2",
     "action": "cleared",
     "timestamp": "17:39",
