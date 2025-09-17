@@ -12,6 +12,7 @@ class PLCController:
         self.machines_config = machines_config
         self.active_config = None
         self.driver = None
+        self.multi_drivers = {}  # Dicionário para múltiplos drivers por IP
 
         self._poll_thread = None
         self._stop_event = threading.Event()
@@ -19,6 +20,7 @@ class PLCController:
         self._io_lock = threading.Lock()  # Para serializar acessos Snap7
         self._plc_connected_state = None
         self.comm_map_by_machine = {}
+        self.tags_by_plc_ip = {}  # Agrupa tags por IP do PLC
         self._load_comm_maps()
         self._last_connection_attempt = 0
         self._connection_retry_interval = 2.0  # Tenta reconectar a cada 2 segundos quando desconectado
@@ -28,7 +30,7 @@ class PLCController:
         self._stop_detection_when_connected = True  # Para detecção quando conectado
 
     def _load_comm_maps(self):
-        """Carrega os maps de comunicação de todas as máquinas"""
+        """Carrega os maps de comunicação de todas as máquinas e agrupa tags por IP"""
         comm_map_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'config', 'comm_map')
         
         for machine_config in self.machines_config:
@@ -40,20 +42,53 @@ class PLCController:
             if os.path.exists(comm_map_file):
                 try:
                     with open(comm_map_file, 'r', encoding='utf-8') as f:
-                        self.comm_map_by_machine[machine_name] = json.load(f)
-                    print(f"[PLC] Carregado comm_map para {machine_name}: {len(self.comm_map_by_machine[machine_name])} tags")
+                        comm_map = json.load(f)
+                    self.comm_map_by_machine[machine_name] = comm_map
+                    
+                    # Agrupa tags por IP do PLC
+                    self._group_tags_by_plc_ip(machine_name, comm_map, machine_config)
+                    
+                    print(f"[PLC] Carregado comm_map para {machine_name}: {len(comm_map)} tags")
                 except Exception as e:
                     print(f"[PLC] Erro ao carregar comm_map para {machine_name}: {e}")
                     self.comm_map_by_machine[machine_name] = []
             else:
                 print(f"[PLC] Comm_map não encontrado para {machine_name}: {comm_map_file}")
                 self.comm_map_by_machine[machine_name] = []
+    
+    def _group_tags_by_plc_ip(self, machine_name, comm_map, machine_config):
+        """Agrupa tags por IP do PLC"""
+        default_ip = machine_config.get('default_plc_ip')
+        
+        for tag in comm_map:
+            # Se a tag tem plc_ip específico, usa ele; senão usa o IP padrão da máquina
+            plc_ip = tag.get('plc_ip', default_ip)
+            
+            if plc_ip:
+                if plc_ip not in self.tags_by_plc_ip:
+                    self.tags_by_plc_ip[plc_ip] = []
+                self.tags_by_plc_ip[plc_ip].append(tag)
+        
+        # Log dos IPs encontrados
+        for ip, tags in self.tags_by_plc_ip.items():
+            if ip == default_ip:
+                print(f"[PLC] {machine_name}: {len(tags)} tags para IP padrão {ip}")
+            else:
+                print(f"[PLC] {machine_name}: {len(tags)} tags para IP adicional {ip}")
 
     def set_active_machine(self, cfg):
-        """Troca a máquina ativa, cria driver e inicia polling."""
+        """Troca a máquina ativa, cria drivers para todos os IPs e inicia polling."""
         with self._lock:
             self._stop_polling()
 
+            # Desconecta todos os drivers existentes
+            for ip, driver in self.multi_drivers.items():
+                try:
+                    driver.disconnect()
+                except Exception:
+                    pass
+            self.multi_drivers = {}
+            
             if self.driver:
                 try:
                     self.driver.disconnect()
@@ -72,32 +107,56 @@ class PLCController:
             else:
                 cfg_with_comm_map = cfg
                 print(f"[PLC] ⚠️ Comm map não encontrado para {machine_name}")
+                return False, "Comm map não encontrado"
             
-            try:
-                print(f"[PLC] Criando driver para {cfg.get('name')} em {cfg.get('default_plc_ip')}")
-                # Cria o driver de forma mais segura para threading
-                self.driver = create_driver_for_config(cfg_with_comm_map)
-                
-                # Conecta de forma mais robusta
-                connected = self.driver.connect()
-                print(f"[PLC] Conectado -> {connected}")
-                if connected:
-                    print(f"[PLC] ✅ Driver criado com sucesso para {cfg.get('name')} ({cfg.get('default_plc_ip')})")
-                else:
-                    print(f"[PLC] ❌ Falha na conexão para {cfg.get('name')} ({cfg.get('default_plc_ip')})")
-                    self.driver = None
-                    return False, "Falha na conexão"
-            except Exception as e:
-                print(f"[PLC] ❌ Erro ao criar driver para {cfg.get('name')}: {e}")
-                self.driver = None
-                return False, f'Falha ao criar/conectar driver: {e}'
+            # Cria drivers para todos os IPs únicos encontrados nas tags
+            connected_ips = []
+            for plc_ip in self.tags_by_plc_ip.keys():
+                try:
+                    print(f"[PLC] Criando driver para IP {plc_ip}")
+                    
+                    # Cria configuração específica para este IP
+                    ip_cfg = cfg_with_comm_map.copy()
+                    ip_cfg['default_plc_ip'] = plc_ip
+                    ip_cfg['name'] = f"{machine_name}_{plc_ip.replace('.', '_')}"
+                    
+                    # Cria driver
+                    driver = create_driver_for_config(ip_cfg)
+                    
+                    # Tenta conectar
+                    connected = driver.connect()
+                    if connected:
+                        self.multi_drivers[plc_ip] = driver
+                        connected_ips.append(plc_ip)
+                        print(f"[PLC] ✅ Driver conectado para {plc_ip}")
+                    else:
+                        print(f"[PLC] ❌ Falha na conexão para {plc_ip}")
+                        try:
+                            driver.disconnect()
+                        except Exception:
+                            pass
+                        
+                except Exception as e:
+                    print(f"[PLC] ❌ Erro ao criar driver para {plc_ip}: {e}")
+            
+            if not connected_ips:
+                print(f"[PLC] ❌ Nenhum driver conectado para {machine_name}")
+                return False, "Nenhum PLC conectado"
+            
+            # Mantém o driver principal para compatibilidade (IP padrão)
+            default_ip = cfg.get('default_plc_ip')
+            if default_ip in self.multi_drivers:
+                self.driver = self.multi_drivers[default_ip]
+            
+            print(f"[PLC] ✅ {len(connected_ips)} drivers conectados: {connected_ips}")
 
             # Emite evento socketio para front
             try:
                 if self.socketio:
                     self.socketio.emit('machine_changed', {
                         'name': cfg['name'],
-                        'connected': bool(self.driver and self.driver.is_connected())
+                        'connected': len(connected_ips) > 0,
+                        'connected_ips': connected_ips
                     })
                     # Força reload da página para reconhecer nova máquina
                     self.socketio.emit('force_reload', {'reason': 'machine_changed', 'machine': cfg['name']})
@@ -237,30 +296,50 @@ class PLCController:
                     time.sleep(0.5)
                     continue
 
-                # Tenta ler dados do PLC
+                # Tenta ler dados de todos os PLCs conectados
                 telemetry = {}
                 connection_ok = True
+                connected_plcs = 0
                 
                 try:
                     with self._io_lock:
-                        telemetry = self.driver.read_telemetry() or {}
-
-                        # leitura de tags
+                        # Lê dados do driver principal (IP padrão)
+                        if self.driver and self.driver.is_connected():
+                            telemetry = self.driver.read_telemetry() or {}
+                            connected_plcs += 1
+                        
+                        # Lê dados de todos os drivers múltiplos
                         machine = self.active_config.get('name') if self.active_config else None
-                        tag_defs = self.comm_map_by_machine.get(machine, [])
-                        if tag_defs:
-                            telemetry.update(self.driver.read_tags(tag_defs))
+                        
+                        for plc_ip, driver in self.multi_drivers.items():
+                            if driver and driver.is_connected():
+                                try:
+                                    # Lê tags específicas deste IP
+                                    tag_defs = self.tags_by_plc_ip.get(plc_ip, [])
+                                    if tag_defs:
+                                        ip_data = driver.read_tags(tag_defs)
+                                        telemetry.update(ip_data)
+                                        connected_plcs += 1
+                                        print(f"[PLC] Lidas {len(ip_data)} tags do IP {plc_ip}")
+                                except Exception as e:
+                                    print(f"[PLC] Erro ao ler tags do IP {plc_ip}: {e}")
                     
-                    # Se chegou até aqui, a conexão está funcionando
-                    consecutive_failures = 0
+                    # Se chegou até aqui, pelo menos uma conexão está funcionando
+                    if connected_plcs > 0:
+                        consecutive_failures = 0
+                        connection_ok = True
+                    else:
+                        connection_ok = False
+                        consecutive_failures += 1
                     
                 except Exception as e:
                     print(f"[PLC] Erro na leitura de dados: {e}")
                     connection_ok = False
                     consecutive_failures += 1
 
-                connected_now = bool(self.driver and self.driver.is_connected() and connection_ok)
+                connected_now = connection_ok and connected_plcs > 0
                 telemetry['plc_connected'] = connected_now
+                telemetry['connected_plcs'] = connected_plcs
 
                 # Processa alarmes se conectado
                 if connected_now and machine:
