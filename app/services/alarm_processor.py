@@ -382,6 +382,12 @@ class AlarmProcessor:
         mapping = self.priority_overrides.get(base_name)
         if mapping and bit_index in mapping:
             return mapping[bit_index]
+        # Tentativa com prefixo XLCLASS_
+        xl_base = f"XLCLASS_{base_name}" if not base_name.startswith("XLCLASS_") else base_name
+        if xl_base in self.priority_overrides:
+            mapping = self.priority_overrides.get(xl_base)
+            if mapping and bit_index in mapping:
+                return mapping[bit_index]
         # Tentativa com DB swap
         candidates = []
         if base_name.startswith("DB01_"):
@@ -399,6 +405,11 @@ class AlarmProcessor:
         # Recarrega dinamicamente se o arquivo mudou
         self._maybe_reload_type_overrides()
         mapping = self.type_overrides.get(base_name)
+        if mapping and bit_index in mapping:
+            return mapping[bit_index]
+        # Tentativa com prefixo XLCLASS_
+        xl_base = f"XLCLASS_{base_name}" if not base_name.startswith("XLCLASS_") else base_name
+        mapping = self.type_overrides.get(xl_base)
         if mapping and bit_index in mapping:
             return mapping[bit_index]
         candidates = []
@@ -431,6 +442,12 @@ class AlarmProcessor:
         # Tenta direto
         if base_name in self.alarm_descriptions:
             descriptions = self.alarm_descriptions[base_name]
+            if bit_index in descriptions:
+                return descriptions[bit_index]
+        # Tenta com prefixo XLCLASS_
+        xl_base = f"XLCLASS_{base_name}" if not base_name.startswith("XLCLASS_") else base_name
+        if xl_base in self.alarm_descriptions:
+            descriptions = self.alarm_descriptions[xl_base]
             if bit_index in descriptions:
                 return descriptions[bit_index]
         # Tenta normalizações entre DB01 e DB04
