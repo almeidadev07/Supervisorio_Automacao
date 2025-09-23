@@ -527,6 +527,16 @@ function handleDrop(e) {
 // Aguarda o DOM estar completamente carregado antes de configurar os eventos
 document.addEventListener('DOMContentLoaded', () => {
     configurarDragAndDrop();
+    // Alternar visibilidade do círculo Alimentador com duplo clique
+    const alimentadorEl = document.querySelector('.alarm-count-circle.alimentador');
+    if (alimentadorEl && !alimentadorEl.dataset.toggleBound) {
+        alimentadorEl.addEventListener('dblclick', () => {
+            const hidden = localStorage.getItem('alarm_circle_alimentador_hidden') === '1';
+            localStorage.setItem('alarm_circle_alimentador_hidden', hidden ? '0' : '1');
+            alimentadorEl.setAttribute('data-visible', hidden ? 'true' : 'false');
+        });
+        alimentadorEl.dataset.toggleBound = '1';
+    }
 });
 
 // Funções do velocímetro
@@ -985,28 +995,75 @@ function pararAjuste() {
 }
 
 // Função para atualizar contadores de alarme
-function atualizarContadoresAlarme() {
-    // Simulação de contadores (substitua com dados reais)
-    const contadores = {
-        emergency: Math.floor(Math.random() * 100),
-        drives: Math.floor(Math.random() * 100),
-        thermal: Math.floor(Math.random() * 100),
-        hardware: Math.floor(Math.random() * 100),
-        process: Math.floor(Math.random() * 100),
-        total: 0
-    };
+async function atualizarContadoresAlarme() {
+    try {
+        const res = await fetch('/api/alarms', { cache: 'no-store' }).then(r => r.json());
+        if (!res || !res.ok) throw new Error(res && res.error ? res.error : 'API error');
 
-    // Calcula total
-    contadores.total = Object.values(contadores)
-        .reduce((acc, val) => acc + val, 0) - contadores.total;
+        const summary = res.alarm_summary || {};
+        const contadores = {
+            emergency: summary.emergency || 0,
+            nr12: summary.nr12 || 0,
+            drives: summary.drives || 0,
+            thermal: summary.thermal || 0,
+            hardware: summary.hardware || 0,
+            process: summary.process || 0,
+            total: summary.total || 0
+        };
 
-    // Atualiza os valores na interface
-    Object.keys(contadores).forEach(tipo => {
-        const elemento = document.querySelector(`.alarm-count-circle.${tipo} .count-value`);
-        if (elemento) {
-            elemento.textContent = contadores[tipo].toString().padStart(3, '0');
+        // Atualiza os valores na interface
+        Object.keys(contadores).forEach(tipo => {
+            const elemento = document.querySelector(`.alarm-count-circle.${tipo} .count-value`);
+            const circle = document.querySelector(`.alarm-count-circle.${tipo}`);
+            if (elemento) {
+                const digits = (tipo === 'alimentador') ? 2 : 2;
+                elemento.textContent = contadores[tipo].toString().padStart(digits, '0');
+            }
+            if (circle) {
+                if (contadores[tipo] > 0) circle.classList.add('has-alarms');
+                else circle.classList.remove('has-alarms');
+            }
+        });
+
+        // Clique no botão Alarmes abre a tela de alarmes
+        // Remove a abertura pelo card principal e delega aos círculos por tipo
+        const btnAlarmes = document.querySelector('.draggable-btn[data-station="alarmes"]');
+        if (btnAlarmes) btnAlarmes.style.cursor = 'default';
+
+        // Click por círculo: abre tela de alarmes e seleciona a aba correspondente
+        const circles = document.querySelectorAll('.alarm-count-circle');
+        circles.forEach(circle => {
+            if (circle.dataset.boundClick) return;
+            circle.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tipo = (circle.getAttribute('data-type') || '').toLowerCase();
+                try {
+                    if (window.showAlarm) {
+                        window.showAlarm(e);
+                        // Aguarda UI montar e seleciona a aba
+                        setTimeout(() => {
+                            if (window.selectAlarmTab) window.selectAlarmTab(tipo);
+                        }, 50);
+                        return;
+                    }
+                } catch(_) {}
+                // Fallback com hash e recarregar
+                window.location.hash = `#alarms-${tipo}`;
+                window.location.reload();
+            });
+            circle.dataset.boundClick = '1';
+        });
+
+        // Aplicar visibilidade do círculo "Alimentador" mantendo posição
+        const alimentadorEl = document.querySelector('.alarm-count-circle.alimentador');
+        const isHidden = localStorage.getItem('alarm_circle_alimentador_hidden') === '1';
+        if (alimentadorEl) {
+            alimentadorEl.setAttribute('data-visible', isHidden ? 'false' : 'true');
         }
-    });
+
+    } catch (e) {
+        // Silencioso para não poluir logs
+    }
 }
 
 // Modificar a função inicializarVelocimetro para incluir a atualização dos contadores

@@ -533,6 +533,7 @@ class AlarmProcessor:
         """Retorna resumo dos alarmes por prioridade"""
         summary = {
             "emergency": 0,
+            "nr12": 0,
             "drives": 0,
             "thermal": 0,
             "hardware": 0,

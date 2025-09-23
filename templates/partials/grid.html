@@ -37,23 +37,37 @@
             <h2>Alarmes</h2>
             <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
                 <div class="alarm-counts-container">
-                    <div class="alarm-count-circle emergency">
+                    <div class="alarm-count-circle emergency" data-type="emergency">
                         <span class="count-value">000</span>
+                        <span class="alarm-label">Emergência</span>
                     </div>
-                    <div class="alarm-count-circle drives">
+                    <div class="alarm-count-circle nr12" data-type="nr12">
                         <span class="count-value">000</span>
+                        <span class="alarm-label">NR12</span>
                     </div>
-                    <div class="alarm-count-circle thermal">
+                    <div class="alarm-count-circle drives" data-type="drives">
                         <span class="count-value">000</span>
+                        <span class="alarm-label">Drives</span>
                     </div>
-                    <div class="alarm-count-circle hardware">
+                    <div class="alarm-count-circle thermal" data-type="thermal">
                         <span class="count-value">000</span>
+                        <span class="alarm-label">Térmicos</span>
                     </div>
-                    <div class="alarm-count-circle process">
+                    <div class="alarm-count-circle hardware" data-type="hardware">
                         <span class="count-value">000</span>
+                        <span class="alarm-label">Hardware</span>
                     </div>
-                    <div class="alarm-count-circle total">
+                    <div class="alarm-count-circle process" data-type="process">
                         <span class="count-value">000</span>
+                        <span class="alarm-label">Processo</span>
+                    </div>
+                    <div class="alarm-count-circle alimentador" data-type="alimentador" data-visible="true">
+                        <span class="count-value">00</span>
+                        <span class="alarm-label">Aliment.</span>
+                    </div>
+                    <div class="alarm-count-circle total" data-type="total">
+                        <span class="count-value">000</span>
+                        <span class="alarm-label">Total</span>
                     </div>
                 </div>
             </div>

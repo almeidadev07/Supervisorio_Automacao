@@ -365,6 +365,36 @@ document.addEventListener('DOMContentLoaded', () => {
     atualizarIndicadoresAbas();
 });
 
+// Permite selecionar uma aba de alarmes programaticamente a partir do grid
+window.selectAlarmTab = function(prioridade) {
+    try {
+        const desired = (prioridade || 'todas').toLowerCase();
+        const buttons = document.querySelectorAll('.filtro-btn');
+        if (!buttons || buttons.length === 0) {
+            // Tenta novamente após a UI estar pronta
+            setTimeout(() => window.selectAlarmTab(prioridade), 100);
+            return;
+        }
+        // Remove seleção atual
+        buttons.forEach(b => b.classList.remove('active'));
+        // Encontra o botão correspondente
+        const btn = Array.from(buttons).find(b => (b.getAttribute('data-prioridade') || '').toLowerCase() === desired);
+        if (btn) {
+            btn.classList.add('active');
+            aplicarFiltro(desired);
+        } else {
+            // Fallback para 'todas'
+            const allBtn = Array.from(buttons).find(b => (b.getAttribute('data-prioridade') || '').toLowerCase() === 'todas');
+            if (allBtn) {
+                allBtn.classList.add('active');
+                aplicarFiltro('todas');
+            }
+        }
+    } catch (_) {
+        // silencioso
+    }
+};
+
 // Função para carregar alarmes do comm_map.json
 async function carregarAlarmesDoCommMap() {
     try {
