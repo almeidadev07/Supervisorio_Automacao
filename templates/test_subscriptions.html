@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Subscrições - Supervisório</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.no-clients {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.danger {
+            background-color: #dc3545;
+        }
+        button.danger:hover {
+            background-color: #c82333;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 4px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .tag-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .tag-item {
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .tag-item:last-child {
+            border-bottom: none;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste do Sistema de Subscrições</h1>
+        <p>Esta página demonstra como o sistema de leitura sob demanda funciona, reduzindo drasticamente a carga no PLC.</p>
+
+        <div class="section">
+            <h3>📊 Status da Conexão</h3>
+            <div id="connectionStatus" class="status disconnected">
+                Aguardando conexão...
+            </div>
+            <div id="subscriptionStatus" class="status no-clients">
+                Nenhum cliente ativo
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🎯 Controle de Subscrições</h3>
+            <p>Teste diferentes cenários de subscrição para ver como o PLC responde:</p>
+            
+            <div style="margin-bottom: 15px;">
+                <button onclick="subscribeToAlarms()">🚨 Subscrever a Alarmes</button>
+                <button onclick="subscribeToVelocities()">⚡ Subscrever a Velocidades</button>
+                <button onclick="subscribeToAll()">📊 Subscrever a Tudo</button>
+                <button onclick="unsubscribeAll()" class="danger">❌ Remover Todas</button>
+            </div>
+
+            <div>
+                <h4>Tags Personalizadas:</h4>
+                <input type="text" id="customTags" placeholder="Digite nomes de tags separados por vírgula">
+                <button onclick="subscribeToCustom()">✅ Subscrever</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>📋 Tags Atualmente Subscritas</h3>
+            <div id="subscribedTags" class="tag-list">
+                Nenhuma tag subscrita
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>📈 Dados em Tempo Real</h3>
+            <div id="telemetryData" class="log">
+                Aguardando dados...
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>📝 Log do Sistema</h3>
+            <div id="systemLog" class="log">
+                Sistema iniciado. Aguardando ações...
+            </div>
+        </div>
+    </div>
+
+    <!-- Inclui o gerenciador de subscrições -->
+    <script src="/static/js/subscription-manager.js"></script>
+    
+    <!-- Socket.IO para receber dados em tempo real -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <script>
+        // Conecta ao Socket.IO
+        const socket = io();
+        
+        // Elementos DOM
+        const connectionStatus = document.getElementById('connectionStatus');
+        const subscriptionStatus = document.getElementById('subscriptionStatus');
+        const subscribedTags = document.getElementById('subscribedTags');
+        const telemetryData = document.getElementById('telemetryData');
+        const systemLog = document.getElementById('systemLog');
+        
+        // Log de sistema
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            systemLog.innerHTML += `[${timestamp}] ${message}\n`;
+            systemLog.scrollTop = systemLog.scrollHeight;
+        }
+        
+        // Atualiza status da conexão
+        socket.on('plc_connection_changed', (data) => {
+            if (data.connected) {
+                connectionStatus.textContent = '✅ PLC Conectado';
+                connectionStatus.className = 'status connected';
+                log('✅ PLC conectado com sucesso');
+            } else {
+                connectionStatus.textContent = '❌ PLC Desconectado';
+                connectionStatus.className = 'status disconnected';
+                log('❌ PLC desconectado');
+            }
+        });
+        
+        // Recebe dados de telemetria
+        socket.on('telemetry', (data) => {
+            if (data.no_active_clients) {
+                subscriptionStatus.textContent = '📭 Nenhum cliente ativo - PLC em modo de espera';
+                subscriptionStatus.className = 'status no-clients';
+            } else {
+                subscriptionStatus.textContent = `📊 ${Object.keys(data).length} dados recebidos`;
+                subscriptionStatus.className = 'status connected';
+            }
+            
+            // Atualiza dados de telemetria
+            telemetryData.innerHTML = JSON.stringify(data, null, 2);
+        });
+        
+        // Funções de teste
+        function subscribeToAlarms() {
+            const alarmTags = [
+                'XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS',
+                'XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL',
+                'XLCLASS_DB04_PRINCIPAL_EMERG_EST_INTELIGENTES'
+            ];
+            
+            subscriptionManager.subscribeTo(alarmTags).then(success => {
+                if (success) {
+                    log('🚨 Subscrito a tags de alarme');
+                    updateSubscribedTags();
+                } else {
+                    log('❌ Falha na subscrição de alarmes');
+                }
+            });
+        }
+        
+        function subscribeToVelocities() {
+            const velocityTags = [
+                'XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_REAL',
+                'XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_PROG'
+            ];
+            
+            subscriptionManager.subscribeTo(velocityTags).then(success => {
+                if (success) {
+                    log('⚡ Subscrito a tags de velocidade');
+                    updateSubscribedTags();
+                } else {
+                    log('❌ Falha na subscrição de velocidades');
+                }
+            });
+        }
+        
+        function subscribeToAll() {
+            const allTags = [
+                'XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS',
+                'XLCLASS_DB04_PRINCIPAL_EMERG_PAINEL_PRINCIPAL',
+                'XLCLASS_DB04_PRINCIPAL_EMERG_EST_INTELIGENTES',
+                'XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_REAL',
+                'XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_PROG'
+            ];
+            
+            subscriptionManager.subscribeTo(allTags).then(success => {
+                if (success) {
+                    log('📊 Subscrito a todas as tags de teste');
+                    updateSubscribedTags();
+                } else {
+                    log('❌ Falha na subscrição completa');
+                }
+            });
+        }
+        
+        function subscribeToCustom() {
+            const customTagsInput = document.getElementById('customTags');
+            const tags = customTagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+            
+            if (tags.length === 0) {
+                log('❌ Nenhuma tag fornecida');
+                return;
+            }
+            
+            subscriptionManager.subscribeTo(tags).then(success => {
+                if (success) {
+                    log(`✅ Subscrito a ${tags.length} tags personalizadas`);
+                    updateSubscribedTags();
+                    customTagsInput.value = '';
+                } else {
+                    log('❌ Falha na subscrição personalizada');
+                }
+            });
+        }
+        
+        function unsubscribeAll() {
+            subscriptionManager.unsubscribe().then(success => {
+                if (success) {
+                    log('❌ Todas as subscrições removidas');
+                    updateSubscribedTags();
+                } else {
+                    log('❌ Falha ao remover subscrições');
+                }
+            });
+        }
+        
+        function updateSubscribedTags() {
+            const tags = Array.from(subscriptionManager.subscribedTags);
+            if (tags.length === 0) {
+                subscribedTags.innerHTML = 'Nenhuma tag subscrita';
+            } else {
+                subscribedTags.innerHTML = tags.map(tag => 
+                    `<div class="tag-item">${tag}</div>`
+                ).join('');
+            }
+        }
+        
+        // Verifica status das subscrições periodicamente
+        setInterval(() => {
+            subscriptionManager.getStatus().then(status => {
+                if (status) {
+                    log(`📊 Status: ${status.active_clients} clientes, ${status.total_subscribed_tags} tags`);
+                }
+            });
+        }, 10000);
+        
+        // Inicialização
+        log('🚀 Página de teste carregada');
+        log('💡 Dica: Use os botões acima para testar diferentes cenários de subscrição');
+        log('📊 Observe como o PLC para de ler tags quando não há clientes ativos');
+    </script>
+</body>
+</html>

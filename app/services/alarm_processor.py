@@ -267,7 +267,7 @@ class AlarmProcessor:
         """
         active_alarms = []
         
-        # Lista de variáveis WORD que são alarmes
+        # Lista base de variáveis WORD que são alarmes (conhecidas)
         alarm_variables = [
             # Principais alarmes (DB1)
             "XLCLASS_DB1_PRINCIPAL_ALARMES_ALTO_PRINCIPAIS",
@@ -289,6 +289,30 @@ class AlarmProcessor:
             "XLCLASS_DB01_PRINCIPAL_EMERG_OVOSCOPIA",
             "XLCLASS_DB01_PRINCIPAL_EMERG_PRESELECIONADOR",
         ]
+
+        # Inclusões específicas faltantes identificadas em comm_map (DB06, DB10 etc.)
+        additional_known_alarm_vars = [
+            # DB06 - Janelas fora de posição
+            "XLCLASS_DB06_AUX_INDEX_ALARME_JANELA_FORA_POS_VISION_EMB09",
+            "XLCLASS_DB06_AUX_INDEX_ALARME_JANELA_FORA_POS_EMB10_CAP_FINAL",
+            # DB10 - Térmicos
+            "XLCLASS_DB10_PARTIDA_DIRETA_ALARMES_TERMICOS",
+            # DB104 - Estados de dispositivos (erros/desc)
+            "XLCLASS_DB104_INFO_DISPOSITIVOS_RMT_DESCONEC_XLCLASS_EMB14",
+            "XLCLASS_DB104_INFO_DISPOSITIVOS_RMT_DESCONEC_EMB15_EMB30",
+            "XLCLASS_DB104_INFO_DISPOSITIVOS_RMT_DESCONEC_LAVADORA_EST_INTEL",
+            "XLCLASS_DB104_INFO_DISPOSITIVOS_MODULO_ERRO_XLCLASS_EMB14",
+            "XLCLASS_DB104_INFO_DISPOSITIVOS_MODULO_ERRO_EMB15_EMB30",
+            "XLCLASS_DB104_INFO_DISPOSITIVOS_MODULO_ERRO_LAVADORA_EST_INTEL",
+            "XLCLASS_DB104_INFO_DISPOSITIVOS_DRIVE_ERRO",
+            # Linhas auxiliares/alarmes modulares
+            "XLCLASS_DB901_ESTEIRA_INLINE_ALARMES",
+            "XLCLASS_DB911_DOSIFICADORA_ALARMES",
+            "XLCLASS_DB921_ESCOVAS_ALARMES",
+        ]
+        for v in additional_known_alarm_vars:
+            if v not in alarm_variables:
+                alarm_variables.append(v)
         
         # Adiciona alarmes de embaladoras (EMB01 a EMB24)
         for i in range(1, 25):
@@ -297,6 +321,21 @@ class AlarmProcessor:
             # DB01 (compatibilidade)
             alarm_variables.append(f"XLCLASS_DB01_PRINCIPAL_EMERG_EMB{i:02d}")
         
+        # Descoberta automática: considera quaisquer variáveis do plc_data com
+        # indicativos de alarme/ emergência no nome, para cobrir novas bases
+        try:
+            alarm_name_markers = ("ALARM", "ALARME", "ALARMES", "EMERG")
+            for key in plc_data.keys():
+                if not isinstance(key, str):
+                    continue
+                upper_key = key.upper()
+                if upper_key.startswith("XLCLASS_") and any(m in upper_key for m in alarm_name_markers):
+                    if key not in alarm_variables:
+                        alarm_variables.append(key)
+        except Exception:
+            # Em caso de qualquer problema, segue com a lista já montada
+            pass
+
         # Processa cada variável de alarme
         for var_name in alarm_variables:
             if var_name in plc_data:
@@ -334,6 +373,9 @@ class AlarmProcessor:
         try:
             # Busca a descrição do alarme
             description = self._get_alarm_description(base_name, bit_index)
+            # Ignora alarmes sem descrição conhecida (evita falsos positivos)
+            if not description:
+                return None
             
             # Determina prioridade (com override por bit se configurado)
             priority = self._get_priority_with_overrides(base_name, bit_index)
@@ -368,6 +410,7 @@ class AlarmProcessor:
                 "priority": priority,
                 "type": alarm_type,
                 "machine": machine,
+                "date": datetime.now().strftime("%d/%m/%Y"),
                 "timestamp": datetime.now().strftime("%H:%M"),
                 "active": True
             }
@@ -437,8 +480,8 @@ class AlarmProcessor:
         except Exception:
             pass
     
-    def _get_alarm_description(self, base_name: str, bit_index: int) -> str:
-        """Obtém a descrição do alarme"""
+    def _get_alarm_description(self, base_name: str, bit_index: int) -> Optional[str]:
+        """Obtém a descrição do alarme. Retorna None se não houver descrição nos arquivos."""
         # Tenta direto
         if base_name in self.alarm_descriptions:
             descriptions = self.alarm_descriptions[base_name]
@@ -460,8 +503,8 @@ class AlarmProcessor:
             if candidate in self.alarm_descriptions and bit_index in self.alarm_descriptions[candidate]:
                 return self.alarm_descriptions[candidate][bit_index]
         
-        # Fallback para descrição genérica
-        return f"{base_name} - Bit {bit_index}"
+        # Sem descrição conhecida
+        return None
     
     def _determine_priority_from_description(self, description: str) -> str:
         """Determina a prioridade baseada no texto da descrição do índice."""
@@ -527,6 +570,7 @@ class AlarmProcessor:
                         "id": alarm_id,
                         "action": "activated",
                         "timestamp": alarm_data["timestamp"],
+                        "date": datetime.now().strftime("%d/%m/%Y"),
                         "description": alarm_data["description"],
                         "priority": alarm_data["priority"],
                         "type": alarm_data["type"],
@@ -542,6 +586,7 @@ class AlarmProcessor:
                         "id": alarm_id,
                         "action": "cleared",
                         "timestamp": datetime.now().strftime("%H:%M"),
+                        "date": datetime.now().strftime("%d/%m/%Y"),
                         "description": old_data["description"],
                         "priority": old_data["priority"],
                         "type": old_data["type"],

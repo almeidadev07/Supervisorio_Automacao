@@ -2,7 +2,8 @@
   {
     "name": "200CX",
     "ip_ranges": [
-      "100.20.0.0/24"
+      "100.20.0.0/24",
+      "100.20.110.0/24"
     ],
     "default_plc_ip": "100.20.0.10",
     "plc_type": "siemens_s7",
@@ -10,12 +11,23 @@
     "features": {
       "diagram": true,
       "weight_range": true
+    },
+    "plc_groups": {
+      "principal": {
+        "ips": ["100.20.0.10"],
+        "description": "PLC Principal - 200 caixas"
+      },
+      "lavadora": {
+        "ips": ["100.20.110.10"],
+        "description": "PLC Lavadora - 200 caixas"
+      }
     }
   },
   {
     "name": "400CX",
     "ip_ranges": [
-      "100.40.0.0/24"
+      "100.40.0.0/24",
+      "100.40.110.0/24"
     ],
     "default_plc_ip": "100.40.0.10",
     "plc_type": "siemens_s7",
@@ -24,12 +36,23 @@
       "diagram": true,
       "weight_range": true,
       "extra_sensor": true
+    },
+    "plc_groups": {
+      "principal": {
+        "ips": ["100.40.0.10"],
+        "description": "PLC Principal - 400 caixas"
+      },
+      "lavadora": {
+        "ips": ["100.40.110.10"],
+        "description": "PLC Lavadora - 400 caixas"
+      }
     }
   },
   {
     "name": "700CX",
     "ip_ranges": [
-      "100.70.0.0/24"
+      "100.70.0.0/24",
+      "100.70.110.0/24"
     ],
     "default_plc_ip": "100.70.0.10",
     "plc_type": "siemens_s7",
@@ -38,6 +61,16 @@
       "diagram": true,
       "weight_range": true,
       "extra_sensor": true
+    },
+    "plc_groups": {
+      "principal": {
+        "ips": ["100.70.0.10"],
+        "description": "PLC Principal - 700 caixas"
+      },
+      "lavadora": {
+        "ips": ["100.70.110.10"],
+        "description": "PLC Lavadora - 700 caixas"
+      }
     }
   }
 ]

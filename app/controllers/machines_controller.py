@@ -98,6 +98,80 @@ def detect_by_ip_only():
     detected, reachable = detect_by_reachable_plc(current_app.machines or [])
     return jsonify({'detected': detected, 'reachable': reachable})
 
+@machines_bp.route('/subscribe_tags', methods=['POST'])
+def subscribe_tags():
+    """Registra quais tags um cliente (tela) precisa receber"""
+    payload = request.json or {}
+    client_id = payload.get('client_id')
+    tag_names = payload.get('tags', [])
+    
+    if not client_id:
+        return jsonify({'ok': False, 'error': 'client_id é obrigatório'}), 400
+    
+    if not isinstance(tag_names, list):
+        return jsonify({'ok': False, 'error': 'tags deve ser uma lista'}), 400
+    
+    success = current_app.plc_controller.subscribe_tags(client_id, tag_names)
+    
+    return jsonify({
+        'ok': success,
+        'client_id': client_id,
+        'subscribed_tags': len(tag_names)
+    })
+
+@machines_bp.route('/unsubscribe', methods=['POST'])
+def unsubscribe():
+    """Remove todas as subscrições de um cliente"""
+    payload = request.json or {}
+    client_id = payload.get('client_id')
+    
+    if not client_id:
+        return jsonify({'ok': False, 'error': 'client_id é obrigatório'}), 400
+    
+    success = current_app.plc_controller.unsubscribe_client(client_id)
+    
+    return jsonify({
+        'ok': success,
+        'client_id': client_id
+    })
+
+@machines_bp.route('/heartbeat', methods=['POST'])
+def heartbeat():
+    """Mantém a subscrição de um cliente ativa"""
+    payload = request.json or {}
+    client_id = payload.get('client_id')
+    
+    if not client_id:
+        return jsonify({'ok': False, 'error': 'client_id é obrigatório'}), 400
+    
+    success = current_app.plc_controller.heartbeat_client(client_id)
+    
+    return jsonify({
+        'ok': success,
+        'client_id': client_id
+    })
+
+@machines_bp.route('/subscriptions', methods=['GET'])
+def get_subscriptions():
+    """Retorna informações sobre as subscrições ativas"""
+    with current_app.plc_controller._subscription_lock:
+        subscriptions = {}
+        for client_id, sub_info in current_app.plc_controller._active_subscriptions.items():
+            subscriptions[client_id] = {
+                'tags_count': len(sub_info['tags']),
+                'last_heartbeat': sub_info['last_heartbeat'],
+                'active': (time.time() - sub_info['last_heartbeat']) < current_app.plc_controller._heartbeat_timeout
+            }
+    
+    subscribed_tags = current_app.plc_controller.get_subscribed_tags()
+    
+    return jsonify({
+        'ok': True,
+        'active_clients': len(subscriptions),
+        'total_subscribed_tags': len(subscribed_tags),
+        'clients': subscriptions
+    })
+
 @machines_bp.route('/comm_map', methods=['GET'])
 def comm_map_json():
     """Return communication map for the active machine as JSON."""

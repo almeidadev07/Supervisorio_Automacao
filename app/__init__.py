@@ -1,146 +1,115 @@
-import os
-import json
-import time
+# app/__init__.py
 from flask import Flask, render_template
 from flask_socketio import SocketIO
+import json
+import os
 
-# importa os blueprints
+# Importa controladores
+from .controllers.enhanced_api_controller import enhanced_api_bp, init_enhanced_controller
 from .controllers.machines_controller import machines_bp
-from .controllers.setups_controller import setups_bp
-
-# socketio global
-socketio = SocketIO(cors_allowed_origins="*")
-
+# from .controllers.setups_controller import setups_bp
 
 def create_app():
+    # Configura o caminho correto para os templates
+    # Usa o diretório de trabalho atual como base
+    base_dir = os.getcwd()
+    template_dir = os.path.join(base_dir, 'templates')
+    static_dir = os.path.join(base_dir, 'static')
+    
+    print(f"[DEBUG] Base dir: {base_dir}")
+    print(f"[DEBUG] Template dir: {template_dir}")
+    print(f"[DEBUG] Static dir: {static_dir}")
+    print(f"[DEBUG] Template dir existe: {os.path.exists(template_dir)}")
+    print(f"[DEBUG] Static dir existe: {os.path.exists(static_dir)}")
+    
     app = Flask(__name__, 
-                template_folder='../templates',
-                static_folder='../static')
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'supervisorio123')
-
-    # Inicializa socketio com a app
-    socketio.init_app(app, cors_allowed_origins="*")
-
-    # Rota principal serve o dashboard
-    @app.route("/")
-    def index():
-        from flask import render_template
-        return render_template("dashboard.html")
-
-    # --- Carrega configuração das máquinas ---
-    config_path = os.path.join(os.path.dirname(__file__), 'data', 'machines_config.json')
-    if os.path.exists(config_path):
-        with open(config_path, 'r') as f:
-            app.machines = json.load(f)
-    else:
-        print("[WARNING] machines_config.json não encontrado, usando lista vazia")
-        app.machines = []
-
-    # --- Carrega comm_map ---
-    app.comm_map = {}
-    comm_map_dir = os.path.join(os.path.dirname(__file__), '..', 'config', 'comm_map')
-    if os.path.exists(comm_map_dir):
-        for filename in os.listdir(comm_map_dir):
-            if filename.endswith('.json'):
-                machine_name = filename.replace('.json', '')
-                file_path = os.path.join(comm_map_dir, filename)
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        app.comm_map[machine_name] = json.load(f)
-                    print(f"[INIT] Comm map carregado para {machine_name}: {len(app.comm_map[machine_name])} tags")
-                except Exception as e:
-                    print(f"[INIT] Erro ao carregar comm_map para {machine_name}: {e}")
-    else:
-        print("[WARNING] Pasta config/comm_map não encontrada")
-
-    # --- Inicializa PLCController ---
-    from .services.plc_controller import PLCController
-    app.plc_controller = PLCController(socketio, app.machines)
-
-    # --- Registra blueprints ---
+                template_folder=template_dir,
+                static_folder=static_dir)
+    
+    # Configurações
+    app.config['SECRET_KEY'] = 'supervisorio_enhanced_2024'
+    
+    # Inicializa Socket.IO
+    socketio = SocketIO(app, cors_allowed_origins="*")
+    
+    # Carrega configuração de máquinas
+    machines_config_path = os.path.join(os.path.dirname(__file__), 'data', 'machines_config.json')
+    with open(machines_config_path, 'r', encoding='utf-8') as f:
+        machines_config = json.load(f)
+    
+    # Inicializa controlador aprimorado
+    # enhanced_plc_controller = init_enhanced_controller(socketio, machines_config)
+    enhanced_plc_controller = None
+    
+    # Inicializa controlador legado que suporta comm_map e alarmes
+    from .services.plc_controller_legacy import PLCController as LegacyPLCController
+    legacy_plc_controller = LegacyPLCController(socketio, machines_config)
+    app.plc_controller = legacy_plc_controller  # Anexa ao app para uso em blueprints antigos
+    
+    # Anexa lista de máquinas ao app para rotas /api/machines e afins
+    app.machines = machines_config
+    
+    # Prepara comm_map básico (opcional) para rotas que consultam current_app.comm_map
     try:
-        app.register_blueprint(machines_bp, url_prefix='/api')
-        app.register_blueprint(setups_bp, url_prefix='/api')
-    except AssertionError as e:
-        print(f"[WARNING] Blueprint já registrado: {e}")
+        comm_map_dir = os.path.join(os.path.dirname(__file__), '..', 'config', 'comm_map')
+        comm_map_dir = os.path.abspath(comm_map_dir)
+        app.comm_map = {}
+        for machine in machines_config:
+            name = machine.get('name')
+            if not name:
+                continue
+            # tenta variações de nome
+            candidates = [f"{name}.json", f"{name.lower()}.json", f"{name.upper()}.json"]
+            loaded = False
+            for fname in candidates:
+                path = os.path.join(comm_map_dir, fname)
+                if os.path.exists(path):
+                    with open(path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    # aceita tanto lista quanto dict
+                    app.comm_map[name] = data
+                    loaded = True
+                    break
+            if not loaded:
+                # mantém vazio se não encontrado, controlador interno já trata
+                app.comm_map[name] = []
+    except Exception as e:
+        print(f"[INIT] ⚠️ Falha ao preparar comm_map para API: {e}")
 
-    # --- Tenta conectar automaticamente apenas se houver PLCs reais disponíveis ---
-    from .utils import get_local_ip, find_machine_config, detect_by_reachable_plc
-    
-    # Primeiro tenta detectar por IP local
-    local_ip = get_local_ip()
-    print(f"[INIT] IP local detectado: {local_ip}")
-    cfg = find_machine_config(local_ip, app.machines)
-    print(f"[INIT] Máquina detectada por IP local: {cfg['name'] if cfg else 'Nenhuma'}")
-    
-    # Só tenta conectar se a máquina detectada por IP local for um PLC real (não mock)
-    if cfg and not cfg['name'].lower().startswith('mock'):
-        try:
-            ok, msg = app.plc_controller.set_active_machine(cfg)
-            if ok:
-                print(f"[INIT] PLC ativo por IP local: {cfg['name']} ({cfg.get('default_plc_ip')})")
-                # Emite evento de detecção inicial para o frontend
-                try:
-                    print(f"[INIT] 🔔 Emitindo eventos Socket.IO para {cfg['name']}")
-                    socketio.emit('plc_detected', {
-                        'machine': cfg['name'],
-                        'ip': cfg.get('default_plc_ip'),
-                        'message': f'PLC {cfg["name"]} detectado na inicialização (IP local)',
-                        'timestamp': time.time()
-                    })
-                    print(f"[INIT] ✅ Evento 'plc_detected' emitido")
-                    print(f"[INIT] 🎯 Frontend notificado sobre detecção inicial de {cfg['name']}")
-                except Exception as e:
-                    print(f"[INIT] ❌ Erro ao notificar frontend: {e}")
+    # Configura automaticamente a máquina 700CX (100.70.0.10) se disponível
+    try:
+        config_700cx = next((m for m in machines_config if m['name'] == '700CX'), None)
+        if config_700cx:
+            print(f"[INIT] Configurando automaticamente máquina 700CX (IP: {config_700cx.get('default_plc_ip')})")
+            # Passa a configuração completa (dict) para o controlador legado
+            success, msg = legacy_plc_controller.set_active_machine(config_700cx)
+            if success:
+                print(f"[INIT] ✅ Máquina 700CX configurada com sucesso")
             else:
-                print(f"[INIT] Falha ao conectar {cfg['name']} por IP local: {msg}")
-                cfg = None
-        except Exception as e:
-            print(f"[INIT] Erro ao conectar {cfg['name']} por IP local: {e}")
-            cfg = None
-    
-    # Se não conseguiu por IP local, tenta detectar por PLC alcançável
-    if not cfg:
-        print("[INIT] Tentando detecção rápida por PLC alcançável...")
-        detected_name, reachable = detect_by_reachable_plc(app.machines)
-        print(f"[INIT] Resultado da detecção: {detected_name}, alcançáveis: {reachable}")
-        
-        if detected_name and not detected_name.lower().startswith('mock'):
-            print(f"[INIT] PLC detectado: {detected_name}")
-            cfg = next((m for m in app.machines if m['name'] == detected_name), None)
-            if cfg:
-                print(f"[INIT] Configuração encontrada para {detected_name}: IP={cfg.get('default_plc_ip')}")
-                try:
-                    ok, msg = app.plc_controller.set_active_machine(cfg)
-                    if ok:
-                        print(f"[INIT] ✅ PLC ativo por detecção: {cfg['name']} ({cfg.get('default_plc_ip')})")
-                        # Emite evento de detecção inicial para o frontend
-                        try:
-                            print(f"[INIT] 🔔 Emitindo eventos Socket.IO para {cfg['name']}")
-                            socketio.emit('plc_detected', {
-                                'machine': cfg['name'],
-                                'ip': cfg.get('default_plc_ip'),
-                                'message': f'PLC {cfg["name"]} detectado na inicialização',
-                                'timestamp': time.time()
-                            })
-                            print(f"[INIT] ✅ Evento 'plc_detected' emitido")
-                            print(f"[INIT] 🎯 Frontend notificado sobre detecção inicial de {cfg['name']}")
-                        except Exception as e:
-                            print(f"[INIT] ❌ Erro ao notificar frontend: {e}")
-                    else:
-                        print(f"[INIT] ❌ Falha ao conectar {cfg['name']} por detecção: {msg}")
-                except Exception as e:
-                    print(f"[INIT] ❌ Erro ao conectar {cfg['name']} por detecção: {e}")
-            else:
-                print(f"[INIT] ❌ Configuração não encontrada para {detected_name}")
+                print(f"[INIT] ⚠️ Falha ao configurar 700CX: {msg}")
         else:
-            print(f"[INIT] Nenhum PLC real detectado (detected_name: {detected_name})")
+            print(f"[INIT] ⚠️ Configuração 700CX não encontrada")
+    except Exception as e:
+        print(f"[INIT] ❌ Erro ao configurar 700CX: {e}")
     
-    # Se não conseguiu conectar a nenhum PLC real, não cria driver mas inicia polling
-    if not cfg:
-        print("[INIT] Nenhum PLC real disponível - aguardando detecção automática...")
-        print("[INIT] O sistema detectará automaticamente quando um PLC for ligado")
-        # Inicia o polling para detectar PLCs automaticamente
-        app.plc_controller.start_polling_if_needed()
+    # O controlador legado já inicia o polling em set_active_machine; como fallback:
+    try:
+        legacy_plc_controller.start_polling_if_needed()
+    except Exception:
+        pass
+    
+    # Registra blueprints
+    app.register_blueprint(enhanced_api_bp, url_prefix='/api/enhanced')
+    app.register_blueprint(machines_bp, url_prefix='/api')
+    # app.register_blueprint(setups_bp)
+    
+    # Rota principal
+    @app.route('/')
+    def index():
+        return render_template('dashboard.html')
+    
+    return app, socketio
 
-    return app
+if __name__ == '__main__':
+    app, socketio = create_app()
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000)

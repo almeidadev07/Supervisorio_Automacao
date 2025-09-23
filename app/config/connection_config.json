@@ -1,0 +1,35 @@
+{
+  "connection_settings": {
+    "timeouts": {
+      "connection": 10.0,
+      "read": 5.0,
+      "ping": 1000
+    },
+    "retry_settings": {
+      "max_connection_retries": 5,
+      "max_read_retries": 3,
+      "base_retry_delay": 2.0,
+      "max_retry_delay": 30.0,
+      "backoff_multiplier": 1.5
+    },
+    "polling_settings": {
+      "base_interval": 1.0,
+      "min_interval": 0.5,
+      "max_interval": 5.0,
+      "stability_check_interval": 30.0,
+      "plc_detection_interval": 10.0,
+      "connection_retry_interval": 5.0
+    },
+    "health_check": {
+      "enabled": true,
+      "interval": 30.0,
+      "max_consecutive_failures": 5
+    },
+    "logging": {
+      "level": "INFO",
+      "enable_detailed_logs": true,
+      "log_connection_attempts": true,
+      "log_health_checks": true
+    }
+  }
+}

@@ -174,6 +174,7 @@ function carregarAlarmesHistoricos() {
                     priority: event.priority,
                     type: event.type,
                     machine: event.machine,
+                    date: event.date || (event.full_timestamp ? new Date(event.full_timestamp).toLocaleDateString('pt-BR') : ''),
                     timestamp: event.timestamp,
                     active: event.action === 'activated'
                 }));
@@ -201,7 +202,8 @@ function atualizarInterfaceAlarmes() {
         alarmList.innerHTML = `
             <div class="alarm-header">
                 <span></span>
-                <span>Hora de Ativação</span>
+                <span>Data</span>
+                <span>Hora</span>
                 <span>Descrição do Alarme</span>
             </div>
             <div class="no-alarms">
@@ -215,6 +217,7 @@ function atualizarInterfaceAlarmes() {
             return `
             <div class="alarme-item ${prioridade}">
                 <div class="alarm-type-dot ${prioridade}"></div>
+                <span class="alarm-date">${alarme.date || ''}</span>
                 <span class="alarm-time">${alarme.timestamp || '--:--'}</span>
                 <span class="alarm-description">${alarme.description}</span>
             </div>`;
@@ -224,7 +227,8 @@ function atualizarInterfaceAlarmes() {
         alarmList.innerHTML = `
             <div class="alarm-header">
                 <span></span>
-                <span>Hora de Ativação</span>
+                <span>Data</span>
+                <span>Hora</span>
                 <span>Descrição do Alarme</span>
             </div>
             ${alarmeItems}
@@ -274,7 +278,8 @@ function mostrarMensagemErroAlarmes() {
     alarmList.innerHTML = `
         <div class="alarm-header">
             <span></span>
-            <span>Hora de Ativação</span>
+            <span>Data</span>
+            <span>Hora</span>
             <span>Descrição do Alarme</span>
         </div>
         <div class="alarm-error">

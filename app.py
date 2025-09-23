@@ -12,8 +12,7 @@ sys.modules['supervisorio_app'] = supervisorio_app
 _spec.loader.exec_module(supervisorio_app)
 
 # Cria a aplicação usando a factory do pacote e obtém o socketio
-app = supervisorio_app.create_app()
-socketio = supervisorio_app.socketio
+app, socketio = supervisorio_app.create_app()
 
 @app.route('/static/pdfs/<path:filename>')
 def serve_pdf(filename):

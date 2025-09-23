@@ -42,6 +42,9 @@ html, body {
     border-radius: 16px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 700;
+    color: #4a5568;
     border: 1px solid rgba(255, 255, 255, 0.2);
     overflow: hidden;
     box-sizing: border-box;
@@ -88,7 +91,9 @@ html, body {
 /* Lista de alarmes - ocupa todo o espaço vertical disponível */
 .alarm-list {
     flex: 1;
-    overflow-y: auto;
+    overflow: auto; /* permite rolagem vertical e horizontal quando necessário */
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable both-edges;
     border: none;
     border-radius: 0;
     padding: 0;
@@ -99,10 +104,50 @@ html, body {
     height: 100%;
     margin: 0 24px 24px 24px;
     border-radius: 12px;
-    overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     box-sizing: border-box;
     max-height: calc(100% - 20px);
+}
+
+/* Scrollbar visível e estilizado para a lista de alarmes */
+.alarm-list::-webkit-scrollbar {
+    width: 24px;
+}
+.alarm-list::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.05);
+    border-radius: 8px;
+}
+.alarm-list::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #a3bffa, #667eea);
+    border-radius: 10px;
+    border: 3px solid rgba(255,255,255,0.6);
+}
+.alarm-list::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #8197f7, #556ddc);
+}
+
+/* Regras específicas por id para garantir aplicação no Chrome */
+#alarmList::-webkit-scrollbar { width: 24px !important; }
+#alarmList::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); }
+#alarmList::-webkit-scrollbar-thumb { border: 3px solid rgba(255,255,255,0.7); border-radius: 10px; }
+#alarmList { scrollbar-width: auto; }
+
+/* Redundância: aplica mesma largura no container da lista (caso ele esteja rolando) */
+.alarm-list-container::-webkit-scrollbar { width: 24px; }
+.alarm-list-container::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); }
+.alarm-list-container::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #a3bffa, #667eea); border-radius: 10px; border: 3px solid rgba(255,255,255,0.6); }
+.alarm-list-container { scrollbar-width: auto; scrollbar-color: #667eea rgba(0,0,0,0.05); }
+
+/* Redundância: aplica no container da tela (caso rolagem esteja nele) */
+#alarmScreen::-webkit-scrollbar { width: 24px; }
+#alarmScreen::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); }
+#alarmScreen::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #a3bffa, #667eea); border-radius: 10px; border: 3px solid rgba(255,255,255,0.6); }
+#alarmScreen { scrollbar-width: auto; scrollbar-color: #667eea rgba(0,0,0,0.05); }
+
+/* Firefox */
+.alarm-list {
+    scrollbar-width: auto;
+    scrollbar-color: #667eea rgba(0,0,0,0.05);
 }
 
 
@@ -128,6 +173,17 @@ html, body {
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
+
+/* Scrollbar da legenda */
+.priority-legend::-webkit-scrollbar {
+    width: 18px;
+}
+.priority-legend::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    border: 2px solid rgba(255,255,255,0.5);
+}
+.priority-legend { scrollbar-width: auto; scrollbar-color: rgba(0,0,0,0.35) transparent; }
 
 .priority-legend h3 {
     color: #2d3748;
@@ -280,7 +336,7 @@ html, body {
 /* Cabeçalho da lista - estilo limpo e fixo */
 .alarm-header {
     display: grid;
-    grid-template-columns: 20px 120px 1fr;
+    grid-template-columns: 20px 120px 120px 1fr;
     align-items: center;
     gap: 16px;
     font-weight: 700;
@@ -304,7 +360,7 @@ html, body {
 /* Item de alarme: indicador colorido à esquerda + conteúdo */
 .alarme-item {
     display: grid;
-    grid-template-columns: 14px 120px 1fr;
+    grid-template-columns: 14px 120px 120px 1fr;
     align-items: center;
     gap: 16px;
     padding: 12px 24px;

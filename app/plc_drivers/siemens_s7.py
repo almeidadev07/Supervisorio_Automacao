@@ -23,24 +23,36 @@ class SiemensS7Driver(BasePLC):
             print(f"[S7] ❌ Erro ao criar cliente snap7: {e}")
             raise e
             
-        self._connection_timeout = 5.0  # Timeout para conexão em segundos
-        self._read_timeout = 2.0  # Timeout para leitura em segundos
+        self._connection_timeout = 10.0  # Timeout para conexão em segundos
+        self._read_timeout = 5.0  # Timeout para leitura em segundos
         self._last_health_check = 0
-        self._health_check_interval = 10.0  # Verifica saúde da conexão a cada 10 segundos
+        self._health_check_interval = 15.0  # Verifica saúde com um pouco mais de frequência
+        self._connection_retry_count = 0
+        self._max_connection_retries = 5
+        self._base_retry_delay = 2.0  # Delay base para retry em segundos
+        # Rate limit para logs ruidosos (e.g., Job pending)
+        self._last_noise_log = 0.0
+        # Backoff por tag para erros recorrentes (Item not available / Address out of range)
+        self._tag_backoff_until = {}
+        self._tag_backoff_seconds = 5.0
+        # Backoff por DB para otimizar acessos
+        self._db_backoff_until = {}
+        self._db_backoff_seconds = 10.0
 
     def connect(self):
-        max_retries = 3
-        retry_delay = 1.0
+        max_retries = 5
+        retry_delay = self._base_retry_delay
         
         for attempt in range(max_retries):
             try:
                 print(f'[S7] Tentativa de conexão {attempt + 1}/{max_retries} para {self.ip}')
                 
                 # Priorizar S7-1500: rack=0, slot=1
-                print('snap7 trying rack=0, slot=1 (S7-1500 default)')
+                print('[S7] Tentando rack=0, slot=1 (S7-1500 default)')
                 self.client.connect(self.ip, 0, 1)
                 if self.client.get_connected():
-                    print('snap7 connected using rack=0, slot=1')
+                    print('[S7] ✅ Conectado usando rack=0, slot=1')
+                    self._connection_retry_count = 0  # Reset contador de retry
                     return True
                 try:
                     self.client.disconnect()
@@ -48,23 +60,25 @@ class SiemensS7Driver(BasePLC):
                     pass
                 
                 # Fallback S7-300/400: rack=0, slot=2
-                print('snap7 trying rack=0, slot=2 (fallback)')
+                print('[S7] Tentando rack=0, slot=2 (fallback)')
                 self.client.connect(self.ip, 0, 2)
                 ok = self.client.get_connected()
                 if ok:
-                    print('snap7 connected using rack=0, slot=2')
+                    print('[S7] ✅ Conectado usando rack=0, slot=2')
+                    self._connection_retry_count = 0  # Reset contador de retry
                     return True
                     
             except Exception as e:
-                print(f'[S7] Erro na tentativa {attempt + 1}: {e}')
+                print(f'[S7] ❌ Erro na tentativa {attempt + 1}: {e}')
+                self._connection_retry_count += 1
                 
             # Aguarda antes da próxima tentativa (backoff exponencial)
             if attempt < max_retries - 1:
-                print(f'[S7] Aguardando {retry_delay}s antes da próxima tentativa...')
+                print(f'[S7] Aguardando {retry_delay:.1f}s antes da próxima tentativa...')
                 time.sleep(retry_delay)
-                retry_delay *= 2  # Backoff exponencial
+                retry_delay = min(retry_delay * 1.5, 30.0)  # Backoff exponencial limitado a 30s
         
-        print(f'[S7] Todas as tentativas de conexão falharam para {self.ip}')
+        print(f'[S7] ❌ Todas as tentativas de conexão falharam para {self.ip}')
         return False
 
     def disconnect(self):
@@ -77,33 +91,45 @@ class SiemensS7Driver(BasePLC):
         try:
             # Verifica se o cliente snap7 reporta como conectado
             if not self.client.get_connected():
+                print('[S7] Cliente snap7 reporta desconectado')
                 return False
             
-            # Verifica saúde da conexão periodicamente
+            # Verifica saúde da conexão periodicamente (menos frequente)
             current_time = time.time()
             if current_time - self._last_health_check > self._health_check_interval:
                 self._last_health_check = current_time
-                return self._check_connection_health()
+                health_ok = self._check_connection_health()
+                if not health_ok:
+                    print('[S7] Verificação de saúde da conexão falhou')
+                return health_ok
             
             return True
-        except Exception:
+        except Exception as e:
+            print(f'[S7] Erro ao verificar conexão: {e}')
             return False
     
     def _check_connection_health(self) -> bool:
-        """Verifica a saúde da conexão TCP fazendo uma operação simples"""
+        """Verifica a saúde da conexão realizando uma chamada leve no cliente.
+        python-snap7 retorna um objeto S7CpuInfo (não dict). Se a chamada
+        não lançar exceção, consideramos a conexão saudável.
+        """
         try:
-            # Tenta ler informações básicas do PLC para verificar se a conexão está realmente funcional
-            # Isso detecta conexões TCP "mortas" que o snap7 ainda reporta como conectadas
-            self.client.get_cpu_info()
+            _ = self.client.get_cpu_info()  # Pode retornar S7CpuInfo
+            print('[S7] ✅ Verificação de saúde OK')
             return True
         except Exception as e:
-            print(f'[S7] Verificação de saúde da conexão falhou: {e}')
+            print(f'[S7] ❌ Verificação de saúde da conexão falhou: {e}')
             return False
 
     def reconnect(self) -> bool:
         """Force recreate client and connect again (handles TCP reset by peer)."""
         try:
-            print(f'[S7] Forçando reconexão para {self.ip}')
+            print(f'[S7] 🔄 Forçando reconexão para {self.ip} (tentativa {self._connection_retry_count + 1})')
+            
+            # Verifica se excedeu o número máximo de tentativas
+            if self._connection_retry_count >= self._max_connection_retries:
+                print(f'[S7] ❌ Máximo de tentativas de reconexão atingido ({self._max_connection_retries})')
+                return False
             
             # Força desconexão completa
             try:
@@ -112,104 +138,206 @@ class SiemensS7Driver(BasePLC):
                 pass
             
             # Aguarda um pouco para garantir que a conexão anterior foi limpa
-            time.sleep(0.5)
+            time.sleep(1.0)
             
             # Cria um novo cliente snap7 para limpar qualquer estado interno
             try:
                 import snap7 as _snap7
                 self.client = _snap7.client.Client()
-                print('[S7] Novo cliente snap7 criado')
+                print('[S7] ✅ Novo cliente snap7 criado')
             except Exception as e:
-                print(f'[S7] Erro ao criar novo cliente: {e}')
+                print(f'[S7] ❌ Erro ao criar novo cliente: {e}')
                 # fallback to existing client
                 pass
             
             # Reset do contador de verificação de saúde
             self._last_health_check = 0
             
-            return self.connect()
+            # Tenta conectar com backoff exponencial
+            success = self.connect()
+            if success:
+                self._connection_retry_count = 0  # Reset contador em caso de sucesso
+            else:
+                self._connection_retry_count += 1
+                
+            return success
         except Exception as e:
-            print(f'[S7] Erro na reconexão: {e}')
+            print(f'[S7] ❌ Erro na reconexão: {e}')
+            self._connection_retry_count += 1
             return False
 
     def read_telemetry(self):
         return {'time': time.time(), 'source': 'siemens_s7', 'value': random.randint(0, 100)}
 
     def read_tags(self, tag_definitions):
-        """Read a list of tag defs from comm_map and return {name:value}.
-        Minimal example using snap7; types supported: BOOL (byte/bit), REAL (offset float).
-        """
+        """Read tags in batches per DB to reduce snap7 calls. Return {name: value}."""
         result = {}
-        
-        # ensure connection before reading
+        if not tag_definitions:
+            return result
+
+        # Garante conexão
         if not self.is_connected():
-            if not self.reconnect():
+            # Retorna None para cada tag pedida
+            if isinstance(tag_definitions[0], str):
+                return {tag: None for tag in tag_definitions}
+            else:
                 return {tag.get('name'): None for tag in tag_definitions}
-        
+
+        # Filtra apenas dicts com area DB
+        tags = []
         for tag in tag_definitions:
-            name = tag.get('name')
-            try:
-                area = (tag.get('area') or '').upper()
-                db = int(tag.get('db') or 0)
-                if area != 'DB':
-                    continue
-                    
+            if isinstance(tag, dict):
+                if (tag.get('area') or '').upper() == 'DB':
+                    name = tag.get('name')
+                    if name:
+                        # Checa backoff por tag
+                        until = self._tag_backoff_until.get(name, 0)
+                        if until and time.time() < until:
+                            result[name] = None
+                            continue
+                        tags.append(tag)
+            elif isinstance(tag, str):
+                # Não temos definição, devolve None
+                result[tag] = None
+
+        if not tags:
+            return result
+
+        # Agrupa por DB
+        by_db = {}
+        for tag in tags:
+            db = int(tag.get('db') or 0)
+            by_db.setdefault(db, []).append(tag)
+
+        # Lê por DB em bloco
+        now_ts = time.time()
+        for db, db_tags in by_db.items():
+            # Respeita backoff por DB
+            db_until = self._db_backoff_until.get(db, 0)
+            if db_until and now_ts < db_until:
+                for tag in db_tags:
+                    name = tag.get('name')
+                    if name:
+                        result[name] = None
+                continue
+
+            # Calcula janela mínima
+            min_start = None
+            max_end = None
+            for tag in db_tags:
                 t = (tag.get('type') or '').upper()
                 if t == 'BOOL':
                     start = int(tag.get('byte') or 0)
-                    bit = int(tag.get('bit') or 0)
-                    
-                    # Tenta ler com retry automático
-                    data = self._read_with_retry(lambda: self.client.db_read(db, start, 1))
-                    if data is not None:
-                        val = (data[0] >> bit) & 1
-                        result[name] = bool(val)
-                    else:
-                        result[name] = None
-                        
+                    end = start + 1
                 elif t == 'REAL':
-                    offset = int(tag.get('offset') or 0)
-                    
-                    # Tenta ler com retry automático
-                    data = self._read_with_retry(lambda: self.client.db_read(db, offset, 4))
-                    if data is not None:
-                        import struct
-                        result[name] = struct.unpack('>f', data)[0]
-                    else:
-                        result[name] = None
-                        
+                    start = int(tag.get('offset') or 0)
+                    end = start + 4
                 elif t == 'WORD':
-                    offset = int(tag.get('offset') or 0)
-                    
-                    # Tenta ler com retry automático
-                    data = self._read_with_retry(lambda: self.client.db_read(db, offset, 2))
-                    if data is not None:
-                        # Converte bytes para WORD (16 bits, little-endian)
-                        result[name] = int.from_bytes(data, byteorder='little')
+                    start = int(tag.get('offset') or 0)
+                    end = start + 2
+                else:
+                    # Tipo não suportado; marcar None
+                    name = tag.get('name')
+                    if name:
+                        result[name] = None
+                    continue
+                if min_start is None or start < min_start:
+                    min_start = start
+                if max_end is None or end > max_end:
+                    max_end = end
+
+            if min_start is None or max_end is None:
+                # Nada válido
+                for tag in db_tags:
+                    name = tag.get('name')
+                    if name:
+                        result[name] = None
+                continue
+
+            size = max_end - min_start
+            # Lê bloco único do DB
+            try:
+                data = self._read_with_retry(lambda: self.client.db_read(db, min_start, size))
+            except Exception as e:
+                data = None
+            if data is None:
+                # Backoff por DB em erros recorrentes
+                self._db_backoff_until[db] = time.time() + self._db_backoff_seconds
+                for tag in db_tags:
+                    name = tag.get('name')
+                    if name:
+                        result[name] = None
+                continue
+
+            # Extrai valores de cada tag a partir do bloco
+            import struct
+            for tag in db_tags:
+                name = tag.get('name')
+                t = (tag.get('type') or '').upper()
+                try:
+                    if t == 'BOOL':
+                        start = int(tag.get('byte') or 0)
+                        bit = int(tag.get('bit') or 0)
+                        idx = start - min_start
+                        if 0 <= idx < len(data):
+                            val = (data[idx] >> bit) & 1
+                            result[name] = bool(val)
+                        else:
+                            result[name] = None
+                    elif t == 'REAL':
+                        offset = int(tag.get('offset') or 0)
+                        idx = offset - min_start
+                        if 0 <= idx and idx + 4 <= len(data):
+                            result[name] = struct.unpack('>f', data[idx:idx+4])[0]
+                        else:
+                            result[name] = None
+                    elif t == 'WORD':
+                        offset = int(tag.get('offset') or 0)
+                        idx = offset - min_start
+                        if 0 <= idx and idx + 2 <= len(data):
+                            result[name] = int.from_bytes(data[idx:idx+2], byteorder='little')
+                        else:
+                            result[name] = None
                     else:
                         result[name] = None
-                        
-            except Exception as e:
-                result[name] = None
-        
+                except Exception as e:
+                    msg = str(e)
+                    if name and ("Item not available" in msg or "Address out of range" in msg):
+                        self._tag_backoff_until[name] = time.time() + self._tag_backoff_seconds
+                    result[name] = None
+
         return result
     
-    def _read_with_retry(self, read_func, max_retries=2):
-        """Executa uma operação de leitura com retry automático"""
-        for attempt in range(max_retries):
-            try:
-                return read_func()
-            except Exception as e:
-                print(f'[S7] Erro na leitura (tentativa {attempt + 1}): {e}')
-                if attempt < max_retries - 1:
-                    print('[S7] Tentando reconectar...')
-                    if self.reconnect():
-                        continue
-                    else:
-                        break
-                else:
-                    print('[S7] Todas as tentativas de leitura falharam')
-        return None
+    def _read_with_retry(self, read_func, max_retries=1):
+        """Executa uma operação de leitura com retry mínimo e logs com rate limit"""
+        try:
+            # Verifica se ainda está conectado antes de tentar ler
+            if not self.is_connected():
+                print('[S7] Desconectado durante leitura')
+                return None
+            
+            # Tenta executar a operação de leitura
+            result = read_func()
+            if result is not None:
+                return result
+            else:
+                # Silencia logs de None para reduzir ruído
+                return None
+                
+        except Exception as e:
+            error_msg = str(e)
+            # Se for erro específico do PLC (CPU not available ou Job pending), retorna None sem reconectar
+            if ("CPU : Item not available" in error_msg or 
+                "Item not available" in error_msg or
+                "CLI : Job pending" in error_msg):
+                return None
+            
+            # Para outros erros, loga uma vez por 2s e retorna None sem reconectar
+            now = time.time()
+            if now - self._last_noise_log > 2.0:
+                print(f'[S7] ❌ Erro de leitura: {e} - continuando sem reconexão')
+                self._last_noise_log = now
+            return None
 
     def write_tags(self, tag_values):
         """Escreve valores nas tags do PLC"""
