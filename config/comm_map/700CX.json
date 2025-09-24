@@ -120,7 +120,7 @@
   ,{"name": "XLCLASS_DB07_INDEX_CAP_OFFSET_FINAL", "area": "DB", "db": 7, "offset": 944, "type": "REAL", "description": "XLCLASS_DB07_INDEX_CAP_OFFSET_FINAL"}
 
   ,{"__section__": "XLCLASS - DB10 - PARTIDA DIRETA"}
-  ,{"name": "XLCLASS_DB10_PARTIDA_DIRETA_ALARMES_TERMICOS", "area": "DB", "db": 10, "offset": 10, "type": "WORD", "description": "XLCLASS_DB10_PARTIDA_DIRETA_ALARMES_TERMICOS"}
+  ,{"name": "XLCLASS_DB10_PARTIDA_DIRETA_ALARMES_TERMICOS", "area": "DB", "db": 10, "offset": 0, "type": "WORD", "description": "XLCLASS_DB10_PARTIDA_DIRETA_ALARMES_TERMICOS"}
 
   ,{"__section__": "XLCLASS - DB101 - NAO HABILITADA"}
   ,{"name": "XLCLASS_DB101_NAO_HABILITADA[0]", "area": "DB", "db": 101, "offset": 136, "type": "WORD", "description": "XLCLASS_DB101_NAO_HABILITADA[0]"}

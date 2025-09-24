@@ -84,6 +84,11 @@ def create_app():
             # Passa a configuração completa (dict) para o controlador legado
             success, msg = legacy_plc_controller.set_active_machine(config_700cx)
             if success:
+                # Garante que o comm_map ativo seja recarregado do arquivo 700CX.json
+                try:
+                    legacy_plc_controller.reload_comm_map_for_active()
+                except Exception:
+                    pass
                 print(f"[INIT] ✅ Máquina 700CX configurada com sucesso")
             else:
                 print(f"[INIT] ⚠️ Falha ao configurar 700CX: {msg}")

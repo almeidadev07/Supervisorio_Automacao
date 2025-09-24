@@ -296,6 +296,18 @@ def force_reload():
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+@machines_bp.route('/reload_comm_map', methods=['POST'])
+def reload_comm_map():
+    """Recarrega o comm_map da máquina ativa a partir de config/comm_map/<MACHINE>.json"""
+    try:
+        success, message = current_app.plc_controller.reload_comm_map_for_active()
+        if success:
+            return jsonify({'ok': True, 'message': message})
+        else:
+            return jsonify({'ok': False, 'error': message}), 500
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 @machines_bp.route('/force_reconnect', methods=['POST'])
 def force_reconnect():
     """Força uma tentativa de reconexão imediata com o PLC"""
@@ -347,8 +359,8 @@ def get_alarms():
             if not tag_defs:
                 return jsonify({'ok': False, 'error': 'no communication map loaded'}), 400
             
-            # Lê tags do PLC
-            plc_data = current_app.plc_controller.driver.read_tags(tag_defs)
+            # Lê tags do PLC usando o controlador (com lock e políticas internas)
+            plc_data = current_app.plc_controller.read_tags()
             
             # Processa alarmes
             from ..services.alarm_processor import alarm_processor

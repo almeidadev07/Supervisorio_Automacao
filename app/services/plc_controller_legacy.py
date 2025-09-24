@@ -77,6 +77,29 @@ class PLCController:
             else:
                 print(f"[PLC] Comm_map não encontrado para {machine_name}: {comm_map_file}")
                 self.comm_map_by_machine[machine_name] = []
+
+    def reload_comm_map_for_active(self):
+        """Recarrega do disco o comm_map da máquina ativa e atualiza agrupamentos por IP."""
+        try:
+            if not self.active_config:
+                return False, 'Nenhuma máquina ativa'
+            machine_name = self.active_config.get('name')
+            if not machine_name:
+                return False, 'Máquina ativa sem nome'
+            comm_map_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'config', 'comm_map')
+            comm_map_file = os.path.join(comm_map_dir, f'{machine_name}.json')
+            if not os.path.exists(comm_map_file):
+                return False, f'Arquivo não encontrado: {comm_map_file}'
+            with open(comm_map_file, 'r', encoding='utf-8') as f:
+                comm_map = json.load(f)
+            self.comm_map_by_machine[machine_name] = comm_map
+            # Reagrupa tags por IP somente da máquina ativa
+            self.tags_by_plc_ip = {}
+            self._group_tags_by_plc_ip(machine_name, comm_map, self.active_config)
+            print(f"[PLC] 🔄 Comm_map recarregado para {machine_name}: {len(comm_map)} tags")
+            return True, 'ok'
+        except Exception as e:
+            return False, str(e)
     
     def _group_tags_by_plc_ip(self, machine_name, comm_map, machine_config):
         """Agrupa tags por IP do PLC"""
@@ -806,13 +829,17 @@ class PLCController:
         critical_keywords = [
             'ALARME', 'ALARM', 'EMERG', 'EMERGENCY', 'ERRO', 'ERROR', 
             'ESTADO', 'STATE', 'STATUS', 'FALHA', 'FAULT',
-            'PRINCIPAL', 'MAIN', 'CRITICO', 'CRITICAL'
+            'PRINCIPAL', 'MAIN', 'CRITICO', 'CRITICAL',
+            'DB10_PARTIDA_DIRETA', 'DB104_INFO_DISPOSITIVOS', 'TERMICOS', 'THERMAL'
         ]
         
         for tag in tag_defs:
             name = tag.get('name', '').upper()
             # Prioriza tags de alarme e estados críticos
             if any(keyword in name for keyword in critical_keywords):
+                critical_tags.append(tag)
+            # Força inclusão de DB10 e DB104 sempre
+            elif 'DB10' in name or 'DB104' in name:
                 critical_tags.append(tag)
             # Limita a 100 tags críticas máximo
             if len(critical_tags) >= 100:

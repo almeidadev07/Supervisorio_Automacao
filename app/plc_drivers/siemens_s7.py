@@ -34,10 +34,10 @@ class SiemensS7Driver(BasePLC):
         self._last_noise_log = 0.0
         # Backoff por tag para erros recorrentes (Item not available / Address out of range)
         self._tag_backoff_until = {}
-        self._tag_backoff_seconds = 5.0
+        self._tag_backoff_seconds = 1.0
         # Backoff por DB para otimizar acessos
         self._db_backoff_until = {}
-        self._db_backoff_seconds = 10.0
+        self._db_backoff_seconds = 1.0
 
     def connect(self):
         max_retries = 5
@@ -212,14 +212,15 @@ class SiemensS7Driver(BasePLC):
         # Lê por DB em bloco
         now_ts = time.time()
         for db, db_tags in by_db.items():
-            # Respeita backoff por DB
-            db_until = self._db_backoff_until.get(db, 0)
-            if db_until and now_ts < db_until:
-                for tag in db_tags:
-                    name = tag.get('name')
-                    if name:
-                        result[name] = None
-                continue
+            # Respeita backoff por DB (exceto DB10 que precisa sempre tentar)
+            if db != 10:
+                db_until = self._db_backoff_until.get(db, 0)
+                if db_until and now_ts < db_until:
+                    for tag in db_tags:
+                        name = tag.get('name')
+                        if name:
+                            result[name] = None
+                    continue
 
             # Calcula janela mínima
             min_start = None
@@ -259,18 +260,104 @@ class SiemensS7Driver(BasePLC):
             try:
                 data = self._read_with_retry(lambda: self.client.db_read(db, min_start, size))
             except Exception as e:
+                # Log detalhado para investigar DBs problemáticos (ex.: DB10)
+                try:
+                    print(f"[S7] ❌ db_read falhou (DB{db}, start={min_start}, size={size}): {e}")
+                except Exception:
+                    pass
                 data = None
             if data is None:
-                # Backoff por DB em erros recorrentes
-                self._db_backoff_until[db] = time.time() + self._db_backoff_seconds
+                # TENTATIVAS EXTRAS PARA DBs ESPECÍFICOS
+                #
+                # DB10: algumas versões têm deslocamento diferente.
+                # Faz leituras individuais de 2 bytes em offsets candidatos e preenche os WORDs.
+                if db == 10:
+                    candidate_offsets = [0, 2, 10]
+                    for tag in db_tags:
+                        name = tag.get('name')
+                        t = (tag.get('type') or '').upper()
+                        if not name:
+                            continue
+                        if t == 'WORD':
+                            value = None
+                            for off in candidate_offsets:
+                                try:
+                                    chunk = self._read_with_retry(lambda: self.client.db_read(db, off, 2))
+                                except Exception as e:
+                                    chunk = None
+                                if chunk is not None and len(chunk) == 2:
+                                    try:
+                                        value = int.from_bytes(chunk, byteorder='big')
+                                        print(f"[S7 DEBUG] DB10 fallback OK tag={name} off={off} val={value}")
+                                        break
+                                    except Exception:
+                                        value = None
+                            result[name] = value
+                            # limpa backoff para DB10 se alguma leitura funcionou
+                            if value is not None and db in self._db_backoff_until:
+                                try:
+                                    del self._db_backoff_until[db]
+                                except Exception:
+                                    self._db_backoff_until[db] = 0
+                        else:
+                            result[name] = None
+                    # Já tratamos DB10; segue para próximo DB
+                    continue
+                # DB104: em caso de erro, tenta ler WORD por WORD no offset de cada tag
+                elif db == 104:
+                    for tag in db_tags:
+                        name = tag.get('name')
+                        t = (tag.get('type') or '').upper()
+                        if not name:
+                            continue
+                        if t == 'WORD':
+                            value = None
+                            base_off = int(tag.get('offset') or 0)
+                            for off in [base_off, base_off + 2, max(0, base_off - 2)]:
+                                try:
+                                    chunk = self._read_with_retry(lambda: self.client.db_read(db, off, 2))
+                                except Exception:
+                                    chunk = None
+                                if chunk is not None and len(chunk) == 2:
+                                    try:
+                                        value = int.from_bytes(chunk, byteorder='big')
+                                        print(f"[S7 DEBUG] DB104 fallback OK tag={name} off={off} val={value}")
+                                        break
+                                    except Exception:
+                                        value = None
+                            result[name] = value
+                            if value is not None and db in self._db_backoff_until:
+                                try:
+                                    del self._db_backoff_until[db]
+                                except Exception:
+                                    self._db_backoff_until[db] = 0
+                        else:
+                            result[name] = None
+                    continue
+                # Demais DBs: aplica backoff normal
+                if db != 10:
+                    self._db_backoff_until[db] = time.time() + self._db_backoff_seconds
                 for tag in db_tags:
                     name = tag.get('name')
                     if name:
                         result[name] = None
                 continue
+            else:
+                # Limpa backoff do DB em caso de sucesso
+                if db in self._db_backoff_until:
+                    try:
+                        del self._db_backoff_until[db]
+                    except Exception:
+                        self._db_backoff_until[db] = 0
 
             # Extrai valores de cada tag a partir do bloco
             import struct
+            # Log de depuração para DB10: confirma janela e tamanho lido
+            try:
+                if db == 10:
+                    print(f"[S7 DEBUG] DB10 janela lida: start={min_start}, size={size}, len(data)={len(data) if data is not None else 'None'}")
+            except Exception:
+                pass
             for tag in db_tags:
                 name = tag.get('name')
                 t = (tag.get('type') or '').upper()
@@ -282,6 +369,12 @@ class SiemensS7Driver(BasePLC):
                         if 0 <= idx < len(data):
                             val = (data[idx] >> bit) & 1
                             result[name] = bool(val)
+                            # Limpa backoff por tag em sucesso
+                            if name in self._tag_backoff_until:
+                                try:
+                                    del self._tag_backoff_until[name]
+                                except Exception:
+                                    self._tag_backoff_until[name] = 0
                         else:
                             result[name] = None
                     elif t == 'REAL':
@@ -289,13 +382,25 @@ class SiemensS7Driver(BasePLC):
                         idx = offset - min_start
                         if 0 <= idx and idx + 4 <= len(data):
                             result[name] = struct.unpack('>f', data[idx:idx+4])[0]
+                            if name in self._tag_backoff_until:
+                                try:
+                                    del self._tag_backoff_until[name]
+                                except Exception:
+                                    self._tag_backoff_until[name] = 0
                         else:
                             result[name] = None
                     elif t == 'WORD':
                         offset = int(tag.get('offset') or 0)
                         idx = offset - min_start
                         if 0 <= idx and idx + 2 <= len(data):
-                            result[name] = int.from_bytes(data[idx:idx+2], byteorder='little')
+                            # Siemens armazena WORD em big-endian
+                            result[name] = int.from_bytes(data[idx:idx+2], byteorder='big')
+                            # Limpa backoff por tag em sucesso
+                            if name in self._tag_backoff_until:
+                                try:
+                                    del self._tag_backoff_until[name]
+                                except Exception:
+                                    self._tag_backoff_until[name] = 0
                         else:
                             result[name] = None
                     else:

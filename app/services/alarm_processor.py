@@ -266,6 +266,17 @@ class AlarmProcessor:
             Lista de alarmes ativos com descrições
         """
         active_alarms = []
+
+        # Modo de teste: processa apenas DB10 (habilita criando o arquivo alarmes/TEST_DB10_ONLY.flag
+        # ou definindo a env var ALARM_TEST_DB10_ONLY=1). Útil para depuração em campo.
+        # Retorna ao comportamento normal: usa flag/arquivo opcional para modo DB10-only
+        try:
+            test_db10_only = (
+                os.environ.get('ALARM_TEST_DB10_ONLY') == '1' or
+                os.path.exists(os.path.join('alarmes', 'TEST_DB10_ONLY.flag'))
+            )
+        except Exception:
+            test_db10_only = False
         
         # Lista base de variáveis WORD que são alarmes (conhecidas)
         alarm_variables = [
@@ -290,6 +301,12 @@ class AlarmProcessor:
             "XLCLASS_DB01_PRINCIPAL_EMERG_PRESELECIONADOR",
         ]
 
+        # Se modo de teste DB10 estiver ativo, limita somente à DB10
+        if test_db10_only:
+            alarm_variables = ["XLCLASS_DB10_PARTIDA_DIRETA_ALARMES_TERMICOS"]
+            print("[ALARM TEST] Modo DB10-only ativo: processando apenas XLCLASS_DB10_PARTIDA_DIRETA_ALARMES_TERMICOS")
+        
+
         # Inclusões específicas faltantes identificadas em comm_map (DB06, DB10 etc.)
         additional_known_alarm_vars = [
             # DB06 - Janelas fora de posição
@@ -310,38 +327,69 @@ class AlarmProcessor:
             "XLCLASS_DB911_DOSIFICADORA_ALARMES",
             "XLCLASS_DB921_ESCOVAS_ALARMES",
         ]
-        for v in additional_known_alarm_vars:
-            if v not in alarm_variables:
-                alarm_variables.append(v)
+        if not test_db10_only:
+            for v in additional_known_alarm_vars:
+                if v not in alarm_variables:
+                    alarm_variables.append(v)
         
         # Adiciona alarmes de embaladoras (EMB01 a EMB24)
-        for i in range(1, 25):
-            # DB04 (preferencial)
-            alarm_variables.append(f"XLCLASS_DB04_PRINCIPAL_EMERG_EMB{i:02d}")
-            # DB01 (compatibilidade)
-            alarm_variables.append(f"XLCLASS_DB01_PRINCIPAL_EMERG_EMB{i:02d}")
+        if not test_db10_only:
+            for i in range(1, 25):
+                # DB04 (preferencial)
+                alarm_variables.append(f"XLCLASS_DB04_PRINCIPAL_EMERG_EMB{i:02d}")
+                # DB01 (compatibilidade)
+                alarm_variables.append(f"XLCLASS_DB01_PRINCIPAL_EMERG_EMB{i:02d}")
         
         # Descoberta automática: considera quaisquer variáveis do plc_data com
         # indicativos de alarme/ emergência no nome, para cobrir novas bases
-        try:
-            alarm_name_markers = ("ALARM", "ALARME", "ALARMES", "EMERG")
-            for key in plc_data.keys():
-                if not isinstance(key, str):
-                    continue
-                upper_key = key.upper()
-                if upper_key.startswith("XLCLASS_") and any(m in upper_key for m in alarm_name_markers):
-                    if key not in alarm_variables:
-                        alarm_variables.append(key)
-        except Exception:
-            # Em caso de qualquer problema, segue com a lista já montada
-            pass
+        if not test_db10_only:
+            try:
+                alarm_name_markers = ("ALARM", "ALARME", "ALARMES", "EMERG")
+                for key in plc_data.keys():
+                    if not isinstance(key, str):
+                        continue
+                    upper_key = key.upper()
+                    if upper_key.startswith("XLCLASS_") and any(m in upper_key for m in alarm_name_markers):
+                        if key not in alarm_variables:
+                            alarm_variables.append(key)
+            except Exception:
+                # Em caso de qualquer problema, segue com a lista já montada
+                pass
 
+        # Log temporário para debug de DB10 e DB104
+        print(f"[ALARM DEBUG] Verificando tags de alarme. Total plc_data keys: {len(plc_data)}")
+        for key in ['XLCLASS_DB10_PARTIDA_DIRETA_ALARMES_TERMICOS',
+                    'XLCLASS_DB104_INFO_DISPOSITIVOS_RMT_DESCONEC_XLCLASS_EMB14',
+                    'XLCLASS_DB104_INFO_DISPOSITIVOS_RMT_DESCONEC_EMB15_EMB30',
+                    'XLCLASS_DB104_INFO_DISPOSITIVOS_RMT_DESCONEC_LAVADORA_EST_INTEL',
+                    'XLCLASS_DB104_INFO_DISPOSITIVOS_MODULO_ERRO_XLCLASS_EMB14',
+                    'XLCLASS_DB104_INFO_DISPOSITIVOS_MODULO_ERRO_EMB15_EMB30',
+                    'XLCLASS_DB104_INFO_DISPOSITIVOS_MODULO_ERRO_LAVADORA_EST_INTEL']:
+            value = plc_data.get(key, 'NOT_IN_PLC_DATA')
+            print(f"[ALARM DEBUG] {key}: {value}")
+            # Se tem valor > 0 mas não está processando, força inclusão
+            if value not in ['NOT_IN_PLC_DATA', None, 0] and key not in alarm_variables:
+                alarm_variables.append(key)
+        
         # Processa cada variável de alarme
         for var_name in alarm_variables:
             if var_name in plc_data:
                 word_value = plc_data[var_name]
+                # Normaliza possíveis formatos (ex.: string "13")
+                try:
+                    if isinstance(word_value, str):
+                        v = word_value.strip()
+                        if v.startswith("0x") or v.startswith("0X"):
+                            word_value = int(v, 16)
+                        else:
+                            word_value = int(v)
+                except Exception:
+                    pass
                 
                 # Converte WORD para bits individuais
+                # Aceita None como 0 para evitar perder tags com problema de leitura
+                if word_value is None:
+                    word_value = 0
                 if isinstance(word_value, (int, float)) and word_value > 0:
                     # Extrai o nome base para buscar descrições
                     base_name = var_name.replace("XLCLASS_", "").replace("_WORD", "")
@@ -371,28 +419,59 @@ class AlarmProcessor:
     def _create_alarm_info(self, var_name: str, bit_index: int, base_name: str, machine: str) -> Optional[Dict[str, Any]]:
         """Cria informações do alarme com descrição"""
         try:
-            # Busca a descrição do alarme
-            description = self._get_alarm_description(base_name, bit_index)
-            # Ignora alarmes sem descrição conhecida (evita falsos positivos)
+            # Converte índice de bit do WORD para índice do array BOOL quando aplicável
+            # Nos arquivos de matemática/descrições, o BOOL[0..7] mapeia os bits 8..15
+            # e o BOOL[8..15] mapeia os bits 0..7 do WORD. Precisamos alinhar isso
+            # para que o índice da descrição corresponda ao índice BOOL.
+            def _word_bit_to_bool_index(idx: int, base: str) -> int:
+                b = (base or "").upper()
+                # Aplicar para DBs que seguem o padrão dos arquivos (DB1/DB04/DB06/DB10/DB104)
+                if (
+                    b.startswith("DB1_") or
+                    b.startswith("DB01_") or
+                    b.startswith("DB04_") or
+                    b.startswith("DB06_") or
+                    b.startswith("DB10_") or
+                    b.startswith("DB104_")
+                ):
+                    if 0 <= idx <= 7:
+                        return idx + 8
+                    if 8 <= idx <= 15:
+                        return idx - 8
+                return idx
+
+            desc_index = _word_bit_to_bool_index(bit_index, base_name)
+
+            # Busca a descrição do alarme usando o índice ajustado
+            description = self._get_alarm_description(base_name, desc_index)
+            # Se não há descrição, permite fallback genérico para bases conhecidas
             if not description:
-                return None
+                if self._allow_generic_for_base(base_name):
+                    description = f"{base_name} - Bit {bit_index}"
+                else:
+                    # Ignora alarmes sem descrição conhecida (evita falsos positivos)
+                    return None
             
             # Determina prioridade (com override por bit se configurado)
-            priority = self._get_priority_with_overrides(base_name, bit_index)
+            # Usa o índice ajustado (BOOL) para casar com tipos_overrides.json
+            priority = self._get_priority_with_overrides(base_name, desc_index)
             if not priority:
                 # Classifica pela descrição do índice (não pelo nome da tag)
                 priority = self._determine_priority_from_description(description)
 
             # Determina type independente (não depende do nome da tag nem descrição se override existir)
-            alarm_type = self._get_type_with_overrides(base_name, bit_index)
+            # Determina type com overrides usando índice ajustado (BOOL)
+            alarm_type = self._get_type_with_overrides(base_name, desc_index)
             if not alarm_type:
                 # Se não houver type específico, usa a mesma lógica de prioridade como fallback
-                alarm_type = priority
+                # Para bases conhecidas, define type padrão adequado
+                default_type = self._default_type_for_base(base_name)
+                alarm_type = default_type or priority
 
             # Mantém prioridade alinhada ao type para refletir na UI/contadores
             priority = alarm_type
             
-            # Cria o ID único do alarme
+            # Cria o ID único do alarme (mantém o índice de bit real para identificar o evento)
             alarm_id = f"{var_name}_bit_{bit_index}"
             
             # Log simples para depuração
@@ -418,6 +497,40 @@ class AlarmProcessor:
         except Exception as e:
             print(f"[ALARM] Erro ao criar alarme {var_name}[{bit_index}]: {e}")
             return None
+
+    def _allow_generic_for_base(self, base_name: str) -> bool:
+        """Permite descrição genérica para bases válidas mesmo sem texto específico.
+        Útil quando nem todos os bits foram mapeados no arquivo de descrições ainda.
+        """
+        b = base_name.upper()
+        allow_prefixes = [
+            "DB10_PARTIDA_DIRETA_ALARMES_TERMICOS",
+            # Permitir genérico para DB104 (alguns índices ainda sem descrição)
+            "DB104_INFO_DISPOSITIVOS",
+            "DB901_ESTEIRA_INLINE_ALARMES",
+            "DB911_DOSIFICADORA_ALARMES",
+            "DB921_ESCOVAS_ALARMES",
+        ]
+        return any(b.startswith(p) for p in allow_prefixes)
+
+    def _default_type_for_base(self, base_name: str) -> Optional[str]:
+        """Retorna um tipo padrão por base quando não há overrides e nem descrição."""
+        b = base_name.upper()
+        if b.startswith("DB10_PARTIDA_DIRETA_ALARMES_TERMICOS"):
+            return "thermal"
+        # DB104: usar tipos padrão razoáveis quando não houver descrição
+        if b.startswith("DB104_INFO_DISPOSITIVOS_DRIVE_ERRO"):
+            return "drives"
+        if b.startswith("DB104_INFO_DISPOSITIVOS"):
+            return "hardware"
+        # DB104 deve usar descrições do arquivo e não fallback genérico
+        if b.startswith("DB901_ESTEIRA_INLINE_ALARMES"):
+            return "process"
+        if b.startswith("DB911_DOSIFICADORA_ALARMES"):
+            return "process"
+        if b.startswith("DB921_ESCOVAS_ALARMES"):
+            return "process"
+        return None
 
     def _get_priority_with_overrides(self, base_name: str, bit_index: int) -> Optional[str]:
         """Retorna prioridade via overrides JSON, considerando DB01/DB04 equivalência."""
@@ -449,12 +562,24 @@ class AlarmProcessor:
         self._maybe_reload_type_overrides()
         mapping = self.type_overrides.get(base_name)
         if mapping and bit_index in mapping:
-            return mapping[bit_index]
+            return str(mapping[bit_index]).lower()
         # Tentativa com prefixo XLCLASS_
         xl_base = f"XLCLASS_{base_name}" if not base_name.startswith("XLCLASS_") else base_name
         mapping = self.type_overrides.get(xl_base)
         if mapping and bit_index in mapping:
-            return mapping[bit_index]
+            return str(mapping[bit_index]).lower()
+        # Tenta variantes com/sem sufixo _INTERNO
+        interno_candidates = []
+        if base_name.endswith("_INTERNO"):
+            interno_candidates.append(base_name[:-8])
+        else:
+            interno_candidates.append(base_name + "_INTERNO")
+        for cand in interno_candidates:
+            if cand in self.type_overrides and bit_index in self.type_overrides[cand]:
+                return str(self.type_overrides[cand][bit_index]).lower()
+            xl_cand = f"XLCLASS_{cand}" if not cand.startswith("XLCLASS_") else cand
+            if xl_cand in self.type_overrides and bit_index in self.type_overrides[xl_cand]:
+                return str(self.type_overrides[xl_cand][bit_index]).lower()
         candidates = []
         if base_name.startswith("DB01_"):
             candidates.append(base_name.replace("DB01_", "DB04_", 1))
@@ -463,7 +588,7 @@ class AlarmProcessor:
         for cand in candidates:
             mapping = self.type_overrides.get(cand)
             if mapping and bit_index in mapping:
-                return mapping[bit_index]
+                return str(mapping[bit_index]).lower()
         return None
 
     def _maybe_reload_type_overrides(self) -> None:
@@ -482,6 +607,31 @@ class AlarmProcessor:
     
     def _get_alarm_description(self, base_name: str, bit_index: int) -> Optional[str]:
         """Obtém a descrição do alarme. Retorna None se não houver descrição nos arquivos."""
+        # Atalho específico para DB104: arquivos usam sempre prefixo XLCLASS_ e sufixo _INTERNO
+        try:
+            if base_name.upper().startswith("DB104_"):
+                # Constrói variações para casar com arquivos que trazem 'XLCLASS' também no meio do nome
+                variants = [base_name]
+                if "_RMT_DESCONEC_EMB" in base_name:
+                    variants.append(base_name.replace("_RMT_DESCONEC_EMB", "_RMT_DESCONEC_XLCLASS_EMB"))
+                if "_MODULO_ERRO_EMB" in base_name:
+                    variants.append(base_name.replace("_MODULO_ERRO_EMB", "_MODULO_ERRO_XLCLASS_EMB"))
+                # Para compatibilidade com chaves já prefixadas por XLCLASS_
+                expanded = []
+                for v in variants:
+                    expanded.append(v)
+                    if not v.startswith("XLCLASS_"):
+                        expanded.append(f"XLCLASS_{v}")
+                # Converte todas em forma canônica com _INTERNO e tenta
+                for v in expanded:
+                    canonical = v if v.startswith("XLCLASS_") else f"XLCLASS_{v}"
+                    if not canonical.endswith("_INTERNO"):
+                        canonical = f"{canonical}_INTERNO"
+                    mapping = self.alarm_descriptions.get(canonical)
+                    if mapping and bit_index in mapping:
+                        return mapping[bit_index]
+        except Exception:
+            pass
         # Tenta direto
         if base_name in self.alarm_descriptions:
             descriptions = self.alarm_descriptions[base_name]
@@ -493,6 +643,43 @@ class AlarmProcessor:
             descriptions = self.alarm_descriptions[xl_base]
             if bit_index in descriptions:
                 return descriptions[bit_index]
+        # Tenta variantes com/sem sufixo _INTERNO (DB104 usa _INTERNO nas descrições)
+        interno_candidates = []
+        if base_name.endswith("_INTERNO"):
+            interno_candidates.append(base_name[:-8])
+        else:
+            interno_candidates.append(base_name + "_INTERNO")
+        for cand in interno_candidates:
+            if cand in self.alarm_descriptions and bit_index in self.alarm_descriptions[cand]:
+                return self.alarm_descriptions[cand][bit_index]
+            xl_cand = f"XLCLASS_{cand}" if not cand.startswith("XLCLASS_") else cand
+            if xl_cand in self.alarm_descriptions and bit_index in self.alarm_descriptions[xl_cand]:
+                return self.alarm_descriptions[xl_cand][bit_index]
+        # Fallback robusto: procura por chaves que comecem com a base (com ou sem XLCLASS_) e
+        # também com sufixo _INTERNO. Seleciona a chave mais longa (mais específica).
+        try:
+            candidates = []
+            targets = [base_name]
+            if not base_name.endswith("_INTERNO"):
+                targets.append(base_name + "_INTERNO")
+            # Prefixos com e sem XLCLASS_
+            expanded_targets = []
+            for t in targets:
+                expanded_targets.append(t)
+                expanded_targets.append(f"XLCLASS_{t}" if not t.startswith("XLCLASS_") else t)
+            for key in self.alarm_descriptions.keys():
+                for tgt in expanded_targets:
+                    if key.startswith(tgt):
+                        candidates.append(key)
+                        break
+            if candidates:
+                # pega a mais específica
+                best = sorted(candidates, key=lambda k: len(k), reverse=True)[0]
+                mapping = self.alarm_descriptions.get(best, {})
+                if bit_index in mapping:
+                    return mapping[bit_index]
+        except Exception:
+            pass
         # Tenta normalizações entre DB01 e DB04
         normalized_candidates = []
         if base_name.startswith("DB01_"):
