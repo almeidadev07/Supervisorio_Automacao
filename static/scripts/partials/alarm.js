@@ -197,6 +197,20 @@ function carregarAlarmesHistoricos() {
 function atualizarInterfaceAlarmes() {
     const alarmList = document.getElementById('alarmList');
     if (!alarmList) return;
+    try {
+        // Ordena do mais recente para o mais antigo usando full_timestamp (ISO) quando disponível
+        if (Array.isArray(currentAlarms)) {
+            currentAlarms.sort((a, b) => {
+                const ta = (a && a.full_timestamp) ? a.full_timestamp : '';
+                const tb = (b && b.full_timestamp) ? b.full_timestamp : '';
+                if (ta && tb) return tb.localeCompare(ta);
+                // Fallback: mantém ordem atual se não houver timestamps ISO
+                return 0;
+            });
+        }
+    } catch (e) {
+        console.warn('[ALARM] Falha ao ordenar alarmes no frontend:', e);
+    }
     
     if (currentAlarms.length === 0) {
         alarmList.innerHTML = `

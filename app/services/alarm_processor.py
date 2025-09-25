@@ -402,8 +402,23 @@ class AlarmProcessor:
                                 var_name, bit_index, base_name, machine
                             )
                             if alarm_info:
+                                # Preserva o instante real de ativação: se já estava ativo antes,
+                                # reutiliza o full_timestamp anterior em vez de gerar um novo
+                                try:
+                                    prev = self._last_alarm_state.get(alarm_info["id"]) if hasattr(self, "_last_alarm_state") else None
+                                    prev_ts = prev.get("full_timestamp") if prev else None
+                                    if prev_ts:
+                                        alarm_info["full_timestamp"] = prev_ts
+                                except Exception:
+                                    pass
                                 active_alarms.append(alarm_info)
         
+        # Ordena do mais recente para o mais antigo
+        try:
+            active_alarms.sort(key=lambda a: a.get("full_timestamp", ""), reverse=True)
+        except Exception:
+            pass
+
         # Registra mudanças no histórico
         self._update_alarm_history(active_alarms, machine)
         
@@ -509,6 +524,7 @@ class AlarmProcessor:
                 "machine": machine,
                 "date": datetime.now().strftime("%d/%m/%Y"),
                 "timestamp": datetime.now().strftime("%H:%M"),
+                "full_timestamp": datetime.now().isoformat(),
                 "active": True
             }
         
@@ -765,7 +781,8 @@ class AlarmProcessor:
                     "description": alarm["description"],
                     "priority": alarm["priority"],
                     "type": alarm["type"],
-                    "machine": alarm["machine"]
+                    "machine": alarm["machine"],
+                    "full_timestamp": alarm.get("full_timestamp")
                 }
             
             # Detecta alarmes que acabaram de ativar (não estavam no estado anterior)

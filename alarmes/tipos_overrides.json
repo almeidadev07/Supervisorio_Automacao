@@ -179,6 +179,22 @@
     "14": "process",
     "15": "process"
   },
+  "XLCLASS_DB06_AUX_INDEX_ALARME_JANELA_FORA_POS_EMB10_CAP_FINAL": {
+    "0": "process",
+    "1": "process",
+    "2": "process",
+    "3": "process",
+    "4": "process",
+    "5": "process",
+    "6": "process",
+    "7": "process",
+    "8": "process",
+    "9": "process",
+    "10": "process",
+    "11": "process",
+    "12": "process",
+    "13": "process"
+  },
   "XLCLASS_DB04_PRINCIPAL_EMERG_EMB10": {
     "0": "emergency",
     "1": "emergency",
@@ -196,22 +212,6 @@
     "13": "nr12",
     "14": "nr12",
     "15": "emergency"
-  },
-  "XLCLASS_DB06_AUX_INDEX_ALARME_JANELA_FORA_POS_EMB10_CAP_FINAL": {
-    "0": "process",
-    "1": "process",
-    "2": "process",
-    "3": "process",
-    "4": "process",
-    "5": "process",
-    "6": "process",
-    "7": "process",
-    "8": "process",
-    "9": "process",
-    "10": "process",
-    "11": "process",
-    "12": "process",
-    "13": "process"
   },
   "XLCLASS_DB04_PRINCIPAL_EMERG_EMB11": {
     "0": "emergency",
@@ -321,7 +321,7 @@
     "14": "hardware",
     "15": "hardware"
   },
-  "XLCLASS_DB104_INFO_DISPOSITIVOS_MODULO_ERRO_EMB15_EMB30_INTERNO": {
+  "XLCLASS_DB104_INFO_DISPOSITIVOS_RMT_DESCONEC_EMB15_EMB30_INTERNO": {
     "0": "hardware",
     "1": "hardware",
     "2": "hardware",
@@ -339,7 +339,7 @@
     "14": "hardware",
     "15": "hardware"
   },
-  "XLCLASS_DB104_INFO_DISPOSITIVOS_RMT_DESCONEC_EMB15_EMB30_INTERNO": {
+  "XLCLASS_DB104_INFO_DISPOSITIVOS_MODULO_ERRO_EMB15_EMB30_INTERNO": {
     "0": "hardware",
     "1": "hardware",
     "2": "hardware",
@@ -1823,8 +1823,8 @@
     "15": "hardware"
   },
   "XLCLASS_DB400_SOLENOIDE_ALARME_E17_02": {
-    "0": "hardwares",
-    "1": "hardwares"
+    "0": "hardware",
+    "1": "hardware"
   },
   "XLCLASS_DB400_SOLENOIDE_ALARME_E18_01": {
     "0": "hardware",
