@@ -464,8 +464,174 @@ function determinarPrioridade(name, description) {
     return 'hardware'; // padrão
 }
 
+// ===== BOTÕES RÁPIDOS DE COMUNICAÇÃO COM PLC =====
+let quickButtonsInitialized = false;
+
+function inicializarBotoesRapidos() {
+    if (quickButtonsInitialized) {
+        console.log('[QUICK_BUTTONS] Botões já inicializados');
+        return;
+    }
+    
+    console.log('[QUICK_BUTTONS] Inicializando botões rápidos...');
+    
+    const TAG_NAME = 'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03';
+    const btnSolenoide = document.getElementById('btn-acionamento'); // bit 0
+    const btnBalanca = document.getElementById('btn-balanca');       // bit 1
+
+    if (!btnSolenoide || !btnBalanca) {
+        console.log('[QUICK_BUTTONS] Botões não encontrados, tentando novamente...');
+        setTimeout(inicializarBotoesRapidos, 500);
+        return;
+    }
+
+    console.log('[QUICK_BUTTONS] Botões encontrados:', {
+        solenoide: !!btnSolenoide,
+        balanca: !!btnBalanca
+    });
+
+    async function readWord() {
+        try {
+            console.log(`[QUICK_BUTTONS] Lendo tag: ${TAG_NAME}`);
+            const res = await fetch(`/api/read_tags?names=${TAG_NAME}`);
+            const data = await res.json();
+            console.log('[QUICK_BUTTONS] Resposta da leitura:', data);
+            
+            if (data && data.ok && data.values && typeof data.values[TAG_NAME] !== 'undefined') {
+                const value = Number(data.values[TAG_NAME]);
+                console.log(`[QUICK_BUTTONS] Valor lido: ${value} (0x${value.toString(16).toUpperCase()})`);
+                return value;
+            } else {
+                console.error('[QUICK_BUTTONS] Dados inválidos na leitura:', data);
+                return null;
+            }
+        } catch (e) {
+            console.error('[QUICK_BUTTONS] Erro na leitura:', e);
+            return null;
+        }
+    }
+
+    async function writeWord(newValue) {
+        try {
+            console.log(`[QUICK_BUTTONS] Escrevendo valor: ${newValue} (0x${newValue.toString(16).toUpperCase()})`);
+            const res = await fetch('/api/write_tags', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ [TAG_NAME]: newValue })
+            });
+            const data = await res.json();
+            console.log('[QUICK_BUTTONS] Resposta da escrita:', data);
+            return !!(data && data.ok);
+        } catch (e) {
+            console.error('[QUICK_BUTTONS] Erro na escrita:', e);
+            return false;
+        }
+    }
+
+    function setButtonVisual(button, active) {
+        if (!button) return;
+        button.classList.toggle('active', !!active);
+        const badge = button.querySelector('.status-badge');
+        if (badge) {
+            badge.textContent = active ? '✓' : '✕';
+            badge.style.color = active ? '#28a745' : '#dc3545';
+        }
+        console.log(`[QUICK_BUTTONS] Botão ${button.id} ${active ? 'ativado' : 'desativado'}`);
+    }
+
+    function bitIsSet(word, bit) {
+        const result = ((word >>> bit) & 1) === 1;
+        console.log(`[QUICK_BUTTONS] Bit ${bit} do valor ${word}: ${result}`);
+        return result;
+    }
+
+    function setBit(word, bit, on) {
+        if (on) {
+            const result = word | (1 << bit);
+            console.log(`[QUICK_BUTTONS] Setando bit ${bit} em ${word}: ${result}`);
+            return result;
+        } else {
+            const result = word & ~(1 << bit);
+            console.log(`[QUICK_BUTTONS] Limpando bit ${bit} em ${word}: ${result}`);
+            return result;
+        }
+    }
+
+    async function toggleBitHandler(button, bit) {
+        try {
+            console.log(`[QUICK_BUTTONS] Toggle bit ${bit} (${button.id})`);
+            
+            // Desabilita o botão temporariamente para evitar cliques múltiplos
+            button.disabled = true;
+            
+            const current = await readWord();
+            if (current === null) {
+                console.error('[QUICK_BUTTONS] Falha na leitura - não é possível continuar');
+                button.disabled = false;
+                return;
+            }
+            
+            const shouldActivate = !bitIsSet(current, bit);
+            const nextValue = setBit(current, bit, shouldActivate);
+            
+            console.log(`[QUICK_BUTTONS] Valor atual: ${current} (0x${current.toString(16).toUpperCase()})`);
+            console.log(`[QUICK_BUTTONS] Próximo valor: ${nextValue} (0x${nextValue.toString(16).toUpperCase()})`);
+            console.log(`[QUICK_BUTTONS] Ação: ${shouldActivate ? 'ATIVAR' : 'DESATIVAR'} bit ${bit}`);
+            
+            const ok = await writeWord(nextValue);
+            if (ok) {
+                setButtonVisual(button, shouldActivate);
+                console.log(`[QUICK_BUTTONS] ✅ Bit ${bit} ${shouldActivate ? 'ativado' : 'desativado'} com sucesso`);
+            } else {
+                console.error('[QUICK_BUTTONS] ❌ Falha na escrita do bit ${bit}');
+                // Mostra feedback visual de erro
+                button.style.backgroundColor = '#dc3545';
+                setTimeout(() => {
+                    button.style.backgroundColor = '';
+                }, 1000);
+            }
+        } catch (e) {
+            console.error('[QUICK_BUTTONS] Erro no toggle:', e);
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    // Setup listeners
+    console.log('[QUICK_BUTTONS] Configurando event listeners...');
+    btnSolenoide.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleBitHandler(btnSolenoide, 0);
+    });
+    btnBalanca.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleBitHandler(btnBalanca, 1);
+    });
+
+    // Sincroniza estado inicial
+    (async function init() {
+        try {
+            console.log('[QUICK_BUTTONS] Sincronizando estado inicial...');
+            const word = await readWord();
+            if (word !== null) {
+                setButtonVisual(btnSolenoide, bitIsSet(word, 0));
+                setButtonVisual(btnBalanca, bitIsSet(word, 1));
+                console.log('[QUICK_BUTTONS] ✅ Estado inicial sincronizado com sucesso');
+            } else {
+                console.error('[QUICK_BUTTONS] ❌ Falha na sincronização inicial');
+            }
+        } catch (e) {
+            console.error('[QUICK_BUTTONS] Erro na sincronização inicial:', e);
+        }
+    })();
+
+    quickButtonsInitialized = true;
+    console.log('[QUICK_BUTTONS] ✅ Botões rápidos inicializados com sucesso');
+}
+
 // Exporta a função para o escopo global
 window.inicializarAlarmes = inicializarAlarmes;
 window.carregarAlarmesDoCommMap = carregarAlarmesDoCommMap;
 window.startAlarmAutoRefresh = startAlarmAutoRefresh;
 window.stopAlarmAutoRefresh = stopAlarmAutoRefresh;
+window.inicializarBotoesRapidos = inicializarBotoesRapidos;

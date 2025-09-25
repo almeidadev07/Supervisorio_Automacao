@@ -456,7 +456,10 @@ class SiemensS7Driver(BasePLC):
         try:
             # Busca as definições das tags no comm_map
             comm_map = self.config.get('comm_map', [])
-            tag_definitions = {tag['name']: tag for tag in comm_map}
+            # Filtra apenas entradas que têm a chave 'name' (ignora seções)
+            tag_definitions = {tag['name']: tag for tag in comm_map if 'name' in tag}
+            
+            print(f"[S7] 📝 Iniciando escrita de {len(tag_values)} tags")
             
             for tag_name, value in tag_values.items():
                 if tag_name not in tag_definitions:
@@ -472,33 +475,51 @@ class SiemensS7Driver(BasePLC):
                 print(f"[S7] 📝 Escrevendo {tag_name} = {value} (DB{db}, offset {offset}, tipo {tag_type})")
                 
                 # Converte o valor para bytes baseado no tipo
-                if tag_type == 'REAL':
-                    import struct
-                    # Converte float para bytes (big-endian)
-                    value_bytes = struct.pack('>f', float(value))
-                elif tag_type == 'WORD':
-                    import struct
-                    # Converte int para bytes (big-endian)
-                    value_bytes = struct.pack('>H', int(value))
-                elif tag_type == 'DWORD':
-                    import struct
-                    # Converte int para bytes (big-endian)
-                    value_bytes = struct.pack('>I', int(value))
-                else:
-                    print(f"[S7] ❌ Tipo {tag_type} não suportado para escrita")
+                try:
+                    if tag_type == 'REAL':
+                        import struct
+                        # Converte float para bytes (big-endian)
+                        value_bytes = struct.pack('>f', float(value))
+                    elif tag_type == 'WORD':
+                        import struct
+                        # Converte int para bytes (big-endian)
+                        value_bytes = struct.pack('>H', int(value))
+                    elif tag_type == 'DWORD':
+                        import struct
+                        # Converte int para bytes (big-endian)
+                        value_bytes = struct.pack('>I', int(value))
+                    else:
+                        print(f"[S7] ❌ Tipo {tag_type} não suportado para escrita")
+                        continue
+                    
+                    print(f"[S7] 🔧 Bytes gerados: {value_bytes.hex().upper()}")
+                    
+                except Exception as e:
+                    print(f"[S7] ❌ Erro ao converter valor {value} para bytes: {e}")
                     continue
                 
                 # Escreve no PLC
-                if area == 'DB':
-                    self.client.db_write(db, offset, value_bytes)
-                    print(f"[S7] ✅ {tag_name} = {value} escrito com sucesso")
-                else:
-                    print(f"[S7] ❌ Área {area} não suportada para escrita")
+                try:
+                    if area == 'DB':
+                        print(f"[S7] 🔧 Chamando db_write(DB{db}, offset {offset}, {len(value_bytes)} bytes)")
+                        self.client.db_write(db, offset, value_bytes)
+                        print(f"[S7] ✅ {tag_name} = {value} escrito com sucesso")
+                    else:
+                        print(f"[S7] ❌ Área {area} não suportada para escrita")
+                        continue
+                        
+                except Exception as e:
+                    print(f"[S7] ❌ Erro ao escrever {tag_name} no PLC: {e}")
+                    # Continua com as outras tags mesmo se uma falhar
+                    continue
             
+            print(f"[S7] ✅ Escrita de tags concluída")
             return True
             
         except Exception as e:
-            print(f"[S7] ❌ Erro ao escrever tags: {e}")
+            print(f"[S7] ❌ Erro geral ao escrever tags: {e}")
+            import traceback
+            print(f"[S7] ❌ Traceback: {traceback.format_exc()}")
             return False
 
 class MockSiemensDriver(BasePLC):

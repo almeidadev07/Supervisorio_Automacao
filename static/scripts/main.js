@@ -95,6 +95,11 @@ function showAlarm(event) {
         window.inicializarAlarmes();
     }
 
+    // Inicializar botões rápidos de comunicação com PLC
+    if (window.inicializarBotoesRapidos) {
+        window.inicializarBotoesRapidos();
+    }
+
     // Iniciar atualização automática dos alarmes quando a tela estiver visível
     if (window.startAlarmAutoRefresh) {
         window.startAlarmAutoRefresh();

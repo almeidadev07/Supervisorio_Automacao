@@ -235,7 +235,12 @@ def write_tags():
         
         machine = cfg.get('name')
         comm_map = (current_app.comm_map or {}).get(machine, [])
-        valid_tags = {tag['name'] for tag in comm_map}
+        
+        # Garante que comm_map é uma lista de dicionários
+        if isinstance(comm_map, list):
+            valid_tags = {tag['name'] for tag in comm_map if isinstance(tag, dict) and 'name' in tag}
+        else:
+            valid_tags = set()
         
         # Filtra apenas tags válidas
         valid_payload = {k: v for k, v in payload.items() if k in valid_tags}

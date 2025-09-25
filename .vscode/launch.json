@@ -4,7 +4,19 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        
+        {
+            "name": "Python: app.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}\\app.py",
+            "console": "integratedTerminal",
+            "env": {
+              "FLASK_DEBUG": "1",
+              "APP_HOST": "127.0.0.1",
+              "APP_PORT": "5000"
+            },
+            "justMyCode": false
+          },
         {
             "type": "chrome",
             "request": "launch",

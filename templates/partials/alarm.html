@@ -110,6 +110,21 @@
                     <span class="color-box process"></span>
                     <span class="legend-text">Processo</span>
                 </div>
+
+                <!-- Ações rápidas: botões abaixo da legenda de prioridade -->
+                <div class="quick-actions" aria-label="Ações rápidas">
+                    <h3>Desativa Alarmes</h3>
+                    <button class="qa-button" id="btn-acionamento" type="button">
+                        <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Acionamento.png') }}" alt="Acionamento" class="qa-icon"/>
+                        <span class="qa-label">Solenóides</span>
+                        <span class="status-badge" aria-hidden="true">✕</span>
+                    </button>
+                    <button class="qa-button" id="btn-balanca" type="button">
+                        <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Balanca.png') }}" alt="Balança" class="qa-icon"/>
+                        <span class="qa-label">Balanças</span>
+                        <span class="status-badge" aria-hidden="true">✕</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>

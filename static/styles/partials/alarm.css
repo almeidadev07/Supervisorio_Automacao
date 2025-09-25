@@ -194,6 +194,72 @@ html, body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* ---------- Quick actions (botões abaixo da legenda) ---------- */
+.quick-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.qa-button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 7px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #acacac, #6b6b6b); /* degradê cinza */
+    border: 2px solid #525252;
+    cursor: pointer;
+    transition: all .2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+
+.qa-button:hover { filter: brightness(0.98); }
+
+.qa-button.active {
+    background: linear-gradient(135deg, #5cbbff, #0289e2); /* degradê azul quando ativo */
+    border-color: #003892; /* azul */
+}
+
+.qa-icon {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+}
+
+.qa-label {
+    font-weight: 700;
+    color: #222222;
+    font-size: 14px;
+}
+
+.qa-button.active .qa-label { color: #1e40af; }
+
+.status-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    line-height: 1;
+    background: #fee2e2; /* vermelho claro padrão (X) */
+    color: #b91c1c; /* vermelho escuro */
+    box-shadow: 0 1px 3px rgba(0,0,0,.15);
+}
+
+.qa-button.active .status-badge {
+    background: #dcfce7; /* verde claro */
+    color: #15803d; /* verde escuro (✓) */
+}
+
 /* Itens da legenda */
 .legend-item {
     display: flex;
