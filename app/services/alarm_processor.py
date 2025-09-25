@@ -432,7 +432,25 @@ class AlarmProcessor:
                     b.startswith("DB04_") or
                     b.startswith("DB06_") or
                     b.startswith("DB10_") or
-                    b.startswith("DB104_")
+                    b.startswith("DB104_") or
+                    b.startswith("DB210_") or
+                    b.startswith("DB211_") or
+                    b.startswith("DB212_") or
+                    b.startswith("DB213_") or
+                    b.startswith("DB214_") or
+                    b.startswith("DB215_") or
+                    b.startswith("DB216_") or
+                    b.startswith("DB217_") or
+                    b.startswith("DB218_") or
+                    b.startswith("DB229_") or
+                    b.startswith("DB400_") or
+                    b.startswith("DB360_") or
+                    b.startswith("DB361_") or
+                    b.startswith("DB362_") or
+                    b.startswith("DB363_") or
+                    b.startswith("DB364_") or
+                    b.startswith("DB365_") or
+                    b.startswith("DB366_")
                 ):
                     if 0 <= idx <= 7:
                         return idx + 8

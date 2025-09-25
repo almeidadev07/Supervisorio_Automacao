@@ -752,6 +752,10 @@
   ,{"name": "XLCLASS_DB400_SOLENOIDE_ALARME_E21_02", "area": "DB", "db": 400, "offset": 86, "type": "WORD", "description": "XLCLASS_DB400_SOLENOIDE_ALARME_E21_02"}
   ,{"name": "XLCLASS_DB400_SOLENOIDE_ALARME_E22_01", "area": "DB", "db": 400, "offset": 88, "type": "WORD", "description": "XLCLASS_DB400_SOLENOIDE_ALARME_E22_01"}
   ,{"name": "XLCLASS_DB400_SOLENOIDE_ALARME_E22_02", "area": "DB", "db": 400, "offset": 90, "type": "WORD", "description": "XLCLASS_DB400_SOLENOIDE_ALARME_E22_02"}
+  ,{"name": "XLCLASS_DB400_SOLENOIDE_ALARME_E23_01", "area": "DB", "db": 400, "offset": 92, "type": "WORD", "description": "XLCLASS_DB400_SOLENOIDE_ALARME_E23_01"}
+  ,{"name": "XLCLASS_DB400_SOLENOIDE_ALARME_E23_02", "area": "DB", "db": 400, "offset": 94, "type": "WORD", "description": "XLCLASS_DB400_SOLENOIDE_ALARME_E23_02"}
+  ,{"name": "XLCLASS_DB400_SOLENOIDE_ALARME_E24_01", "area": "DB", "db": 400, "offset": 96, "type": "WORD", "description": "XLCLASS_DB400_SOLENOIDE_ALARME_E24_01"}
+  ,{"name": "XLCLASS_DB400_SOLENOIDE_ALARME_E24_02", "area": "DB", "db": 400, "offset": 98, "type": "WORD", "description": "XLCLASS_DB400_SOLENOIDE_ALARME_E24_02"}
   ,{"name": "XLCLASS_DB400_SOLENOIDE_COMANDO", "area": "DB", "db": 400, "offset": 128, "type": "WORD", "description": "XLCLASS_DB400_SOLENOIDE_COMANDO"}
   ,{"name": "XLCLASS_DB400_SOLENOIDE_ACION_MAN_01", "area": "DB", "db": 400, "offset": 136, "type": "WORD", "description": "XLCLASS_DB400_SOLENOIDE_ACION_MAN_01"}
   ,{"name": "XLCLASS_DB400_SOLENOIDE_ACION_MAN_02", "area": "DB", "db": 400, "offset": 138, "type": "WORD", "description": "XLCLASS_DB400_SOLENOIDE_ACION_MAN_02"}
