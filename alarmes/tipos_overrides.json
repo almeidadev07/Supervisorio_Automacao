@@ -143,24 +143,6 @@
     "14": "nr12",
     "15": "emergency"
   },
-  "XLCLASS_DB06_AUX_INDEX_ALARME_JANELA_FORA_POS_VISION_EMB09": {
-    "0": "process",
-    "1": "process",
-    "2": "process",
-    "3": "process",
-    "4": "process",
-    "5": "process",
-    "6": "process",
-    "7": "process",
-    "8": "process",
-    "9": "process",
-    "10": "process",
-    "11": "process",
-    "12": "process",
-    "13": "process",
-    "14": "process",
-    "15": "process"
-  },
   "XLCLASS_DB04_PRINCIPAL_EMERG_EMB09": {
     "0": "emergency",
     "1": "emergency",
@@ -179,6 +161,40 @@
     "14": "nr12",
     "15": "emergency"
   },
+  "XLCLASS_DB06_AUX_INDEX_ALARME_JANELA_FORA_POS_VISION_EMB09": {
+    "0": "process",
+    "1": "process",
+    "2": "process",
+    "3": "process",
+    "4": "process",
+    "5": "process",
+    "6": "process",
+    "7": "process",
+    "8": "process",
+    "9": "process",
+    "10": "process",
+    "11": "process",
+    "12": "process",
+    "13": "process",
+    "14": "process",
+    "15": "process"
+  },
+  "XLCLASS_DB06_AUX_INDEX_ALARME_JANELA_FORA_POS_EMB10_CAP_FINAL": {
+    "0": "process",
+    "1": "process",
+    "2": "process",
+    "3": "process",
+    "4": "process",
+    "5": "process",
+    "6": "process",
+    "7": "process",
+    "8": "process",
+    "9": "process",
+    "10": "process",
+    "11": "process",
+    "12": "process",
+    "13": "process"
+  },
   "XLCLASS_DB04_PRINCIPAL_EMERG_EMB10": {
     "0": "emergency",
     "1": "emergency",
@@ -196,22 +212,6 @@
     "13": "nr12",
     "14": "nr12",
     "15": "emergency"
-  },
-  "XLCLASS_DB06_AUX_INDEX_ALARME_JANELA_FORA_POS_EMB10_CAP_FINAL": {
-    "0": "process",
-    "1": "process",
-    "2": "process",
-    "3": "process",
-    "4": "process",
-    "5": "process",
-    "6": "process",
-    "7": "process",
-    "8": "process",
-    "9": "process",
-    "10": "process",
-    "11": "process",
-    "12": "process",
-    "13": "process"
   },
   "XLCLASS_DB04_PRINCIPAL_EMERG_EMB11": {
     "0": "emergency",
@@ -321,24 +321,6 @@
     "14": "nr12",
     "15": "emergency"
   },
-  "XLCLASS_DB104_INFO_DISPOSITIVOS_MODULO_ERRO_EMB15_EMB30_INTERNO": {
-    "0": "hardware",
-    "1": "hardware",
-    "2": "hardware",
-    "3": "hardware",
-    "4": "hardware",
-    "5": "hardware",
-    "6": "hardware",
-    "7": "hardware",
-    "8": "hardware",
-    "9": "hardware",
-    "10": "hardware",
-    "11": "hardware",
-    "12": "hardware",
-    "13": "hardware",
-    "14": "hardware",
-    "15": "hardware"
-  },
   "XLCLASS_DB04_PRINCIPAL_EMERG_EMB15": {
     "0": "emergency",
     "1": "emergency",
@@ -356,6 +338,24 @@
     "13": "nr12",
     "14": "nr12",
     "15": "emergency"
+  },
+  "XLCLASS_DB104_INFO_DISPOSITIVOS_MODULO_ERRO_EMB15_EMB30_INTERNO": {
+    "0": "hardware",
+    "1": "hardware",
+    "2": "hardware",
+    "3": "hardware",
+    "4": "hardware",
+    "5": "hardware",
+    "6": "hardware",
+    "7": "hardware",
+    "8": "hardware",
+    "9": "hardware",
+    "10": "hardware",
+    "11": "hardware",
+    "12": "hardware",
+    "13": "hardware",
+    "14": "hardware",
+    "15": "hardware"
   },
   "XLCLASS_DB104_INFO_DISPOSITIVOS_RMT_DESCONEC_EMB15_EMB30_INTERNO": {
     "0": "hardware",

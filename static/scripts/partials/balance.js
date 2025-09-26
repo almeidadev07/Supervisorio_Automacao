@@ -129,6 +129,9 @@ function inicializarBalance() {
     document.getElementById('confirm-calibration')
         .addEventListener('click', handleConfirmCalibration);
 
+    document.getElementById('cancel-calibration')
+        .addEventListener('click', hideModals);
+
 
     // Inicialização inicial da grid
     updateGrid();

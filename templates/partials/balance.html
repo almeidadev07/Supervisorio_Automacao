@@ -18,7 +18,7 @@
             <button type="button" class="modal-close" aria-label="Fechar">×</button>
             <h2>Calibração de Balança</h2>
             <p>Linha: <span id="modal-line-number"></span></p>
-            <p>Valor Atual: <span id="modal-current-value"></span>g</p>
+            <p><span id="modal-current-value"></span><span id="unit">g</span></p>
             
             <div class="modal-buttons">
                 <button id="min-weight-btn" class="btn btn-icon" aria-label="Peso mínimo">
@@ -40,7 +40,12 @@
             <p>Deseja calibrar o peso <span id="weight-type"></span> da balança?</p>
             
             <div class="modal-buttons">
-                <button id="confirm-calibration" class="btn btn-success">Confirmar</button>
+                <button id="confirm-calibration" class="btn btn-icon" aria-label="Confirmar">
+                    <img src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão Selecionado_ligado.png') }}" alt="Confirmar" />
+                </button>
+                <button id="cancel-calibration" class="btn btn-icon" aria-label="Cancelar">
+                    <img src="{{ url_for('static', filename='images/pages/icons/comandos/Botão_fechar.png') }}" alt="Cancelar" />
+                </button>
             </div>
         </div>
     </div>
