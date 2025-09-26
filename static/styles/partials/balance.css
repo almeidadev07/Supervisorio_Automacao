@@ -1,7 +1,43 @@
-.balance-wrapper {
+#balanceScreen {
+    display: flex;
+    height: calc(100vh - var(--menu-height, 100px) - 20px);
     padding: 20px;
-    max-width: 1200px;
+    margin: 0;
+    background: #f8f9fa;
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.balance-container {
+    display: flex;
+    gap: 24px;
+    height: 100%;
+    width: 100%;
+    max-width: 1400px;
     margin: 0 auto;
+    border-radius: 16px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.balance-panel {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 700;
+    color: #4a5568;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 20px;
 }
 
 .balance-header {
@@ -12,21 +48,26 @@
 }
 
 .toggle-btn {
-    padding: 8px 16px;
-    border-radius: 4px;
-    font-weight: bold;
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-weight: 800;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    border: 2px solid #c9d3e6;
+    background: linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%);
+    color: #334155;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
 }
 
 .toggle-btn.enabled {
-    background-color: #ef4444;
+    background: linear-gradient(180deg, #f63b3b 0%, #eb2525 100%);
     color: white;
+    border-color: #eb2525;
 }
 
 .toggle-btn.disabled {
-    background-color: #3b82f6;
-    color: white;
+    background: linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%);
+    color: #334155;
 }
 
 .balance-grid {
@@ -36,16 +77,19 @@
 }
 
 .balance-card {
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 16px;
     text-align: center;
-    background-color: #f9fafb;
+    background: rgba(255, 255, 255, 0.95);
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* <-- distribui o conteúdo de cima para baixo */
-    height: 300px; /* ou o tamanho desejado */
+    justify-content: space-between;
+    align-items: center;
+    height: 260px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
 }
+.calibrate-actions { width: 100%; display:flex; align-items:center; justify-content:center; }
 
 .weight-value {
     font-size: 24px;
@@ -83,12 +127,18 @@
 
 .calibrate-btn {
     margin-top: 8px;
-    background-color: #eab308;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 14px;
+    background: transparent;
+    padding: 0;
+    border-radius: 10px;
+    font-size: 0;
     cursor: pointer;
+    border: none;
+    box-shadow: none;
+    width: auto;
+    height: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Modal Styles */
@@ -106,44 +156,92 @@
 }
 
 .modal-content {
-    background-color: white;
-    padding: 24px;
-    border-radius: 8px;
-    max-width: 400px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 20px;
+    border-radius: 16px;
+    max-width: 300px; /* box mais compacto */
     width: 100%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .modal-buttons {
-    display: flex;
-    gap: 8px;
-    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(140px, 1fr)); /* mesma linha */
+    gap: 12px;
+    margin-top: 14px;
+    align-items: center;
+    justify-items: center;
 }
 
 .btn {
-    padding: 8px 16px;
-    border-radius: 4px;
+    padding: 0;
+    border-radius: 12px;
     cursor: pointer;
-    flex: 1;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+.btn-icon { display:flex; align-items:center; justify-content:center; padding: 0; width: 220px; height: 90px; }
+.btn-icon img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+/* Tamanho do botão Calibrar (imagem interna) */
+.calibrate-btn img {
+    width: 80px;
+    height: 70px;
+    object-fit: contain;
+    display: block;
+}
+
+@media (max-width: 1024px) {
+    .calibrate-btn img { width: 128px; height: 44px; }
+}
+@media (max-width: 768px) {
+    .calibrate-btn img { width: 120px; height: 42px; }
+}
+@media (max-width: 480px) {
+    .calibrate-btn img { width: 110px; height: 40px; }
+}
+
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px; /* quadrado com cantos arredondados */
+    border: 1px solid #e5e7eb;
+    background: linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%);
+    color: #334155;
+    font-size: 18px;
+    line-height: 26px;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
 }
 
 .btn-primary {
-    background-color: #3b82f6;
+    background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
     color: white;
+    border-color: #2563eb;
 }
 
 .btn-secondary {
-    background-color: #9ca3af;
+    background: linear-gradient(180deg, #9ca3af 0%, #6b7280 100%);
     color: white;
+    border-color: #6b7280;
 }
 
 .btn-success {
-    background-color: #22c55e;
+    background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
     color: white;
+    border-color: #16a34a;
 }
 
 .btn-danger {
-    background-color: #ef4444;
+    background: linear-gradient(180deg, #f43f5e 0%, #e11d48 100%);
     color: white;
+    border-color: #e11d48;
 }
 
 @media (max-width: 1024px) {

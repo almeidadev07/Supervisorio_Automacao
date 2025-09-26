@@ -24,15 +24,17 @@ function inicializarBalance() {
             card.className = 'balance-card';
             card.innerHTML = `
                 <h3>Linha ${line.number}</h3>
-                <span class="weight-value">${line.weight}g</span>
-                <div class="balance-status">
-                    <span class="status-indicator ${line.calibrated ? 'calibrated' : 'not-calibrated'}"></span>
+                <span class=\"weight-value\">${line.weight}g</span>
+                <div class=\"balance-status\">
+                    <span class=\"status-indicator ${line.calibrated ? 'calibrated' : 'not-calibrated'}\"></span>
                     <span>${line.calibrated ? 'Calibrado' : 'Pendente'}</span>
                 </div>
                 ${calibrationEnabled ? `
-                    <button class="calibrate-btn" data-line="${line.number}">
-                        Calibrar
-                    </button>
+                    <div class=\"calibrate-actions\">
+                        <button class=\"calibrate-btn\" data-line=\"${line.number}\">
+                            <img src=\"/static/images/pages/icons/comandos/01%20-%20Bot%C3%A3o_Calibrar.png\" alt=\"Calibrar\" />
+                        </button>
+                    </div>
                 ` : ''}
             `;
             balanceGrid.appendChild(card);
@@ -41,6 +43,7 @@ function inicializarBalance() {
         // Adiciona evento aos botões de calibrar *somente* se calibração estiver habilitada
         if (calibrationEnabled) {
             document.querySelectorAll('.calibrate-btn').forEach(btn => {
+                btn.removeEventListener('click', handleCalibrateClick);
                 btn.addEventListener('click', handleCalibrateClick);
             });
         }
@@ -80,7 +83,8 @@ function inicializarBalance() {
 
     // Evento ao clicar no botão "Calibrar"
     function handleCalibrateClick(e) {
-        const lineNumber = parseInt(e.target.dataset.line, 10);
+        const datasetSource = e.currentTarget || e.target.closest('.calibrate-btn') || e.target;
+        const lineNumber = parseInt(datasetSource.dataset.line, 10);
         const line = lines.find(l => l.number === lineNumber);
         if (line) {
             showWeightModal(line);
@@ -117,14 +121,14 @@ function inicializarBalance() {
     document.getElementById('max-weight-btn')
         .addEventListener('click', () => handleWeightSelection('max'));
 
-    document.getElementById('cancel-weight-btn')
-        .addEventListener('click', hideModals);
+    // X para fechar nos modais
+    document.querySelectorAll('.modal .modal-close').forEach(btn => {
+        btn.addEventListener('click', hideModals);
+    });
 
     document.getElementById('confirm-calibration')
         .addEventListener('click', handleConfirmCalibration);
 
-    document.getElementById('cancel-confirmation')
-        .addEventListener('click', hideModals);
 
     // Inicialização inicial da grid
     updateGrid();
