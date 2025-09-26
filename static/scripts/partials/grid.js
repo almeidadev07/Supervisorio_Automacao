@@ -527,6 +527,15 @@ function handleDrop(e) {
 // Aguarda o DOM estar completamente carregado antes de configurar os eventos
 document.addEventListener('DOMContentLoaded', () => {
     configurarDragAndDrop();
+    // Garante teclados fechados ao iniciar
+    try {
+        const kb = document.getElementById('teclado-virtual');
+        if (kb) kb.style.display = 'none';
+    } catch(_) {}
+    try {
+        const kbt = document.getElementById('teclado-virtual-texto');
+        if (kbt) kbt.style.display = 'none';
+    } catch(_) {}
     // Alternar visibilidade do círculo Alimentador com duplo clique
     const alimentadorEl = document.querySelector('.alarm-count-circle.alimentador');
     if (alimentadorEl && !alimentadorEl.dataset.toggleBound) {
@@ -875,71 +884,21 @@ window.addEventListener('resize', function() {
 
 
 function abrirTeclado(e) {
-    const input = e.target.closest('.velocimetro-input');
+    const input = e.target.closest('.velocimetro-input') || e.target;
     if (input) {
         // Marca que o usuário está digitando se for o campo de velocidade programada
         if (input.id === 'velocidadeInput') {
             USER_TYPING_VELOCITY = true;
         }
-        
         input.focus();
+        // Posicionamento do teclado numérico: agora é fixo no rodapé, então basta mostrar
         const rect = input.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        const tecladoHeight = 200; // Altura aproximada do teclado
-        
+        // Só exibe após definir o target, para evitar flash inicial
         teclado.style.display = "grid";
-        teclado.style.left = `${rect.left}px`;
-        
-        // Detecta se o campo está na parte superior ou inferior da tela
-        const isInUpperHalf = rect.top < (viewportHeight / 2);
-        
-        if (isInUpperHalf) {
-            // Campo na parte superior - mostra teclado embaixo
-        teclado.style.top = `${rect.bottom + 15}px`;
-        } else {
-            // Campo na parte inferior - mostra teclado em cima do velocímetro inteiro
-            // Encontra o container do velocímetro para posicionar acima dele
-            const velocimetroContainer = input.closest('.draggable-btn');
-            if (velocimetroContainer) {
-                const containerRect = velocimetroContainer.getBoundingClientRect();
-                teclado.style.top = `${containerRect.top - tecladoHeight - 15}px`;
-            } else {
-                // Fallback: usa a posição do input
-                teclado.style.top = `${rect.top - tecladoHeight - 15}px`;
-            }
-        }
-        
-        // Ajusta posição horizontal para manter dentro da tela
-        const tecladoWidth = 300; // Largura aproximada do teclado
-        const viewportWidth = window.innerWidth;
-        
-        if (!isInUpperHalf) {
-            // Quando o teclado está em cima, centraliza em relação ao velocímetro
-            const velocimetroContainer = input.closest('.draggable-btn');
-            if (velocimetroContainer) {
-                const containerRect = velocimetroContainer.getBoundingClientRect();
-                const centerX = containerRect.left + (containerRect.width / 2) - (tecladoWidth / 2);
-                teclado.style.left = `${Math.max(10, Math.min(centerX, viewportWidth - tecladoWidth - 10))}px`;
-            }
-        } else {
-            // Quando o teclado está embaixo, usa a posição do input
-            if (rect.left + tecladoWidth > viewportWidth) {
-                teclado.style.left = `${viewportWidth - tecladoWidth - 10}px`;
-            }
-        }
-        
-        // Ajusta posição vertical se o teclado sair da tela
-        const finalTop = parseInt(teclado.style.top);
-        if (finalTop < 10) {
-            teclado.style.top = '10px';
-        } else if (finalTop + tecladoHeight > viewportHeight - 10) {
-            teclado.style.top = `${viewportHeight - tecladoHeight - 10}px`;
-        }
-        
-        teclado.dataset.target = input.id;
+        // Mantém dataset.target para que as funções usem o input correto
+        teclado.dataset.target = input.id || (input.id = 'kbd-' + Math.random().toString(36).slice(2,8));
         deveSubstituir = true;
         valorDigitado = "";
-        e.stopPropagation();
     }
 }
 
@@ -947,16 +906,21 @@ function fecharTeclado() {
     const input = document.getElementById(teclado.dataset.target);
     if (input) {
         input.blur();
-        let valor = parseInt(valorDigitado, 10) || 0;
+        let valor = parseInt(valorDigitado, 10);
+        if (isNaN(valor)) {
+            valor = parseInt(input.value, 10);
+        }
+        if (isNaN(valor)) valor = 0;
         valor = Math.min(SPEED_MAX, Math.max(0, valor));
         input.value = valor;
-        const ponteiro = input.closest('.draggable-btn').querySelector('.ponteiro');
+        // Dispara eventos para telas que salvam no change
+        try { input.dispatchEvent(new Event('input', { bubbles: true })); } catch(_) {}
+        try { input.dispatchEvent(new Event('change', { bubbles: true })); } catch(_) {}
+        const ponteiro = input.closest('.draggable-btn')?.querySelector?.('.ponteiro');
         if (ponteiro) atualizarPonteiro(ponteiro, valor);
-        
         // Escreve no PLC se for o campo de velocidade programada
         if (input.id === 'velocidadeInput') {
             escreverVelocidadeProgramada(valor);
-            // Libera o controle de digitação após um pequeno delay
             setTimeout(() => {
                 USER_TYPING_VELOCITY = false;
             }, 1000);
@@ -968,13 +932,34 @@ function fecharTeclado() {
 
 function digitarNumero(num) {
     const input = document.getElementById(teclado.dataset.target);
+    if (!input) return;
     if (valorDigitado === "" || deveSubstituir) {
         valorDigitado = num.toString();
         deveSubstituir = false;
     } else if (valorDigitado.length < 3) {
         valorDigitado += num;
     }
+    // Atualiza o input visivelmente enquanto digita
     input.value = valorDigitado;
+}
+
+// Novo: apagar último dígito no teclado numérico
+function apagarUltimoNumero() {
+    const input = document.getElementById(teclado.dataset.target);
+    if (!input) return;
+    if (valorDigitado === "" && input.value) {
+        valorDigitado = String(input.value);
+    }
+    valorDigitado = valorDigitado.slice(0, -1);
+    input.value = valorDigitado;
+}
+
+// Novo: limpar totalmente a entrada no teclado numérico
+function limparEntradaTeclado() {
+    const input = document.getElementById(teclado.dataset.target);
+    if (!input) return;
+    valorDigitado = "";
+    input.value = "";
 }
 
 function ajustarValor(delta) {
@@ -1883,6 +1868,9 @@ window.addEventListener('load', () => {
         console.log('⚠️ Botão encontrado mas sem onclick, configurando...');
         configurarBotaoResetComTentativas();
     }
+    // Garante teclados fechados também após load completo
+    try { const kb = document.getElementById('teclado-virtual'); if (kb) kb.style.display = 'none'; } catch(_) {}
+    try { const kbt = document.getElementById('teclado-virtual-texto'); if (kbt) kbt.style.display = 'none'; } catch(_) {}
 });
 
 // Adiciona event delegation como fallback
@@ -1895,6 +1883,15 @@ document.addEventListener('click', (e) => {
                         target.textContent.toLowerCase().includes('padrão');
     
     if (isResetButton) {
+        // Só intercepta se a tela do grid estiver ativa
+        try {
+            const grid = document.getElementById('grid-container');
+            const gridVisible = grid && window.getComputedStyle(grid).display !== 'none' && grid.offsetParent !== null;
+            if (!gridVisible) {
+                console.log('⛔ Interceptação do reset ignorada: tela inicial não está ativa');
+                return;
+            }
+        } catch(_) {}
         console.log('🎯 Event delegation capturou clique no botão reset:', target);
         e.preventDefault();
         e.stopPropagation();
@@ -1911,6 +1908,16 @@ function handleResetClick(e) {
     console.log('🔄 Evento:', e);
     console.log('🔄 Target:', e.target);
     
+    // Garante que o reset só funcione na tela inicial (grid)
+    try {
+        const grid = document.getElementById('grid-container');
+        const gridVisible = grid && window.getComputedStyle(grid).display !== 'none' && grid.offsetParent !== null;
+        if (!gridVisible) {
+            console.log('⛔ Reset bloqueado: tela inicial não está ativa');
+            return;
+        }
+    } catch(_) {}
+
     // Previne múltiplas execuções
     if (isResetting) {
         console.log('⚠️ Reset já está sendo processado, ignorando...');
@@ -1983,6 +1990,14 @@ function handleResetClick(e) {
 // Salva posições quando a página for fechada ou recarregada
 window.addEventListener('beforeunload', () => {
     saveGridPositions();
+});
+
+// Fecha teclados ao mudar de aba/visibilidade
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        try { const kb = document.getElementById('teclado-virtual'); if (kb) kb.style.display = 'none'; } catch(_) {}
+        try { const kbt = document.getElementById('teclado-virtual-texto'); if (kbt) kbt.style.display = 'none'; } catch(_) {}
+    }
 });
 
 // Salva posições quando a página perder o foco (usuário mudar de aba)

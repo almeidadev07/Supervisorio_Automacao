@@ -1,4 +1,47 @@
 
+/* Layout inspirado no alarm.css */
+#weightRangeScreen {
+    display: flex;
+    height: calc(100vh - var(--menu-height, 100px) - 20px);
+    padding: 20px;
+    margin: 0;
+    background: #f8f9fa;
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.weight-container {
+    display: flex;
+    gap: 24px;
+    height: 100%;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    border-radius: 16px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.weight-panel {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 700;
+    color: #4a5568;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 20px;
+}
+
 .weight-scale {
     width: 100%;
     display: flex;
@@ -35,6 +78,11 @@
 .faixa-label.faixa-5 { font-weight: bold; font-size: 25px; color: #FF4500; }
 .faixa-label.faixa-6 { font-weight: bold; font-size: 25px; color: #00BFFF; }
 .faixa-label.faixa-7 { font-weight: bold; font-size: 25px; color: #00FFBF; }
+
+/* Sombra para melhorar legibilidade dos textos das faixas */
+.faixa-label { text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+/* Amarelo precisa de um pouco mais de contraste */
+.faixa-label.faixa-2 { text-shadow: 0 1px 3px rgba(0,0,0,0.75); }
 
 #main-bar {
     display: flex;
@@ -128,19 +176,7 @@
 }
 
 
-.weight-range-wrapper {
-    padding: 20px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    min-height: calc(100vh - 40px); /* Full viewport height minus padding */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    width: 100%;
-    max-width: 1400px; /* Increased max width */
-    margin: 0 auto;
-}
+/* wrapper antigo removido, substituído por #weightRangeScreen */
 
 .weight-range-content {
     flex: 1;
@@ -150,16 +186,8 @@
     gap: 30px; /* Increased spacing between elements */
 }
 
-/* Add this to ensure proper container sizing */
-#weight-range-container {
-    height: 100vh;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-    box-sizing: border-box;
-}
+/* container original mantém apenas sizing básico se usado em outra parte */
+#weight-range-container { box-sizing: border-box; }
 
 
 .weight-bar {
@@ -209,33 +237,152 @@
     width: 80px; /* Increased width */
     padding: 8px;
     text-align: center;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     font-size: 14px;
 }
 
 
-.buttons {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-    margin-top: 30px;
-}
-.buttons button {
-    padding: 12px 24px; /* Increased padding */
-    font-size: 16px; /* Increased font size */
-    min-width: 120px; /* Added min-width */
-    border: none;
-    border-radius: 4px;
-    background: #007bff;
-    color: white;
-    cursor: pointer;
-    transition: background 0.3s;
+/* botões removidos; auto-save sem botões */
+
+/* Override bordas coloridas anteriores das faixas para cinza claro */
+.weight-input.faixa-1,
+.weight-input.faixa-2,
+.weight-input.faixa-3,
+.weight-input.faixa-4,
+.weight-input.faixa-5,
+.weight-input.faixa-6,
+.weight-input.faixa-7 {
+    border-color: #e5e7eb;
+    border-width: 1px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
-.buttons button:hover {
-    background: #0056b3;
+.weight-input:focus {
+    outline: none;
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
 }
+
+/* Estilo de foco/edição para os textos das faixas (labels) */
+.faixa-label[contenteditable="true"] {
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 2px 8px;
+    background: rgba(255,255,255,0.6);
+    transition: box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.faixa-label[contenteditable="true"]:focus {
+    outline: none;
+    border-color: #cbd5e1; /* cinza claro no foco */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+    background: rgba(255,255,255,0.9);
+}
+
+/* Teclado virtual para textos */
+#teclado-virtual-texto {
+    position: fixed;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%);
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 8px;
+    box-shadow: 0 16px 32px rgba(0,0,0,0.15);
+    display: none;
+    z-index: 99999;
+    width: min(520px, 96vw);
+}
+#teclado-virtual-num {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    display: none;
+    z-index: 9999;
+    width: min(360px, 94vw);
+}
+
+#teclado-virtual-num .kbd-num-keys {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 60px);
+    gap: 8px;
+}
+
+#teclado-virtual-num .nkey {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    font-weight: 800;
+    color: #334155;
+    cursor: pointer;
+    user-select: none;
+}
+
+#teclado-virtual-num .nkey:hover { filter: brightness(0.98); }
+#teclado-virtual-num .nkey:active { transform: translateY(1px); }
+
+#teclado-virtual-num .kbd-num-hint {
+    margin-top: 8px;
+    text-align: center;
+    color: #64748b;
+    font-size: 12px;
+}
+
+#teclado-virtual-texto .kbd-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+#teclado-virtual-texto .kbd-input {
+    flex: 1;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 16px;
+    outline: none;
+}
+
+#teclado-virtual-texto .kbd-keys {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 6px;
+}
+
+#teclado-virtual-texto .key {
+    padding: 10px 0;
+    text-align: center;
+    background: linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%);
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 700;
+    color: #334155;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+#teclado-virtual-texto .key:hover { filter: brightness(0.98); }
+#teclado-virtual-texto .key:active { transform: translateY(1px); }
+
+#teclado-virtual-texto .key-wide { grid-column: span 2; }
+#teclado-virtual-texto .key-accept { background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%); color: #fff; border-color: #16a34a; }
+#teclado-virtual-texto .key-cancel { background: linear-gradient(180deg, #f43f5e 0%, #e11d48 100%); color: #fff; border-color: #e11d48; }
 
 .total-weight {
     text-align: center;
@@ -252,7 +399,7 @@
 .setup-buttons {
     display: flex;
     justify-content: center;
-    gap: 30px; /* Increased gap */
+    gap: 24px;
 }
 
 .setup-label {
@@ -267,23 +414,34 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px; /* Increased size */
-    height: 40px; /* Increased size */
-    font-size: 16px; /* Increased font size */
-    border-radius: 50%;
-    background: white;
-    border: 2px solid #007bff;
-    color: #007bff;
-    font-weight: bold;
-    transition: all 0.3s ease;
+    width: 56px;
+    height: 56px;
+    font-size: 18px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%);
+    border: 2px solid #c9d3e6;
+    color: #334155;
+    font-weight: 800;
+    transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
 }
 
 .setup-label:hover .setup-circle {
-    background: #e6f2ff;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(0,0,0,0.12);
+    background: linear-gradient(180deg, #ffffff 0%, #eaf2ff 100%);
 }
 
 .setup-label input[type="radio"]:checked + .setup-circle {
-    background: #007bff;
-    color: white;
+    background: linear-gradient(180deg, #f63b3b 0%, #eb2525 100%);
+    color: #ffffff;
+    border-color: #eb2525;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
+}
+
+/* Pequeno badge de brilho ao focar/hover */
+.setup-label:active .setup-circle {
+    transform: translateY(0px) scale(0.98);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
 }
 

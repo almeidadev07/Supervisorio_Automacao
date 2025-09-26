@@ -57,26 +57,25 @@
     color: rgb(51, 255, 0);
 }
 
-.tecla {
-    width: 50px;
-    height: 50px;
-    margin: 5px;
-    font-size: 20px;
+.tecla { /* estilos aplicados somente quando o teclado estiver visível */
+    width: auto;
+    height: auto;
+    margin: 0;
+    font-size: 18px;
     text-align: center;
-    line-height: 50px;
-    background: lightgray;
-    border: none;
-    border-radius: 5px;
+    background: linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%);
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
     cursor: pointer;
-    display: inline-block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 .tecla.ok {
     background: green;
     color: white;
-    grid-column: 2 / span 2; /* Começa na coluna 2 e ocupa 2 colunas */
-    width: calc(92% ); /* Compensa o gap do grid */
-    margin-left: 5px; /* Alinhamento preciso */
 }
 
 .ajuste-btn {
@@ -172,8 +171,8 @@
     }
 
     .tecla.ok {
-        width: calc(90%);
-        margin-left: 4px;
+        background: green;
+        color: white;
     }
 
     .ajuste-btn {
@@ -208,8 +207,8 @@
     }
 
     .tecla.ok {
-        width: calc(88%);
-        margin-left: 3px;
+        background: green;
+        color: white;
     }
 
     .ajuste-btn {
@@ -240,8 +239,8 @@
     }
 
     .tecla.ok {
-        width: calc(85%);
-        margin-left: 2px;
+        background: green;
+        color: white;
     }
 
     .ajuste-btn {

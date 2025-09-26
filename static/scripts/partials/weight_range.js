@@ -4,34 +4,56 @@ function inicializarWeightRange() {
     // Configurações
     const MAX_TOTAL = 150;
     const colors = ['#FF1493', '#FFFF00', '#0000FF', '#00FF00', '#FF4500', '#00BFFF', '#00FFBF'];
-    let activeSetup = 1;
+    // Carrega preset ativo previamente salvo (fallback 0)
+    let activeSetup = Number(localStorage.getItem('weight_active_setup') || 0);
     
     // Estado inicial
-    let setups = {
-        0: [25, 10, 15, 15, 10, 15, 10],
-        1: [25, 10, 15, 15, 10, 15, 10],
-        2: [25, 10, 15, 15, 10, 15, 10],
-        3: [25, 10, 15, 15, 10, 15, 10]
-    };
+    // Carrega setups do localStorage, com defaults
+    let setups = (() => {
+        try {
+            const raw = localStorage.getItem('weight_setups');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === 'object') return parsed;
+            }
+        } catch (e) { console.warn('Falha ao ler weight_setups do localStorage', e); }
+        return {
+            0: [25, 10, 15, 15, 10, 15, 10],
+            1: [25, 10, 15, 15, 10, 15, 10],
+            2: [25, 10, 15, 15, 10, 15, 10],
+            3: [25, 10, 15, 15, 10, 15, 10]
+        };
+    })();
 
     // Elementos DOM
     const container = document.getElementById('weight-range-container');
     const mainBar = document.getElementById('main-bar');
     const segments = document.querySelectorAll('.segment');
     const inputs = Array.from(document.querySelectorAll('.weight-input'));
-    const saveBtn = document.getElementById('save-button');
-    const exportBtn = document.getElementById('export-button');
-    const importBtn = document.getElementById('import-button');
+    const labels = Array.from(document.querySelectorAll('.faixa-label'));
+    // Botões removidos (auto-save)
 
     // Setup selection
     const setupInputs = document.querySelectorAll('input[name="setup"]');
     
+    // Seleciona visualmente o preset ativo salvo
     setupInputs.forEach(input => {
+        if (Number(input.value) === activeSetup) input.checked = true;
         input.addEventListener('change', () => {
             activeSetup = parseInt(input.value);
+            localStorage.setItem('weight_active_setup', String(activeSetup));
             updateDisplay();
         });
     });
+
+    // Persistência
+    function persistSetups() {
+        try {
+            localStorage.setItem('weight_setups', JSON.stringify(setups));
+        } catch (e) {
+            console.error('Erro ao salvar weight_setups no localStorage', e);
+        }
+    }
 
     function updateDisplay() {
         const values = setups[activeSetup];
@@ -121,6 +143,7 @@ function inicializarWeightRange() {
             const newValue = Math.max(0, Math.min(150, value));
             inputs[index].value = newValue;
             setups[activeSetup][index] = newValue;
+            persistSetups();
             
             // Atualiza largura da barra
             const percentage = (newValue / MAX_TOTAL) * 100;
@@ -133,87 +156,15 @@ function inicializarWeightRange() {
 
     // Eventos dos inputs
     inputs.forEach((input, index) => {
-        input.addEventListener('change', () => {
+        const handler = () => {
             const value = parseInt(input.value) || 0;
             updateInputValue(index, value);
-        });
+        };
+        input.addEventListener('change', handler);
+        input.addEventListener('input', handler);
     })
 
-    // Salvar configurações
-    function saveSetups() {
-        fetch('/api/setups', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(setups)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alert('Configurações salvas com sucesso!');
-            } else {
-                throw new Error(data.error || 'Erro ao salvar');
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            alert('Erro ao salvar configurações: ' + error.message);
-        });
-    }
-
-    // Exportar configurações
-    function exportSetups() {
-        window.location.href = '/api/export';
-    }
-
-    // Importar configurações
-    function importSetups() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        
-        input.onchange = function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const formData = new FormData();
-            formData.append('file', file);
-            
-            fetch('/api/import', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    alert('Configurações importadas com sucesso!');
-                    loadSetups(); // Recarrega as configurações
-                } else {
-                    throw new Error(data.error || 'Erro ao importar');
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao importar configurações: ' + error.message);
-            });
-        };
-        
-        input.click();
-    }
-
-    // Carrega configurações do servidor
-    function loadSetups() {
-        fetch('/api/setups')
-            .then(response => response.json())
-            .then(data => {
-                setups = data;
-                updateDisplay();
-            })
-            .catch(error => {
-                console.error('Erro ao carregar configurações:', error);
-            });
-    }
+    // Removido fluxo de salvar/exportar/importar via servidor; uso localStorage
     // Atualiza display
     function updateDisplay() {
         const values = setups[activeSetup];
@@ -233,21 +184,114 @@ function inicializarWeightRange() {
 
     // Atualiza total
     function updateTotal() {
-        const total = setups[activeSetup].reduce((sum, val) => sum + val, 0);
-        const totalDisplay = document.getElementById('total-weight');
-        if (totalDisplay) {
-            totalDisplay.textContent = total;
-            totalDisplay.style.color = total > MAX_TOTAL ? 'red' : 'black';
-        }
+        // total removido da UI
     }
 
     // Inicialização
-    if (saveBtn) saveBtn.addEventListener('click', saveSetups);
-    if (exportBtn) exportBtn.addEventListener('click', exportSetups);
-    if (importBtn) importBtn.addEventListener('click', importSetups);
-    
     initializeDragEvents();
-    loadSetups();
+    updateDisplay();
+
+    // Integração com teclado virtual existente (númerico) para os inputs de valor
+    // Integra teclados globais: numérico e texto são incluídos em virtual_keyboard.html
+    // Reuso do teclado numérico global (id: teclado-virtual) com API já existente em grid.js
+    inputs.forEach((input) => {
+        if (!input.id) input.id = `weight-input-${Math.random().toString(36).slice(2,8)}`;
+        input.addEventListener('click', () => {
+            try {
+                if (window.abrirTeclado) abrirTeclado({ target: input });
+            } catch(_) {}
+        });
+    });
+
+    // Teclado virtual para textos das faixas
+    const tecladoTexto = document.getElementById('teclado-virtual-texto');
+    const tecladoTextoInput = document.getElementById('kbd-texto-input');
+    let labelAtiva = null;
+    let tecladoTextoMaiusculo = true;
+
+    function abrirTecladoTexto(labelEl) {
+        labelAtiva = labelEl;
+        if (tecladoTexto && tecladoTextoInput) {
+            tecladoTextoInput.value = (labelEl && labelEl.textContent) ? labelEl.textContent.trim() : '';
+            tecladoTexto.style.display = 'block';
+            setTimeout(() => tecladoTextoInput.focus(), 0);
+        }
+    }
+    function fecharTecladoTexto(confirmar) {
+        if (confirmar && labelAtiva && tecladoTextoInput) {
+            const novo = tecladoTextoInput.value.trim();
+            if (novo) labelAtiva.textContent = novo;
+        }
+        if (tecladoTexto) tecladoTexto.style.display = 'none';
+        labelAtiva = null;
+    }
+
+    // Bind labels para abrir teclado de texto
+    labels.forEach((label) => {
+        label.addEventListener('focus', () => {
+            abrirTecladoTexto(label);
+        });
+        // Também abrir ao clicar (entrar no modo de edição)
+        label.addEventListener('click', () => {
+            abrirTecladoTexto(label);
+        });
+    });
+
+    // Bind teclas do teclado virtual de texto
+    if (tecladoTexto) {
+        // Evita fechar ao clicar dentro do teclado
+        if (!tecladoTexto.dataset.stopInsideBound) {
+            tecladoTexto.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+            });
+            tecladoTexto.dataset.stopInsideBound = '1';
+        }
+
+        // Fecha ao clicar fora (garantia de bind único)
+        if (!window._weightTextKbOutsideBound) {
+            document.addEventListener('mousedown', (e) => {
+                if (tecladoTexto.style.display === 'block' && !tecladoTexto.contains(e.target)) {
+                    fecharTecladoTexto(false);
+                }
+            });
+            window._weightTextKbOutsideBound = true;
+        }
+
+        // Evento de teclas com delegação, evitando múltiplos binds
+        if (!tecladoTexto.dataset.bound) {
+            tecladoTexto.addEventListener('click', (evt) => {
+                const keyEl = evt.target.closest('.key');
+                if (!keyEl || !tecladoTexto.contains(keyEl)) return;
+                const isAccept = keyEl.classList.contains('key-accept');
+                const isCancel = keyEl.classList.contains('key-cancel');
+                const txt = keyEl.textContent;
+                const isToggle = keyEl.dataset.action === 'toggle-case';
+                if (isAccept) { fecharTecladoTexto(true); return; }
+                if (isCancel) { fecharTecladoTexto(false); return; }
+                if (isToggle) {
+                    tecladoTextoMaiusculo = !tecladoTextoMaiusculo;
+                    // Atualiza visual das letras do teclado
+                    tecladoTexto.querySelectorAll('.key').forEach((k) => {
+                        if (k.classList.contains('key-accept') || k.classList.contains('key-cancel') || k.classList.contains('key-wide')) return;
+                        if (!k.textContent) return;
+                        // só altera se for 1 caracter alfabético
+                        if (/^[A-Za-z]$/.test(k.textContent)) {
+                            k.textContent = tecladoTextoMaiusculo ? k.textContent.toUpperCase() : k.textContent.toLowerCase();
+                        }
+                    });
+                    return;
+                }
+                if (txt === '⌫') {
+                    tecladoTextoInput.value = tecladoTextoInput.value.slice(0, -1);
+                    return;
+                }
+                // Adiciona mantendo estado de maiúsculas/minúsculas
+                const toAdd = tecladoTextoMaiusculo ? txt.toUpperCase() : txt.toLowerCase();
+                tecladoTextoInput.value += toAdd;
+            });
+            tecladoTexto.dataset.bound = '1';
+        }
+    }
 }
 
 // Exporta função para escopo global

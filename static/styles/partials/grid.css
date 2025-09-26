@@ -291,16 +291,20 @@
 /* ========== Elementos de Controle ========== */
 #teclado-virtual {
     display: none;
-    grid-template-columns: repeat(3, minmax(50px, 1fr));
-    gap: 5px;
-    position: fixed; /* fixo na tela, não depende do container */
-    background: white;
-    border: 2px solid #333;
-    padding: 10px;
+    position: fixed;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%);
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
     border-radius: 10px;
-    box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    box-shadow: 0 16px 32px rgba(0,0,0,0.15);
     z-index: 99999;
-
+    width: min(320px, 96vw);
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(4, 52px);
+    gap: 6px;
 }
 
 #botoes-ajuste {
@@ -577,6 +581,10 @@
     display: block;
 }
 
+.tecla.ok {
+    background: green;
+    color: white;
+}
 
 
 /* ========== Estilos Responsivos ========== */

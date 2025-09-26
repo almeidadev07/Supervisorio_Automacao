@@ -1,5 +1,5 @@
-<!-- Teclado Virtual -->
-<div id="teclado-virtual">
+<!-- Teclado Virtual Numérico Global (independente) -->
+<div id="teclado-virtual" role="dialog" aria-label="Teclado numérico">
     <button class="tecla" onclick="digitarNumero(7)">7</button>
     <button class="tecla" onclick="digitarNumero(8)">8</button>
     <button class="tecla" onclick="digitarNumero(9)">9</button>
@@ -9,6 +9,22 @@
     <button class="tecla" onclick="digitarNumero(1)">1</button>
     <button class="tecla" onclick="digitarNumero(2)">2</button>
     <button class="tecla" onclick="digitarNumero(3)">3</button>
+    <button class="tecla" onclick="apagarUltimoNumero()">⌫</button>
     <button class="tecla" onclick="digitarNumero(0)">0</button>
     <button class="tecla ok" onclick="fecharTeclado()">OK</button>
+</div>
+
+<!-- Teclado Virtual de Texto Global (independente) -->
+<div id="teclado-virtual-texto" role="dialog" aria-label="Teclado de texto">
+    <div class="kbd-header">
+        <input id="kbd-texto-input" class="kbd-input" type="text" placeholder="Digite o texto" maxlength="32" />
+    </div>
+    <div class="kbd-keys">
+        <div class="key key-wide" data-action="toggle-case">Aa</div>
+        <div class="key">Q</div><div class="key">W</div><div class="key">E</div><div class="key">R</div><div class="key">T</div><div class="key">Y</div><div class="key">U</div><div class="key">I</div><div class="key">O</div><div class="key">P</div>
+        <div class="key">A</div><div class="key">S</div><div class="key">D</div><div class="key">F</div><div class="key">G</div><div class="key">H</div><div class="key">J</div><div class="key">K</div><div class="key">L</div><div class="key key-wide">⌫</div>
+        <div class="key">Z</div><div class="key">X</div><div class="key">C</div><div class="key">V</div><div class="key">B</div><div class="key">N</div><div class="key">M</div><div class="key">-</div><div class="key">_</div><div class="key"> </div>
+        <div class="key key-accept">OK</div>
+        <div class="key key-cancel">Cancelar</div>
+    </div>
 </div>
