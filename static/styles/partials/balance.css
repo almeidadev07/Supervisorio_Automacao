@@ -370,6 +370,186 @@
     display: inline-block !important;
 }
 
+/* ========== Modal de Carregamento ========== */
+.loading-overlay {
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    z-index: 2000 !important;
+}
+
+/* Posiciona o conteúdo de carregamento um pouco acima do centro, mantendo centralização horizontal */
+.loading-overlay .loading-content {
+    margin-top: -150px !important; /* sobe ~40px */
+}
+
+
+.loading-gear {
+    margin-bottom: 20px !important;
+    position: relative !important;
+    height: 150px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.gear {
+    width: 200px !important;
+    height: 200px !important;
+    animation: rotate 2s linear infinite !important;
+    position: relative !important;
+    display: block !important;
+    margin: 0 auto !important;
+}
+
+.gear-1 {
+    animation-delay: 0s !important;
+    z-index: 2 !important;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-text {
+    margin-top: 20px !important;
+    font-size: 20px !important;
+    font-weight: bold !important;
+    color: #ffffff !important;
+    margin-bottom: 15px !important;
+    text-align: center !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5) !important;
+}
+
+.loading-progress {
+    width: 100% !important;
+    max-width: 400px !important;
+    margin: 0 auto !important;
+    margin-top: 30px !important;
+    position: relative !important;
+    z-index: 10 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+}
+
+.progress-bar {
+    width: 100% !important;
+    height: 40px !important;
+    background-color: #2d3748 !important;
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    margin-bottom: 15px !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+    border: 3px solid #1a202c !important;
+    position: relative !important;
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 10 !important;
+}
+
+.progress-half {
+    position: absolute !important;
+    top: 0 !important;
+    height: 100% !important;
+    width: 0;
+    background: #ef4444 !important;
+    background-color: #ef4444 !important;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.6) !important;
+    z-index: 2 !important;
+    transition: width 0.4s ease !important;
+}
+.progress-half.left { left: 50% !important; border-top-left-radius: 17px !important; border-bottom-left-radius: 17px !important; transform: translateX(-100%) !important; }
+.progress-half.right { left: 50% !important; border-top-right-radius: 17px !important; border-bottom-right-radius: 17px !important; }
+
+/* Força a cor vermelha com seletor mais específico */
+#progress-fill, #loading-progress-fill, #loading-progress-left, #loading-progress-right {
+    background: #ef4444 !important;
+    background-color: #ef4444 !important;
+    background-image: none !important;
+}
+
+/* Força ainda mais específico */
+.loading-progress #progress-fill, .loading-progress #loading-progress-fill, .loading-progress #loading-progress-left, .loading-progress #loading-progress-right {
+    background: #ef4444 !important;
+    background-color: #ef4444 !important;
+    background-image: none !important;
+}
+
+.progress-text {
+    font-size: 24px !important;
+    font-weight: bold !important;
+    color: #ffffff !important;
+    text-align: center !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8) !important;
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    display: inline-block !important;
+    position: relative !important;
+    z-index: 20 !important;
+    min-width: 0 !important;
+}
+
+/* Força máxima para barra vermelha */
+.modal.loading-overlay .loading-content .loading-progress .progress-bar .progress-fill,
+.modal.loading-overlay .loading-content .loading-progress .progress-bar #progress-fill,
+.modal.loading-overlay .loading-content .loading-progress .progress-bar #loading-progress-fill,
+.modal.loading-overlay .loading-content .loading-progress .progress-bar #loading-progress-left,
+.modal.loading-overlay .loading-content .loading-progress .progress-bar #loading-progress-right,
+#loading-modal .loading-content .loading-progress .progress-bar .progress-fill,
+#loading-modal .loading-content .loading-progress .progress-bar #progress-fill,
+#loading-modal .loading-content .loading-progress .progress-bar #loading-progress-fill,
+#loading-modal .loading-content .loading-progress .progress-bar #loading-progress-left,
+#loading-modal .loading-content .loading-progress .progress-bar #loading-progress-right {
+    background: #ef4444 !important;
+    background-color: #ef4444 !important;
+    background-image: none !important;
+    background-clip: padding-box !important;
+}
+
+/* Força absoluta - último recurso */
+body .modal.loading-overlay .loading-content .loading-progress .progress-bar .progress-fill,
+body .modal.loading-overlay .loading-content .loading-progress .progress-bar #progress-fill,
+body .modal.loading-overlay .loading-content .loading-progress .progress-bar #loading-progress-fill,
+body .modal.loading-overlay .loading-content .loading-progress .progress-bar #loading-progress-left,
+body .modal.loading-overlay .loading-content .loading-progress .progress-bar #loading-progress-right,
+body #loading-modal .loading-content .loading-progress .progress-bar .progress-fill,
+body #loading-modal .loading-content .loading-progress .progress-bar #progress-fill,
+body #loading-modal .loading-content .loading-progress .progress-bar #loading-progress-fill,
+body #loading-modal .loading-content .loading-progress .progress-bar #loading-progress-left,
+body #loading-modal .loading-content .loading-progress .progress-bar #loading-progress-right,
+html body .modal.loading-overlay .loading-content .loading-progress .progress-bar .progress-fill,
+html body .modal.loading-overlay .loading-content .loading-progress .progress-bar #progress-fill,
+html body .modal.loading-overlay .loading-content .loading-progress .progress-bar #loading-progress-fill,
+html body .modal.loading-overlay .loading-content .loading-progress .progress-bar #loading-progress-left,
+html body .modal.loading-overlay .loading-content .loading-progress .progress-bar #loading-progress-right,
+html body #loading-modal .loading-content .loading-progress .progress-bar .progress-fill,
+html body #loading-modal .loading-content .loading-progress .progress-bar #progress-fill,
+html body #loading-modal .loading-content .loading-progress .progress-bar #loading-progress-fill,
+html body #loading-modal .loading-content .loading-progress .progress-bar #loading-progress-left,
+html body #loading-modal .loading-content .loading-progress .progress-bar #loading-progress-right {
+    background: #ef4444 !important;
+    background-color: #ef4444 !important;
+    background-image: none !important;
+    background-clip: padding-box !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Classe de força para JavaScript */
+.force-red {
+    background: #ef4444 !important;
+    background-color: #ef4444 !important;
+    background-image: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
 @media (max-width: 1024px) {
     .balance-grid {
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

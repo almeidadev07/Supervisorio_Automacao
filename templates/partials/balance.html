@@ -49,6 +49,24 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal de Carregamento -->
+    <div id="loading-modal" class="modal loading-overlay" style="display: none;">
+        <div class="loading-content">
+
+            <div class="loading-gear">
+                <img src="{{ url_for('static', filename='images/pages/icons/status/engrenagem_rodando_01.png') }}" alt="Engrenagem" class="gear gear-1" />
+            </div>
+            <div class="loading-text">Habilitando Calibração...</div>
+            <div class="loading-progress">
+                <div class="progress-bar">
+                    <div class="progress-half left" id="loading-progress-left"></div>
+                    <div class="progress-half right" id="loading-progress-right"></div>
+                </div>
+                <div class="progress-text" id="loading-progress-text">0%</div>
+            </div>
+        </div>
+    </div>
         </div>
     </div>
     </div>

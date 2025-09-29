@@ -490,13 +490,17 @@ function updateStatusPin(pinId) {
 }
 
 function updateProgressBar() {
-    const progressFill = document.getElementById("progress-fill");
+    const progressLeft = document.getElementById("loading-progress-left");
+    const progressRight = document.getElementById("loading-progress-right");
     const completedCount = captureState.completedStations.size;
     const progressPercentage = (completedCount / captureState.totalStations) * 100;
     
-    if (progressFill) {
-        progressFill.style.width = `${progressPercentage}%`;
-        progressFill.style.background = 'linear-gradient(90deg, #dc3545 0%, #c82333 100%)';
+    if (progressLeft && progressRight) {
+        const halfWidth = Math.max(0, Math.min(50, progressPercentage / 2));
+        progressLeft.style.width = `${halfWidth}%`;
+        progressRight.style.width = `${halfWidth}%`;
+        progressLeft.style.background = '#dc3545';
+        progressRight.style.background = '#dc3545';
     }
     
     console.log(`📊 Progresso: ${completedCount}/${captureState.totalStations} (${progressPercentage.toFixed(1)}%)`);

@@ -433,3 +433,20 @@
         min-width: 80px !important;
     }
 }
+
+/* FORÇA ABSOLUTA PARA BARRA VERMELHA */
+.progress-fill,
+#progress-fill,
+.loading-progress .progress-bar .progress-fill,
+.loading-progress .progress-bar #progress-fill,
+.modal.loading-overlay .loading-content .loading-progress .progress-bar .progress-fill,
+.modal.loading-overlay .loading-content .loading-progress .progress-bar #progress-fill,
+#loading-modal .loading-content .loading-progress .progress-bar .progress-fill,
+#loading-modal .loading-content .loading-progress .progress-bar #progress-fill {
+    background: #ef4444 !important;
+    background-color: #ef4444 !important;
+    background-image: none !important;
+    background-clip: padding-box !important;
+    border: none !important;
+    box-shadow: none !important;
+}
