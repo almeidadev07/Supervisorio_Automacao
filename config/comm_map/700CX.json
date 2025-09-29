@@ -211,6 +211,18 @@
   ,{"name": "XLCLASS_DB201_CLASSIFICACAO_P10[1]", "area": "DB", "db": 201, "offset": 36, "type": "WORD", "description": "XLCLASS_DB201_CLASSIFICACAO_P10[1]"}
   ,{"name": "XLCLASS_DB201_CLASSIFICACAO_CLASSES_A_IGNORAR", "area": "DB", "db": 201, "offset": 38, "type": "WORD", "description": "XLCLASS_DB201_CLASSIFICACAO_CLASSES_A_IGNORAR"}
 
+  ,{"__section__": "XLCLASS - DB202 - NOME DINAMICO"}
+  ,{"name": "XLCLASS_DB202_NOME_DINAMICO[0]", "area": "DB", "db": 202, "offset": 0, "type": "STRING", "description": "XLCLASS_DB202_NOME_DINAMICO[0]"}
+  ,{"name": "XLCLASS_DB202_NOME_DINAMICO[1]", "area": "DB", "db": 202, "offset": 256, "type": "STRING", "description": "XLCLASS_DB202_NOME_DINAMICO[1]"}
+  ,{"name": "XLCLASS_DB202_NOME_DINAMICO[2]", "area": "DB", "db": 202, "offset": 512, "type": "STRING", "description": "XLCLASS_DB202_NOME_DINAMICO[2]"}
+  ,{"name": "XLCLASS_DB202_NOME_DINAMICO[3]", "area": "DB", "db": 202, "offset": 768, "type": "STRING", "description": "XLCLASS_DB202_NOME_DINAMICO[3]"}
+  ,{"name": "XLCLASS_DB202_NOME_DINAMICO[4]", "area": "DB", "db": 202, "offset": 1024, "type": "STRING", "description": "XLCLASS_DB202_NOME_DINAMICO[4]"}
+  ,{"name": "XLCLASS_DB202_NOME_DINAMICO[5]", "area": "DB", "db": 202, "offset": 1280, "type": "STRING", "description": "XLCLASS_DB202_NOME_DINAMICO[5]"}
+  ,{"name": "XLCLASS_DB202_NOME_DINAMICO[6]", "area": "DB", "db": 202, "offset": 1536, "type": "STRING", "description": "XLCLASS_DB202_NOME_DINAMICO[6]"}
+  ,{"name": "XLCLASS_DB202_NOME_DINAMICO[7]", "area": "DB", "db": 202, "offset": 1792, "type": "STRING", "description": "XLCLASS_DB202_NOME_DINAMICO[7]"}
+  ,{"name": "XLCLASS_DB202_NOME_DINAMICO[8]", "area": "DB", "db": 202, "offset": 2048, "type": "STRING", "description": "XLCLASS_DB202_NOME_DINAMICO[8]"}
+  ,{"name": "XLCLASS_DB202_NOME_DINAMICO[9]", "area": "DB", "db": 202, "offset": 2304, "type": "STRING", "description": "XLCLASS_DB202_NOME_DINAMICO[9]"}
+
   ,{"__section__": "XLCLASS - DB209 - VISIB TIPO OVO"}
   ,{"name": "XLCLASS_DB209_VISIB_TIPO_OVO_L01[0]", "area": "DB", "db": 209, "offset": 2, "type": "WORD", "description": "XLCLASS_DB209_VISIB_TIPO_OVO_L01[0]"}
   ,{"name": "XLCLASS_DB209_VISIB_TIPO_OVO_L01[1]", "area": "DB", "db": 209, "offset": 4, "type": "WORD", "description": "XLCLASS_DB209_VISIB_TIPO_OVO_L01[1]"}

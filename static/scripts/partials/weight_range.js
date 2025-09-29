@@ -66,8 +66,106 @@ function inicializarWeightRange() {
                 console.error('Erro ao escrever no PLC:', e);
                 return false;
             }
+        },
+        async getLabels() {
+            const names = Array.from({ length: 7 }, (_, i) => `XLCLASS_DB202_NOME_DINAMICO[${i}]`).join(',');
+            const url = `/api/read_tags?names=${encodeURIComponent(names)}`;
+            try {
+                const res = await fetch(url, { cache: 'no-store' });
+                if (!res.ok) throw new Error(`GET ${url} => ${res.status}`);
+                const data = await res.json();
+                const values = (data && data.values) || {};
+                return Array.from({ length: 7 }, (_, i) => {
+                    const key = `XLCLASS_DB202_NOME_DINAMICO[${i}]`;
+                    const v = values[key];
+                    if (v === null || typeof v === 'undefined') return '########';
+                    return String(v || '');
+                });
+            } catch (e) {
+                console.error('Falha ao ler labels do PLC:', e);
+                return Array.from({ length: 7 }, () => '########');
+            }
+        },
+        async setLabel(index, text) {
+            try {
+                const tag = `XLCLASS_DB202_NOME_DINAMICO[${index}]`;
+                const payload = {};
+                payload[tag] = String(text || '');
+                const res = await fetch('/api/write_tags', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.ok) {
+                    console.error('Falha ao escrever label no PLC:', res.status, data);
+                    return false;
+                }
+                return true;
+            } catch (e) {
+                console.error('Erro ao escrever label no PLC:', e);
+                return false;
+            }
         }
     };
+
+    // Subscrição por tela (ativa drivers só quando a tela está aberta)
+    const clientId = `weight-range-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    let heartbeatTimer = null;
+
+    function buildSubscribedTags(presetIdx) {
+        const tags = [];
+        // Labels DB202
+        for (let i = 0; i < 7; i++) tags.push(`XLCLASS_DB202_NOME_DINAMICO[${i}]`);
+        // Seleção do preset e faixas atuais
+        tags.push('XLCLASS_DB229_PESAGEM_SELECAO');
+        const mapa = Number(presetIdx) || 0; // 0..3
+        for (let i = 1; i <= 7; i++) tags.push(`XLCLASS_DB229_PESAGEM_MAPA_${mapa}_TIPO_P${i}`);
+        return tags;
+    }
+
+    async function subscribeScreen(presetIdx) {
+        try {
+            const res = await fetch('/api/subscribe_tags', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ client_id: clientId, tags: buildSubscribedTags(presetIdx) })
+            });
+            await res.json().catch(() => ({}));
+        } catch (_) {}
+    }
+
+    async function unsubscribeScreen() {
+        try {
+            await fetch('/api/unsubscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ client_id: clientId })
+            });
+        } catch (_) {}
+    }
+
+    async function heartbeatScreen() {
+        try {
+            await fetch('/api/heartbeat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ client_id: clientId })
+            });
+        } catch (_) {}
+    }
+
+    function startHeartbeat() {
+        if (heartbeatTimer) clearInterval(heartbeatTimer);
+        heartbeatTimer = setInterval(heartbeatScreen, 15000);
+    }
+
+    function stopHeartbeat() {
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
+    }
 
     // Elementos DOM
     const container = document.getElementById('weight-range-container');
@@ -75,6 +173,7 @@ function inicializarWeightRange() {
     const segments = document.querySelectorAll('.segment');
     const inputs = Array.from(document.querySelectorAll('.weight-input'));
     const labels = Array.from(document.querySelectorAll('.faixa-label'));
+    const ENABLE_LABEL_EDIT = false; // rótulos somente leitura
     // Botões removidos (auto-save)
 
     // Debounce
@@ -111,6 +210,8 @@ function inicializarWeightRange() {
             updateDisplay();
             // Garante que SELECAO no PLC está setada e valores escritos (sincronização)
             writeDebounced();
+            // Atualiza subscrição para MAPA correto
+            subscribeScreen(activeSetup);
         });
     });
 
@@ -260,6 +361,9 @@ function inicializarWeightRange() {
 
     // Inicialização
     initializeDragEvents();
+    // Subscrição quando a tela abre
+    subscribeScreen(activeSetup);
+    startHeartbeat();
     // Carrega do PLC o preset ativo ao iniciar
     (async () => {
         const plcValues = await api.getPresetValues(activeSetup);
@@ -289,37 +393,73 @@ function inicializarWeightRange() {
     const tecladoTextoInput = document.getElementById('kbd-texto-input');
     let labelAtiva = null;
     let tecladoTextoMaiusculo = true;
+    let labelsRefreshPaused = false;
 
     function abrirTecladoTexto(labelEl) {
-        labelAtiva = labelEl;
-        if (tecladoTexto && tecladoTextoInput) {
-            tecladoTextoInput.value = (labelEl && labelEl.textContent) ? labelEl.textContent.trim() : '';
-            tecladoTexto.style.display = 'block';
-            setTimeout(() => tecladoTextoInput.focus(), 0);
+        if (ENABLE_LABEL_EDIT) {
+            labelAtiva = labelEl;
+            if (tecladoTexto && tecladoTextoInput) {
+                tecladoTextoInput.value = (labelEl && labelEl.textContent) ? labelEl.textContent.trim() : '';
+                tecladoTexto.style.display = 'block';
+                setTimeout(() => tecladoTextoInput.focus(), 0);
+                labelsRefreshPaused = true;
+            }
         }
     }
-    function fecharTecladoTexto(confirmar) {
-        if (confirmar && labelAtiva && tecladoTextoInput) {
-            const novo = tecladoTextoInput.value.trim();
-            if (novo) labelAtiva.textContent = novo;
+    async function fecharTecladoTexto(confirmar) {
+        if (ENABLE_LABEL_EDIT) {
+            if (confirmar && labelAtiva && tecladoTextoInput) {
+                const novo = tecladoTextoInput.value.trim();
+                const idx = labels.indexOf(labelAtiva);
+                if (idx >= 0) {
+                    const ok = await api.setLabel(idx, novo);
+                    if (ok) {
+                        labelAtiva.textContent = novo;
+                    } else {
+                        setTimeout(refreshLabelsFromPLC, 600);
+                    }
+                }
+            }
+            if (tecladoTexto) tecladoTexto.style.display = 'none';
+            labelAtiva = null;
+            labelsRefreshPaused = false;
         }
-        if (tecladoTexto) tecladoTexto.style.display = 'none';
-        labelAtiva = null;
     }
 
     // Bind labels para abrir teclado de texto
     labels.forEach((label) => {
-        label.addEventListener('focus', () => {
-            abrirTecladoTexto(label);
-        });
-        // Também abrir ao clicar (entrar no modo de edição)
-        label.addEventListener('click', () => {
-            abrirTecladoTexto(label);
-        });
+        if (!ENABLE_LABEL_EDIT) {
+            try { label.setAttribute('tabindex', '-1'); } catch(_) {}
+            try { label.setAttribute('contenteditable', 'false'); } catch(_) {}
+            try { label.style.cursor = 'default'; } catch(_) {}
+            try { label.style.pointerEvents = 'none'; } catch(_) {}
+            // não clonar o elemento para não quebrar o array labels usado no refresh
+        } else {
+            label.addEventListener('focus', () => {
+                abrirTecladoTexto(label);
+            });
+            // Também abrir ao clicar (entrar no modo de edição)
+            label.addEventListener('click', () => {
+                abrirTecladoTexto(label);
+            });
+        }
     });
 
+    async function refreshLabelsFromPLC() {
+        if (labelsRefreshPaused) return;
+        const plcLabels = await api.getLabels();
+        plcLabels.forEach((txt, i) => {
+            if (!labels[i]) return;
+            const val = (txt === null || typeof txt === 'undefined') ? '' : String(txt);
+            // Mostra vazio (e CSS mantém espaço fixo). Opcionalmente mostre ######## visualmente:
+            labels[i].textContent = val;
+        });
+    }
+
+    setInterval(refreshLabelsFromPLC, 2000);
+
     // Bind teclas do teclado virtual de texto
-    if (tecladoTexto) {
+    if (tecladoTexto && ENABLE_LABEL_EDIT) {
         // Evita fechar ao clicar dentro do teclado
         if (!tecladoTexto.dataset.stopInsideBound) {
             tecladoTexto.addEventListener('mousedown', (e) => {
@@ -373,6 +513,22 @@ function inicializarWeightRange() {
             tecladoTexto.dataset.bound = '1';
         }
     }
+
+    // Limpeza ao sair da tela / ocultar
+    const handleVisibility = () => {
+        if (document.hidden) {
+            stopHeartbeat();
+            unsubscribeScreen();
+        } else {
+            subscribeScreen(activeSetup);
+            startHeartbeat();
+        }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('beforeunload', () => {
+        stopHeartbeat();
+        unsubscribeScreen();
+    });
 }
 
 // Exporta função para escopo global

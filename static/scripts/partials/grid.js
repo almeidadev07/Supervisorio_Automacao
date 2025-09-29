@@ -1,7 +1,9 @@
 let draggedButton = null;
 // timestamp global do último valor válido recebido (socket ou HTTP)
 let SPEED_LAST_OK_TS = 0;
+let ALARM_LAST_OK_TS = 0; // timestamp do último resumo de alarmes válido
 let SPEED_WAS_OFFLINE = false;
+let PLC_CONNECTED = true; // estado global de conexão com o PLC
 let ENSURE_MACHINE_LAST_TS = 0;
 
 // Controle de estado para evitar condição de corrida na velocidade programada
@@ -581,10 +583,10 @@ function mostrarVelocidadeIndisponivel(){
     // Velocidade real
     const valorEl = document.querySelector('#valorReal .valor');
     if (valorEl) {
-        valorEl.textContent = '???';
+        valorEl.textContent = '###';
     } else {
         const root = document.getElementById('valorReal');
-        if (root) root.textContent = '???';
+        if (root) root.textContent = '###';
     }
     const ponteiro = document.getElementById('ponteiroReal');
     if (ponteiro) atualizarPonteiro(ponteiro, 0);
@@ -592,7 +594,7 @@ function mostrarVelocidadeIndisponivel(){
     // Velocidade programada
     const velocidadeInput = document.getElementById('velocidadeInput');
     if (velocidadeInput) {
-        velocidadeInput.value = '???';
+        velocidadeInput.value = '###';
     }
     const ponteiroProg = document.getElementById('ponteiroProg');
     if (ponteiroProg) {
@@ -735,9 +737,12 @@ function bindTelemetryVelocidadeReal(){
         socket.on('telemetry', data => {
             if (!data) return;
             if (data.plc_connected === false){
+                PLC_CONNECTED = false;
                 mostrarVelocidadeIndisponivel();
+                setAlarmCountsOffline();
                 return;
             }
+            PLC_CONNECTED = true;
             const val = pickSpeedValue(data);
             if (val == null) return;
             atualizarVelocidadeRealUI(val);
@@ -746,6 +751,7 @@ function bindTelemetryVelocidadeReal(){
         // Quando reconectar, faça uma leitura imediata por HTTP para repopular
         socket.on('plc_connection_changed', (s) => {
             if (s && s.connected){
+                PLC_CONNECTED = true;
                 fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')), { cache: 'no-store' })
                     .then(r => r.json())
                     .then(res => {
@@ -769,6 +775,10 @@ function bindTelemetryVelocidadeReal(){
                     })
                     .catch(() => {});
                 ensureMachineSelected();
+            }
+            else {
+                PLC_CONNECTED = false;
+                setAlarmCountsOffline();
             }
         });
         // Comando remoto para recarregar a página
@@ -983,17 +993,28 @@ function pararAjuste() {
 async function atualizarContadoresAlarme() {
     try {
         const res = await fetch('/api/alarms', { cache: 'no-store' }).then(r => r.json());
-        if (!res || !res.ok) throw new Error(res && res.error ? res.error : 'API error');
+        if (!res) throw new Error('no response');
+        // Se o backend indicar desconexão, mantém '##' e sai
+        if (res.connected === false || res.plc_connected === false || res.offline === true) {
+            setAlarmCountsOffline();
+            return;
+        }
+        if (!res.ok) throw new Error(res && res.error ? res.error : 'API error');
 
-        const summary = res.alarm_summary || {};
+        const summary = res.alarm_summary;
+        // Se não houver resumo válido, considera offline para não sobrescrever '##' com '00'
+        if (!summary || typeof summary !== 'object') {
+            setAlarmCountsOffline();
+            return;
+        }
         const contadores = {
-            emergency: summary.emergency || 0,
-            nr12: summary.nr12 || 0,
-            drives: summary.drives || 0,
-            thermal: summary.thermal || 0,
-            hardware: summary.hardware || 0,
-            process: summary.process || 0,
-            total: summary.total || 0
+            emergency: Number(summary.emergency || 0),
+            nr12: Number(summary.nr12 || 0),
+            drives: Number(summary.drives || 0),
+            thermal: Number(summary.thermal || 0),
+            hardware: Number(summary.hardware || 0),
+            process: Number(summary.process || 0),
+            total: Number(summary.total || 0)
         };
 
         // Atualiza os valores na interface
@@ -1001,7 +1022,7 @@ async function atualizarContadoresAlarme() {
             const elemento = document.querySelector(`.alarm-count-circle.${tipo} .count-value`);
             const circle = document.querySelector(`.alarm-count-circle.${tipo}`);
             if (elemento) {
-                const digits = (tipo === 'alimentador') ? 2 : 2;
+                const digits = 2;
                 elemento.textContent = contadores[tipo].toString().padStart(digits, '0');
             }
             if (circle) {
@@ -1009,6 +1030,9 @@ async function atualizarContadoresAlarme() {
                 else circle.classList.remove('has-alarms');
             }
         });
+
+        // Marca momento de atualização bem-sucedida
+        ALARM_LAST_OK_TS = Date.now();
 
         // Clique no botão Alarmes abre a tela de alarmes
         // Remove a abertura pelo card principal e delega aos círculos por tipo
@@ -1047,8 +1071,19 @@ async function atualizarContadoresAlarme() {
         }
 
     } catch (e) {
-        // Silencioso para não poluir logs
+        // Em perda de comunicação, mostra placeholder '##' para todos os tipos
+        setAlarmCountsOffline();
     }
+}
+
+function setAlarmCountsOffline(){
+    const tipos = ['emergency','nr12','drives','thermal','hardware','process','total','alimentador'];
+    tipos.forEach(tipo => {
+        const elemento = document.querySelector(`.alarm-count-circle.${tipo} .count-value`);
+        if (elemento) elemento.textContent = '##';
+        const circle = document.querySelector(`.alarm-count-circle.${tipo}`);
+        if (circle) circle.classList.remove('has-alarms');
+    });
 }
 
 // Modificar a função inicializarVelocimetro para incluir a atualização dos contadores
@@ -1152,7 +1187,22 @@ function inicializarVelocimetro() {
 
     // Atualiza contadores de alarme periodicamente
     setInterval(() => {
+        // Se o PLC está marcado como desconectado, não busca API agora e mantém '##'
+        if (!PLC_CONNECTED) {
+            setAlarmCountsOffline();
+            return;
+        }
         atualizarContadoresAlarme();
+        // Watchdog: se ficar >3s sem resumo válido, força '##'
+        if (Date.now() - ALARM_LAST_OK_TS > 3000) {
+            setAlarmCountsOffline();
+        }
+        // [DESABILITADO] Efeito visual de alerta no box de alarmes (pulsar vermelho)
+        // try {
+        //     const anyActive = document.querySelector('.alarm-count-circle.has-alarms');
+        //     const box = document.querySelector('.draggable-btn[data-station="alarmes"]');
+        //     if (box) box.classList.toggle('alarmes-alerta', !!anyActive);
+        // } catch(_) {}
     }, 2000);
 }
 

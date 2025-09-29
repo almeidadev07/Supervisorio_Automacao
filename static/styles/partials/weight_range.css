@@ -227,9 +227,16 @@
 }
 
 .input-group label {
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 18px;
+    font-weight: 700;
     color: #333;
+    min-height: 28px; /* reserva altura para quando string estiver vazia */
+    display: inline-block;
+}
+
+/* Evita reflow quando label está vazio: mantém espaço com pseudo-elemento */
+.input-group label:empty::before {
+    content: '\200B'; /* zero-width space para preservar altura */
 }
 
 

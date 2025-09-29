@@ -236,6 +236,9 @@ class SiemensS7Driver(BasePLC):
                 elif t == 'WORD':
                     start = int(tag.get('offset') or 0)
                     end = start + 2
+                elif t == 'STRING':
+                    start = int(tag.get('offset') or 0)
+                    end = start + 256
                 else:
                     # Tipo não suportado; marcar None
                     name = tag.get('name')
@@ -403,6 +406,32 @@ class SiemensS7Driver(BasePLC):
                                     self._tag_backoff_until[name] = 0
                         else:
                             result[name] = None
+                    elif t == 'STRING':
+                        offset = int(tag.get('offset') or 0)
+                        idx = offset - min_start
+                        if 0 <= idx and idx + 256 <= len(data):
+                            try:
+                                max_len = data[idx]
+                                actual_len = data[idx + 1]
+                                if max_len > 254:
+                                    max_len = 254
+                                if actual_len > max_len:
+                                    actual_len = max_len
+                                raw = bytes(data[idx + 2: idx + 2 + actual_len])
+                                try:
+                                    text = raw.decode('utf-8', errors='ignore')
+                                except Exception:
+                                    text = raw.decode('latin-1', errors='ignore')
+                                result[name] = text
+                                if name in self._tag_backoff_until:
+                                    try:
+                                        del self._tag_backoff_until[name]
+                                    except Exception:
+                                        self._tag_backoff_until[name] = 0
+                            except Exception:
+                                result[name] = None
+                        else:
+                            result[name] = None
                     else:
                         result[name] = None
                 except Exception as e:
@@ -488,6 +517,19 @@ class SiemensS7Driver(BasePLC):
                         import struct
                         # Converte int para bytes (big-endian)
                         value_bytes = struct.pack('>I', int(value))
+                    elif tag_type == 'STRING':
+                        max_len = 254
+                        if value is None:
+                            value = ''
+                        try:
+                            encoded = str(value).encode('utf-8')
+                        except Exception:
+                            encoded = str(value).encode('latin-1', errors='ignore')
+                        actual_len = min(len(encoded), max_len)
+                        header = bytes([max_len, actual_len])
+                        body = encoded[:actual_len]
+                        padding = bytes(max_len - actual_len)
+                        value_bytes = header + body + padding
                     else:
                         print(f"[S7] ❌ Tipo {tag_type} não suportado para escrita")
                         continue

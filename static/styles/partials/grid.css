@@ -38,6 +38,50 @@
     transition: all 0.3s ease;
     pointer-events: all;
 }
+
+/*
+ * Estado de alerta para o card do Grid "Alarmes".
+ * Objetivo:
+ *  - Dar feedback visual quando houver qualquer tipo de alarme ativo,
+ *    sem competir com as cores individuais dos tipos nos círculos.
+ * Estratégia visual:
+ *  - Mantemos um fundo neutro (cinza) para não criar mistura cromática
+ *    com os círculos; o destaque vem de uma borda vermelha suave e
+ *    de um pulso externo (box-shadow animado) em vermelho.
+ *  - Elevamos o z-index para que o card não fique oculto atrás dos
+ *    demais enquanto pulsa/ganha leve zoom.
+ */
+.draggable-btn.alarmes-alerta {
+    animation: box-blink-red 1.1s infinite ease-in-out;
+    box-shadow: 0 0 0 0 rgba(255,0,0,0.0);
+    /* base neutra (cinza) com realce vermelho para não ficar rosa */
+    background: linear-gradient(135deg, #b4b4b4, #c0c2c5);
+    border: 2px solid rgba(220, 38, 38, 0.192); /* vermelho 600 suave */
+    z-index: 2000; /* garantir acima dos outros cards durante o efeito */
+}
+
+/*
+ * Animação de pulso:
+ *  - No meio do ciclo (50%), aplicamos um anel vermelho translúcido em
+ *    volta do card usando box-shadow com grande spread. Isso cria o
+ *    "efeito de pulso" sem alterar o conteúdo interno.
+ *  - Nos extremos (0% e 100%), removemos o anel para voltar ao estado
+ *    neutro. Um leve scale(1.02) no pico do pulso destaca o card
+ *    sem gerar jump perceptível de layout.
+ */
+ 
+@keyframes box-blink-red {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.00), 0 8px 22px rgba(0,0,0,0.14);
+        transform: none;
+    }
+    50% {
+        /* anel vermelho suave (sem tom rosa) */
+        box-shadow: 0 0 0 12px rgba(220, 38, 38, 0.671), 0 10px 26px rgba(0,0,0,0.22);
+        transform: scale(1.02);
+    }
+}
+
 .draggable-btn:active {
     cursor: grabbing;
 }
