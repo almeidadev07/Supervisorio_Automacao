@@ -25,6 +25,50 @@ function inicializarWeightRange() {
         };
     })();
 
+    // Helpers de API
+    const api = {
+        async getPresetValues(presetIdx) {
+            // presetIdx é 0..3; API espera 1..4
+            const preset = Number(presetIdx) + 1;
+            const url = `/api/weight_range?preset=${preset}`;
+            try {
+                const res = await fetch(url, { cache: 'no-store' });
+                if (!res.ok) throw new Error(`GET ${url} => ${res.status}`);
+                const data = await res.json();
+                if (data && data.ok && Array.isArray(data.values) && data.values.length === 7) {
+                    return data.values.map(v => {
+                        const n = Number(v);
+                        if (!isFinite(n)) return 0;
+                        return Math.max(0, Math.min(150, Math.round(n)));
+                    });
+                }
+            } catch (e) {
+                console.error('Falha ao ler valores do PLC:', e);
+            }
+            return null;
+        },
+        async setPresetValues(presetIdx, values) {
+            const preset = Number(presetIdx) + 1; // 1..4
+            const body = { preset, values: values.map(v => Math.max(0, Math.min(150, Number(v) || 0))) };
+            try {
+                const res = await fetch('/api/weight_range', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.ok) {
+                    console.error('Falha ao escrever no PLC:', res.status, data);
+                    return false;
+                }
+                return true;
+            } catch (e) {
+                console.error('Erro ao escrever no PLC:', e);
+                return false;
+            }
+        }
+    };
+
     // Elementos DOM
     const container = document.getElementById('weight-range-container');
     const mainBar = document.getElementById('main-bar');
@@ -33,16 +77,40 @@ function inicializarWeightRange() {
     const labels = Array.from(document.querySelectorAll('.faixa-label'));
     // Botões removidos (auto-save)
 
+    // Debounce
+    function debounce(fn, wait) {
+        let t = null;
+        return function(...args) {
+            clearTimeout(t);
+            t = setTimeout(() => fn.apply(this, args), wait);
+        };
+    }
+
+    // Escreve valores atuais do preset ativo no PLC (com debounce)
+    const writeDebounced = debounce(async () => {
+        const current = setups[activeSetup] || [];
+        if (!Array.isArray(current) || current.length !== 7) return;
+        await api.setPresetValues(activeSetup, current);
+    }, 400);
+
     // Setup selection
     const setupInputs = document.querySelectorAll('input[name="setup"]');
     
     // Seleciona visualmente o preset ativo salvo
     setupInputs.forEach(input => {
         if (Number(input.value) === activeSetup) input.checked = true;
-        input.addEventListener('change', () => {
+        input.addEventListener('change', async () => {
             activeSetup = parseInt(input.value);
             localStorage.setItem('weight_active_setup', String(activeSetup));
+            // Carrega valores do PLC para o preset selecionado
+            const plcValues = await api.getPresetValues(activeSetup);
+            if (plcValues) {
+                setups[activeSetup] = plcValues;
+                persistSetups();
+            }
             updateDisplay();
+            // Garante que SELECAO no PLC está setada e valores escritos (sincronização)
+            writeDebounced();
         });
     });
 
@@ -122,6 +190,8 @@ function inicializarWeightRange() {
                 isDragging = false;
                 document.removeEventListener('mousemove', onMouseMove);
                 document.removeEventListener('mouseup', onMouseUp);
+                // Após arraste, escreve no PLC
+                writeDebounced();
             }
         });
     }
@@ -159,6 +229,7 @@ function inicializarWeightRange() {
         const handler = () => {
             const value = parseInt(input.value) || 0;
             updateInputValue(index, value);
+            writeDebounced();
         };
         input.addEventListener('change', handler);
         input.addEventListener('input', handler);
@@ -189,7 +260,17 @@ function inicializarWeightRange() {
 
     // Inicialização
     initializeDragEvents();
-    updateDisplay();
+    // Carrega do PLC o preset ativo ao iniciar
+    (async () => {
+        const plcValues = await api.getPresetValues(activeSetup);
+        if (plcValues) {
+            setups[activeSetup] = plcValues;
+            persistSetups();
+        }
+        updateDisplay();
+        // Garante sincronização da seleção no PLC
+        writeDebounced();
+    })();
 
     // Integração com teclado virtual existente (númerico) para os inputs de valor
     // Integra teclados globais: numérico e texto são incluídos em virtual_keyboard.html

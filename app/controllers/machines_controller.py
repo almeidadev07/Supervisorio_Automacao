@@ -408,3 +408,105 @@ def get_alarm_history():
         
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+@machines_bp.route('/weight_range', methods=['POST'])
+def set_weight_range():
+    """Define valores de faixas de peso para um preset e escreve no PLC.
+    Payload esperado: { "preset": 1..4, "values": [v1..v7] }
+    - preset 1 usa MAPA_0, 2 -> MAPA_1, 3 -> MAPA_2, 4 -> MAPA_3
+    - v1..v7 mapeiam para TIPO_P1..TIPO_P7
+    - cada valor é limitado a [0, 150]
+    - também escreve a tag de seleção do preset no PLC
+    """
+    try:
+        payload = request.json or {}
+        preset = int(payload.get('preset', 1))
+        values = payload.get('values')
+        if preset not in (1, 2, 3, 4):
+            return jsonify({'ok': False, 'error': 'preset inválido (1-4)'}), 400
+        if not isinstance(values, list) or len(values) != 7:
+            return jsonify({'ok': False, 'error': 'values deve conter 7 números'}), 400
+        # Limita valores 0..150 e converte para float (REAL)
+        try:
+            clamped = [float(max(0, min(150, float(v)))) for v in values]
+        except Exception:
+            return jsonify({'ok': False, 'error': 'values deve conter números'}), 400
+
+        # Determina sufixo do mapa
+        mapa_idx = preset - 1  # 1->0, 2->1, 3->2, 4->3
+
+        # Verifica comm_map da máquina ativa
+        cfg = current_app.plc_controller.active_config
+        if not cfg:
+            return jsonify({'ok': False, 'error': 'No machine selected'}), 400
+        machine = cfg.get('name')
+        comm_map = (current_app.comm_map or {}).get(machine, [])
+        valid_tags = {tag['name'] for tag in comm_map if isinstance(tag, dict) and 'name' in tag}
+
+        # Garante driver conectado (tenta reconectar se necessário)
+        driver = current_app.plc_controller.driver
+        if not driver or not driver.is_connected():
+            ok, msg = current_app.plc_controller.force_reconnect()
+            if not ok:
+                return jsonify({'ok': False, 'error': f'PLC desconectado: {msg}'}), 500
+
+        # Monta payload de escrita
+        tag_values = {}
+        # Escreve seleção do preset no PLC (WORD/INT). Pelo requisito: preset 1->MAPA_0 => valor 0
+        selecao_tag = 'XLCLASS_DB229_PESAGEM_SELECAO'
+        if selecao_tag in valid_tags:
+            tag_values[selecao_tag] = int(mapa_idx)
+        else:
+            # Se a tag não existe, retorna erro explícito para facilitar diagnóstico
+            return jsonify({'ok': False, 'error': f'tag de seleção não encontrada no comm_map: {selecao_tag}'}), 400
+
+        # Faixas
+        for i, val in enumerate(clamped, start=1):
+            tag_name = f"XLCLASS_DB229_PESAGEM_MAPA_{mapa_idx}_TIPO_P{i}"
+            if tag_name not in valid_tags:
+                return jsonify({'ok': False, 'error': f'tag não encontrada no comm_map: {tag_name}'}), 400
+            tag_values[tag_name] = val
+
+        # Escreve tags
+        success = current_app.plc_controller.write_tags(tag_values)
+        if not success:
+            return jsonify({'ok': False, 'error': 'Falha ao escrever tags no PLC'}), 500
+
+        # Lê de volta para confirmar gravação
+        try:
+            read_back_names = [selecao_tag] + [f"XLCLASS_DB229_PESAGEM_MAPA_{mapa_idx}_TIPO_P{i}" for i in range(1, 8)]
+            read_values = current_app.plc_controller.read_tags(read_back_names) or {}
+        except Exception:
+            read_values = {}
+
+        return jsonify({'ok': True, 'written': tag_values, 'read_back': read_values})
+    except Exception as e:
+        logger.error(f"Erro em set_weight_range: {e}")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@machines_bp.route('/weight_range', methods=['GET'])
+def get_weight_range():
+    """Lê valores atuais das faixas de peso para um preset.
+    Query: ?preset=1..4
+    """
+    try:
+        preset = request.args.get('preset', default=1, type=int)
+        if preset not in (1, 2, 3, 4):
+            return jsonify({'ok': False, 'error': 'preset inválido (1-4)'}), 400
+        mapa_idx = preset - 1
+
+        cfg = current_app.plc_controller.active_config
+        if not cfg:
+            return jsonify({'ok': False, 'error': 'No machine selected'}), 400
+
+        # Monta lista de tags a ler
+        tag_names = [f"XLCLASS_DB229_PESAGEM_MAPA_{mapa_idx}_TIPO_P{i}" for i in range(1, 8)]
+        values = current_app.plc_controller.read_tags(tag_names)
+
+        # Garante retorno em ordem P1..P7 (default None se faltando)
+        ordered = [values.get(name) for name in tag_names]
+        return jsonify({'ok': True, 'preset': preset, 'tags': tag_names, 'values': ordered})
+    except Exception as e:
+        logger.error(f"Erro em get_weight_range: {e}")
+        return jsonify({'ok': False, 'error': str(e)}), 500
