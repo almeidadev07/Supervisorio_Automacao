@@ -84,12 +84,36 @@
     background: rgba(255, 255, 255, 0.95);
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     height: 260px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
 }
-.calibrate-actions { width: 100%; display:flex; align-items:center; justify-content:center; }
+.calibrate-actions { 
+    width: 100%; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    height: 90px;
+    margin-top: auto;
+    position: relative;
+}
+
+.status-icons {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.status-icons img {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    display: none;
+}
 
 .weight-value {
     font-size: 24px;
@@ -103,28 +127,6 @@
     margin-bottom: 8px;
 }
 
-.balance-status {
-    display: flex;
-    align-items: center;
-    justify-content: center; /* <-- adiciona essa linha */
-    margin: 8px 0;
-}
-
-.status-indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 2px; /* aumentado de 8px para 15px */
-    padding: 2px;
-}
-
-.status-indicator.calibrated {
-    background-color: #22c55e;
-}
-
-.status-indicator.not-calibrated {
-    background-color: #ef4444;
-}
 
 .calibrate-btn {
     margin-top: 8px;
@@ -353,22 +355,6 @@
     margin: 0 !important;
 }
 
-/* Espaçamento forçado para indicadores de status */
-.balance-status {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    margin: 8px 0 !important;
-}
-
-.status-indicator {
-    width: 12px !important;
-    height: 12px !important;
-    border-radius: 50% !important;
-    margin-right: 8px !important; /* espaçamento reduzido */
-    padding: 2px !important;
-    display: inline-block !important;
-}
 
 /* ========== Modal de Carregamento ========== */
 .loading-overlay {
