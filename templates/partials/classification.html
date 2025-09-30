@@ -1,7 +1,4 @@
 <div class="classification-wrapper">
-    <div class="classification-header">
-        <h1>Sistema de Classificação de Ovos</h1>
-    </div>
     
     <div class="embaladora-grid">
         <div class="grid-row" id="status-row"></div>
@@ -10,15 +7,14 @@
     </div>
     
     <div class="control-row">
-        <button id="recipe-btn" class="control-btn recipe-btn">
-            📥 Receita
+        <button id="recipe-btn" class="control-btn recipe-btn" style="width:64px;height:64px;">
+            <img src="{{ url_for('static', filename='images/pages/icons/comandos/botão_elevador_baixo.png') }}" alt="Receita" />
         </button>
         
-        <div class="classes-group" id="classes-list">
-        </div>
+        <div class="classes-group" id="classes-list"></div>
         
-        <button id="clear-btn" class="control-btn clear-btn">
-            🗑️ Limpar
+        <button id="clear-btn" class="control-btn clear-btn" style="width:64px;height:64px;">
+            <img src="{{ url_for('static', filename='images/pages/icons/comandos/botão_lixo.png') }}" alt="Limpar" />
         </button>
     </div>
 </div>
@@ -26,7 +22,7 @@
 <div id="class-modal" class="modal" style="display:none;">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Embaladora <span id="selected-embaladora"></span></h2>
+            <h2><span class="embaladora-label">Embaladora</span> <span id="selected-embaladora"></span></h2>
             <button class="close-btn">&times;</button>
         </div>
         <div class="modal-body">

@@ -116,15 +116,16 @@
 }
 
 .weight-value {
-    font-size: 24px;
+    font-size: 30px;
     font-weight: bold;
     display: block;
+    margin-top: 46px;
     margin-bottom: 8px;
 }
 
 .balance-card h3 {
     font-weight: bold;
-    margin-bottom: 8px;
+    margin-bottom: 16px;
 }
 
 

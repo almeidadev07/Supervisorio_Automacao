@@ -1,21 +1,15 @@
 function inicializarClassification() {
     console.log('Inicializando Classification...');
     const state = {
-        embaladoras: [
-            { id: 'IND', nome: 'IND', ativo: false, classes: [] },
-            { id: 'E01', nome: 'E01', ativo: false, classes: [] },
-            { id: 'E02', nome: 'E02', ativo: false, classes: [] },
-            { id: 'E03', nome: 'E03', ativo: false, classes: [] },
-            { id: 'E04', nome: 'E04', ativo: false, classes: [] },
-            { id: 'E05', nome: 'E05', ativo: false, classes: [] },
-            { id: 'E06', nome: 'E06', ativo: false, classes: [] },
-            { id: 'E07', nome: 'E07', ativo: false, classes: [] },
-            { id: 'E08', nome: 'E08', ativo: false, classes: [] },
-            { id: 'E09', nome: 'E09', ativo: false, classes: [] },
-            { id: 'E10', nome: 'E10', ativo: false, classes: [] },
-            { id: 'E11', nome: 'E11', ativo: false, classes: [] },
-            { id: 'SPJ', nome: 'SPJ', ativo: false, classes: [] }
-        ],
+        embaladoras: (() => {
+            const cols = [{ id: 'IND', nome: 'IND', ativo: false, classes: [] }];
+            for (let i = 1; i <= 24; i++) {
+                const num = String(i).padStart(2, '0');
+                cols.push({ id: `E${num}`, nome: `E${num}`, ativo: false, classes: [] });
+            }
+            cols.push({ id: 'SPJ', nome: 'SPJ', ativo: false, classes: [] });
+            return cols;
+        })(),
         classesOvos: [
             { id: 'C1', nome: 'C1', cor: '#FF3399' },
             { id: 'C2', nome: 'C2', cor: '#FFFF00' },
@@ -29,7 +23,31 @@ function inicializarClassification() {
         ],
         selectedEmbaladora: null,
         presets: [],
-        tiposOvo: ['branco', 'vermelho', 'misto']
+        tiposOvo: ['branco', 'vermelho', 'misto'],
+        dynamicLabels: Array.from({ length: 7 }, () => null)
+    };
+
+    // API helpers (reutiliza a lógica da tela de faixa de peso para nomes dinâmicos)
+    const api = {
+        async getLabels() {
+            const names = Array.from({ length: 7 }, (_, i) => `XLCLASS_DB202_NOME_DINAMICO[${i}]`).join(',');
+            const url = `/api/read_tags?names=${encodeURIComponent(names)}`;
+            try {
+                const res = await fetch(url, { cache: 'no-store' });
+                if (!res.ok) throw new Error(`GET ${url} => ${res.status}`);
+                const data = await res.json();
+                const values = (data && data.values) || {};
+                return Array.from({ length: 7 }, (_, i) => {
+                    const key = `XLCLASS_DB202_NOME_DINAMICO[${i}]`;
+                    const v = values[key];
+                    if (v === null || typeof v === 'undefined') return null;
+                    return String(v || '').trim();
+                });
+            } catch (e) {
+                console.error('Falha ao ler labels do PLC (classification):', e);
+                return Array.from({ length: 7 }, () => null);
+            }
+        }
     };
     function renderStatus() {
         const statusRow = document.getElementById('status-row');
@@ -78,19 +96,29 @@ function inicializarClassification() {
     function renderClasses(classes) {
         console.log('Renderizando classes:', classes);
         
+        // Calcula posições garantindo que todos os círculos caibam dentro do card
+        const cardHeight = 400; // altura do card definida no CSS
+        const marginSafe = 10; // margem desejada no topo e na base
+        const maxHeight = cardHeight - marginSafe * 2; // área útil vertical exata (simétrica)
+        const circleSize = 30; // tamanho do círculo (mantém consistente com CSS)
+        const verticalGap = 8; // espaçamento entre círculos
+        const totalItems = state.classesOvos.length;
+        const totalNeeded = totalItems * circleSize + (totalItems - 1) * verticalGap;
+        const startTop = marginSafe + Math.max(0, Math.floor((maxHeight - totalNeeded) / 2)); // garante margem igual em cima e embaixo
+
         const fixedPositions = state.classesOvos.map((classe, index) => ({
             id: classe.id,
-            top: index * 40 + 10,
+            top: Math.max(10, Math.floor(startTop + index * (circleSize + verticalGap))),
             cor: classe.cor
         }));
         return fixedPositions.map(position => {
             const selectedClass = classes.find(c => c.id === position.id);
             if (selectedClass) {
-                // Não mostra a letra do tipo na tela, apenas aplica a classe CSS
                 return `
                     <div class="egg-class-item tipo-${selectedClass.tipo}" style="
                         background-color: ${position.cor};
                         top: ${position.top}px;
+                        height: ${circleSize}px; width: ${circleSize}px;
                     "></div>
                 `;
             }
@@ -101,12 +129,20 @@ function inicializarClassification() {
         const classList = document.getElementById('classes-list');
         if (!classList) return;
         
-        classList.innerHTML = state.classesOvos.map(classe => `
-            <div class="egg-class">
-                <div class="egg-color" style="background-color: ${classe.cor}"></div>
-                <span>${classe.nome}</span>
-            </div>
-        `).join('');
+        classList.innerHTML = state.classesOvos.map(classe => {
+            const id = classe.id;
+            const ids = ['C1','C2','C3','C4','C5','C6','C7'];
+            const isRange = ids.includes(id);
+            const idx = isRange ? ids.indexOf(id) : -1;
+            const plcName = isRange ? (state.dynamicLabels[idx] || '#######') : classe.nome;
+            return `
+                <div class="egg-class">
+                    <span>${id}</span>
+                    <div class="egg-color" style="background-color: ${classe.cor}"></div>
+                    ${isRange ? `<span>${plcName}</span>` : ''}
+                </div>
+            `;
+        }).join('');
     }
     function showClassModal(embaladora) {
         if (!embaladora) return;
@@ -116,16 +152,27 @@ function inicializarClassification() {
         const options = document.getElementById('class-options');
         
         if (!modal || !selectedEmbSpan || !options) return;
-        selectedEmbSpan.textContent = embaladora.nome;
+        let displayName = embaladora.nome;
+        // Formata para exibir apenas o número sem o prefixo 'E' (ex.: 'E05' -> '05')
+        if (typeof displayName === 'string' && /^E\d{2}$/.test(displayName)) {
+            displayName = displayName.replace(/^E/, '');
+        }
+        selectedEmbSpan.textContent = displayName;
         
         options.innerHTML = state.classesOvos.map(classe => {
             const existingClass = embaladora.classes.find(c => c.id === classe.id);
             const selectedType = existingClass?.tipo || '';
+            const id = classe.id;
+            const ids = ['C1','C2','C3','C4','C5','C6','C7'];
+            const isRange = ids.includes(id);
+            const idx = isRange ? ids.indexOf(id) : -1;
+            const plcName = isRange ? (state.dynamicLabels[idx] || '#######') : classe.nome;
             
             return `
                 <div class="class-option">
+                    <span>${id}</span>
                     <div class="color-box" style="background-color: ${classe.cor};"></div>
-                    <span>${classe.nome}</span>
+                    ${isRange ? `<span>${plcName}</span>` : ''}
                     <div class="type-buttons">
                         <button class="type-btn type-branco ${selectedType === 'branco' ? 'selected' : ''}" 
                                 data-emb="${embaladora.id}" 
@@ -404,6 +451,16 @@ function inicializarClassification() {
         renderClassesList();
         renderPresets();
         setupEventListeners();
+
+        // Carrega nomes dinâmicos das classes (C1..C7) como na tela de faixa de peso
+        api.getLabels().then((labels) => {
+            if (Array.isArray(labels) && labels.length === 7) {
+                state.dynamicLabels = labels.map(v => (v && v.trim() !== '' ? v.trim() : null));
+                // Re-renderiza para refletir nomes adicionais
+                renderGrid();
+                renderClassesList();
+            }
+        });
 
         // Simulate active status updates
         setInterval(() => {
