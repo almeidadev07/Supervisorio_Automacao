@@ -153,6 +153,250 @@ function inicializarClassification() {
         }
         return true;
     }
+    function setBit(word, bitIndex, on) {
+        const b = Number(bitIndex) >>> 0;
+        const w = Number(word) >>> 0;
+        return on ? (w | (1 << b)) : (w & ~(1 << b));
+    }
+    function getEmbBitAndIndex(embId) {
+        // Usa a ordem atual das embaladoras renderizadas
+        const order = state.embaladoras.map(e => e.id);
+        const pos = order.indexOf(embId);
+        if (pos === -1) return null;
+        if (pos <= 15) return { index: 1, bit: pos }; // IND..E15 => [1], bits 0..15
+        return { index: 0, bit: pos - 16 };          // E16..SPJ => [0], bits reiniciam em 0
+    }
+    function classIdToP(classId) {
+        switch (classId) {
+            case 'C1': return 'P1';
+            case 'C2': return 'P2';
+            case 'C3': return 'P3';
+            case 'C4': return 'P4';
+            case 'C5': return 'P5';
+            case 'C6': return 'P6';
+            case 'C7': return 'P7';
+            case 'CRACK': return 'P9';
+            case 'VISIO': return 'P10';
+            default: return null;
+        }
+    }
+    function spjClassToIgnoreBit(classId) {
+        // C1..C7 => bits 8..14, CRACK => 15, VISIO => 0
+        if (classId === 'VISIO') return 0;
+        if (classId === 'CRACK') return 15;
+        if (/^C[1-7]$/.test(classId)) {
+            const n = Number(classId.slice(1));
+            return 7 + n; // C1->8 ... C7->14
+        }
+        return null;
+    }
+    async function readWords(tags) {
+        const names = tags.join(',');
+        try {
+            const res = await fetch(`/api/read_tags?names=${encodeURIComponent(names)}`, { cache: 'no-store' });
+            if (!res.ok) throw new Error('bad');
+            const data = await res.json();
+            return data?.values || {};
+        } catch (_) {
+            return {};
+        }
+    }
+    async function writeWords(payload) {
+        try {
+            const res = await fetch('/api/write_tags', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            return !!data?.ok;
+        } catch (_) {
+            return false;
+        }
+    }
+    async function refreshSelectionsFromPLC() {
+        // Reutiliza a leitura das palavras e aplica se mudou
+        const pList = ['P1','P2','P3','P4','P5','P6','P7','P9','P10'];
+        const tags = [];
+        for (const p of pList) {
+            tags.push(`XLCLASS_DB200_CLASSIFICACAO_${p}[0]`);
+            tags.push(`XLCLASS_DB200_CLASSIFICACAO_${p}[1]`);
+            tags.push(`XLCLASS_DB201_CLASSIFICACAO_${p}[0]`);
+            tags.push(`XLCLASS_DB201_CLASSIFICACAO_${p}[1]`);
+        }
+        // SPJ: incluir palavras de ignorar branco/vermelho
+        tags.push('XLCLASS_DB200_CLASSIFICACAO_CLASSES_A_IGNORAR');
+        tags.push('XLCLASS_DB201_CLASSIFICACAO_CLASSES_A_IGNORAR');
+        tags.push('XLCLASS_DB200_CLASSIFICACAO_CLASSES_A_IGNORAR');
+        const values = await readWords(tags);
+        const order = state.embaladoras.map(e => e.id);
+        const next = state.embaladoras.map(emb => ({ ...emb, classes: [] }));
+        for (let pos = 0; pos < order.length; pos++) {
+            const embId = order[pos];
+            const embIdx = next.findIndex(e => e.id === embId);
+            if (embIdx === -1) continue;
+            if (embId === 'SPJ') {
+                const ignoreWhite = Number(values['XLCLASS_DB200_CLASSIFICACAO_CLASSES_A_IGNORAR'] ?? 0) >>> 0;
+                const ignoreRed = Number(values['XLCLASS_DB201_CLASSIFICACAO_CLASSES_A_IGNORAR'] ?? 0) >>> 0;
+                for (const classObj of state.classesOvos) {
+                    const b = spjClassToIgnoreBit(classObj.id);
+                    if (b === null) continue;
+                    const wOn = ((ignoreWhite >>> b) & 1) === 1;
+                    const rOn = ((ignoreRed >>> b) & 1) === 1;
+                    let tipo = null;
+                    if (wOn && rOn) tipo = 'misto';
+                    else if (wOn) tipo = 'branco';
+                    else if (rOn) tipo = 'vermelho';
+                    if (tipo) next[embIdx].classes.push({ id: classObj.id, nome: classObj.nome, cor: classObj.cor, tipo });
+                }
+            } else {
+                const mapping = getEmbBitAndIndex(embId);
+                if (!mapping) continue;
+                const { index, bit } = mapping;
+                for (const classObj of state.classesOvos) {
+                    const p = classIdToP(classObj.id);
+                    if (!p) continue;
+                    const wWhite = Number(values[`XLCLASS_DB200_CLASSIFICACAO_${p}[${index}]`] ?? 0) >>> 0;
+                    const wRed = Number(values[`XLCLASS_DB201_CLASSIFICACAO_${p}[${index}]`] ?? 0) >>> 0;
+                    const whiteOn = ((wWhite >>> bit) & 1) === 1;
+                    const redOn = ((wRed >>> bit) & 1) === 1;
+                    let tipo = null;
+                    if (whiteOn && redOn) tipo = 'misto';
+                    else if (whiteOn) tipo = 'branco';
+                    else if (redOn) tipo = 'vermelho';
+                    if (tipo) next[embIdx].classes.push({ id: classObj.id, nome: classObj.nome, cor: classObj.cor, tipo });
+                }
+            }
+        }
+        const a = JSON.stringify(state.embaladoras.map(e => ({ id: e.id, classes: e.classes })));
+        const b = JSON.stringify(next.map(e => ({ id: e.id, classes: e.classes })));
+        if (a !== b) {
+            state.embaladoras = next;
+            renderGrid();
+        }
+    }
+    async function loadSelectionsFromPLC() {
+        // Monta lista de tags para leitura: P1..P7, P9, P10 em índices [0] e [1] para DB200 (branco) e DB201 (vermelho)
+        const pList = ['P1','P2','P3','P4','P5','P6','P7','P9','P10'];
+        const tags = [];
+        for (const p of pList) {
+            tags.push(`XLCLASS_DB200_CLASSIFICACAO_${p}[0]`);
+            tags.push(`XLCLASS_DB200_CLASSIFICACAO_${p}[1]`);
+            tags.push(`XLCLASS_DB201_CLASSIFICACAO_${p}[0]`);
+            tags.push(`XLCLASS_DB201_CLASSIFICACAO_${p}[1]`);
+        }
+        // SPJ palavras especiais
+        tags.push('XLCLASS_DB200_CLASSIFICACAO_CLASSES_A_IGNORAR');
+        tags.push('XLCLASS_DB201_CLASSIFICACAO_CLASSES_A_IGNORAR');
+        const values = await readWords(tags);
+
+        // Decodifica por embaladora e classe
+        const updated = state.embaladoras.map(emb => ({ ...emb, classes: [] }));
+        const order = state.embaladoras.map(e => e.id);
+        for (let pos = 0; pos < order.length; pos++) {
+            const embId = order[pos];
+            const embIdx = updated.findIndex(e => e.id === embId);
+            if (embIdx === -1) continue;
+
+            if (embId === 'SPJ') {
+                const ignoreWhite = Number(values['XLCLASS_DB200_CLASSIFICACAO_CLASSES_A_IGNORAR'] ?? 0) >>> 0;
+                const ignoreRed = Number(values['XLCLASS_DB201_CLASSIFICACAO_CLASSES_A_IGNORAR'] ?? 0) >>> 0;
+                for (const classObj of state.classesOvos) {
+                    const b = spjClassToIgnoreBit(classObj.id);
+                    if (b === null) continue;
+                    const isCrackVisio = (classObj.id === 'CRACK' || classObj.id === 'VISIO');
+                    const wOn = ((ignoreWhite >>> b) & 1) === 1;
+                    const rOn = isCrackVisio ? false : ((ignoreRed >>> b) & 1) === 1; // CRACK/VISIO não usam vermelho no SPJ
+                    let tipo = null;
+                    if (wOn && rOn) tipo = 'misto';
+                    else if (wOn) tipo = 'branco';
+                    else if (rOn) tipo = 'vermelho';
+                    if (tipo) {
+                        updated[embIdx].classes.push({ id: classObj.id, nome: classObj.nome, cor: classObj.cor, tipo });
+                    }
+                }
+            } else {
+                const mapping = getEmbBitAndIndex(embId);
+                if (!mapping) continue;
+                const { index, bit } = mapping;
+                for (const classObj of state.classesOvos) {
+                    const p = classIdToP(classObj.id);
+                    if (!p) continue;
+                    const wWhite = Number(values[`XLCLASS_DB200_CLASSIFICACAO_${p}[${index}]`] ?? 0) >>> 0;
+                    const wRed = Number(values[`XLCLASS_DB201_CLASSIFICACAO_${p}[${index}]`] ?? 0) >>> 0;
+                    const whiteOn = ((wWhite >>> bit) & 1) === 1;
+                    const redOn = ((wRed >>> bit) & 1) === 1;
+                    let tipo = null;
+                    if (whiteOn && redOn) tipo = 'misto';
+                    else if (whiteOn) tipo = 'branco';
+                    else if (redOn) tipo = 'vermelho';
+                    if (tipo) {
+                        updated[embIdx].classes.push({ id: classObj.id, nome: classObj.nome, cor: classObj.cor, tipo });
+                    }
+                }
+            }
+        }
+        state.embaladoras = updated;
+        renderGrid();
+    }
+    async function syncSelectionToPLC(embId, classId, tipo) {
+        const mapping = getEmbBitAndIndex(embId);
+        const p = classIdToP(classId);
+        // SPJ usa palavras de classes a ignorar (branco/vermelho)
+        if (embId === 'SPJ') {
+            const tagW = 'XLCLASS_DB200_CLASSIFICACAO_CLASSES_A_IGNORAR';
+            const tagR = 'XLCLASS_DB201_CLASSIFICACAO_CLASSES_A_IGNORAR';
+            const current = await readWords([tagW, tagR]);
+            const wW = Number(current[tagW] ?? 0) >>> 0;
+            const wR = Number(current[tagR] ?? 0) >>> 0;
+            const b = spjClassToIgnoreBit(classId);
+            if (b === null) return false;
+            let nextW = wW;
+            let nextR = wR;
+            const isCrackVisio = (classId === 'CRACK' || classId === 'VISIO');
+            if (isCrackVisio) {
+                // Para CRACK/VISIO no SPJ, somente DB200 (misto) é usada; DB201 não é usada
+                if (tipo === 'misto') { nextW = setBit(wW, b, true); nextR = setBit(wR, b, false); }
+                else { nextW = setBit(wW, b, false); nextR = setBit(wR, b, false); }
+            } else {
+                if (tipo === 'branco') { nextW = setBit(wW, b, true); nextR = setBit(wR, b, false); }
+                else if (tipo === 'vermelho') { nextW = setBit(wW, b, false); nextR = setBit(wR, b, true); }
+                else if (tipo === 'misto') { nextW = setBit(wW, b, true); nextR = setBit(wR, b, true); }
+                else { nextW = setBit(wW, b, false); nextR = setBit(wR, b, false); }
+            }
+            const payload = { [tagW]: nextW, [tagR]: nextR };
+            return await writeWords(payload);
+        }
+        if (!mapping || !p) return false;
+        const { index, bit } = mapping;
+        const tagWhite = `XLCLASS_DB200_CLASSIFICACAO_${p}[${index}]`;
+        const tagRed = `XLCLASS_DB201_CLASSIFICACAO_${p}[${index}]`;
+        // Lê valores atuais
+        const current = await readWords([tagWhite, tagRed]);
+        const wWhite = Number(current[tagWhite] ?? 0) >>> 0;
+        const wRed = Number(current[tagRed] ?? 0) >>> 0;
+        // Calcula próximos valores conforme o tipo
+        let nextWhite = wWhite;
+        let nextRed = wRed;
+        if (tipo === 'branco') {
+            nextWhite = setBit(wWhite, bit, true);
+            nextRed = setBit(wRed, bit, false);
+        } else if (tipo === 'vermelho') {
+            nextWhite = setBit(wWhite, bit, false);
+            nextRed = setBit(wRed, bit, true);
+        } else if (tipo === 'misto') {
+            nextWhite = setBit(wWhite, bit, true);
+            nextRed = setBit(wRed, bit, true);
+        } else {
+            // Sem tipo (removido) => limpa ambos
+            nextWhite = setBit(wWhite, bit, false);
+            nextRed = setBit(wRed, bit, false);
+        }
+        const payload = {};
+        payload[tagWhite] = nextWhite;
+        payload[tagRed] = nextRed;
+        return await writeWords(payload);
+    }
     function renderStatus() {
         const statusRow = document.getElementById('status-row');
         if (!statusRow) return;
@@ -218,11 +462,17 @@ function inicializarClassification() {
         return fixedPositions.map(position => {
             const selectedClass = classes.find(c => c.id === position.id);
             if (selectedClass) {
+                let extraStyle = '';
+                if (selectedClass.tipo === 'branco') {
+                    extraStyle = 'border: 4px solid white; box-shadow: 0 0 0 1px #ccc;';
+                } else if (selectedClass.tipo === 'vermelho') {
+                    extraStyle = 'border: 4px solid #ef4444;';
+                } // 'misto' usa CSS com pseudo-elemento
                 return `
                     <div class="egg-class-item tipo-${selectedClass.tipo}" style="
                         background-color: ${position.cor};
                         top: ${position.top}px;
-                        height: ${circleSize}px; width: ${circleSize}px;
+                        height: ${circleSize}px; width: ${circleSize}px; ${extraStyle}
                     "></div>
                 `;
             }
@@ -284,37 +534,51 @@ function inicializarClassification() {
         
         options.innerHTML = state.classesOvos.map(classe => {
             const existingClass = embaladora.classes.find(c => c.id === classe.id);
-            const selectedType = existingClass?.tipo || '';
+            let selectedType = existingClass?.tipo || '';
+            // Para SPJ, o estado pode ter vindo do PLC como branco/vermelho/misto; honrar exatamente o tipo
             const id = classe.id;
             const ids = ['C1','C2','C3','C4','C5','C6','C7'];
             const isRange = ids.includes(id);
             const idx = isRange ? ids.indexOf(id) : -1;
             const plcName = isRange ? (state.dynamicLabels[idx] || '#######') : classe.nome;
-            
+            const isCrackVisio = (id === 'CRACK' || id === 'VISIO');
+            const buttonsHtml = isCrackVisio
+                ? `
+                    <button class="type-btn type-misto ${selectedType === 'misto' ? 'selected' : ''}"
+                            data-emb="${embaladora.id}"
+                            data-class="${classe.id}"
+                            data-type="misto">
+                        Misto
+                    </button>
+                  `
+                : `
+                    <button class="type-btn type-branco ${selectedType === 'branco' ? 'selected' : ''}" 
+                            data-emb="${embaladora.id}" 
+                            data-class="${classe.id}" 
+                            data-type="branco">
+                        Branco
+                    </button>
+                    <button class="type-btn type-vermelho ${selectedType === 'vermelho' ? 'selected' : ''}" 
+                            data-emb="${embaladora.id}" 
+                            data-class="${classe.id}" 
+                            data-type="vermelho">
+                        Vermelho
+                    </button>
+                    <button class="type-btn type-misto ${selectedType === 'misto' ? 'selected' : ''}" 
+                            data-emb="${embaladora.id}" 
+                            data-class="${classe.id}" 
+                            data-type="misto">
+                        Misto
+                    </button>
+                  `;
+
             return `
                 <div class="class-option">
                     <span>${id}</span>
                     <div class="color-box" style="background-color: ${classe.cor};"></div>
                     ${isRange ? `<span>${plcName}</span>` : ''}
                     <div class="type-buttons">
-                        <button class="type-btn type-branco ${selectedType === 'branco' ? 'selected' : ''}" 
-                                data-emb="${embaladora.id}" 
-                                data-class="${classe.id}" 
-                                data-type="branco">
-                            Branco
-                        </button>
-                        <button class="type-btn type-vermelho ${selectedType === 'vermelho' ? 'selected' : ''}" 
-                                data-emb="${embaladora.id}" 
-                                data-class="${classe.id}" 
-                                data-type="vermelho">
-                            Vermelho
-                        </button>
-                        <button class="type-btn type-misto ${selectedType === 'misto' ? 'selected' : ''}" 
-                                data-emb="${embaladora.id}" 
-                                data-class="${classe.id}" 
-                                data-type="misto">
-                            Misto
-                        </button>
+                        ${buttonsHtml}
                     </div>
                 </div>
             `;
@@ -349,6 +613,10 @@ function inicializarClassification() {
             if (button) {
                 button.classList.remove('selected');
             }
+            // Sincroniza com PLC limpando bits
+            syncSelectionToPLC(embId, classId, null).then((ok) => {
+                if (!ok) console.warn('Falha ao limpar seleção no PLC');
+            });
         } else {
             // Remove a classe existente se houver
             if (existingClassIndex !== -1) {
@@ -363,16 +631,19 @@ function inicializarClassification() {
                 tipo: tipo
             });
             
-            // Atualiza os botões visuais
-            const buttons = document.querySelectorAll(`.type-btn[data-emb="${embId}"][data-class="${classId}"]`);
+        // Atualiza os botões visuais (se modal ainda aberto)
+        const buttons = document.querySelectorAll(`.type-btn[data-emb="${embId}"][data-class="${classId}"]`);
+        if (buttons && buttons.length) {
             buttons.forEach(btn => {
                 btn.classList.remove('selected');
             });
-            
             const selectedButton = document.querySelector(`.type-btn[data-emb="${embId}"][data-class="${classId}"][data-type="${tipo}"]`);
-            if (selectedButton) {
-                selectedButton.classList.add('selected');
-            }
+            if (selectedButton) selectedButton.classList.add('selected');
+        }
+            // Sincroniza com PLC conforme tipo escolhido
+            syncSelectionToPLC(embId, classId, tipo).then((ok) => {
+                if (!ok) console.warn('Falha ao escrever seleção no PLC');
+            });
         }
         state.embaladoras[embIndex].classes = novasClasses;
         console.log('Estado atualizado:', state.embaladoras[embIndex]);
@@ -647,6 +918,9 @@ function inicializarClassification() {
             }
         });
 
+        // Carrega seleções atuais do PLC para refletir nos cards
+        loadSelectionsFromPLC();
+
         // Polling periódico para atualizar nomes das faixas do PLC automaticamente
         const LABEL_REFRESH_MS = 2000; // 2s (ajuste se necessário)
         let labelTimer = setInterval(async () => {
@@ -662,7 +936,7 @@ function inicializarClassification() {
             } catch (_) { /* ignora erros transitórios */ }
         }, LABEL_REFRESH_MS);
 
-        // Polling do alerta de parada
+        // Polling do alerta de parada e das seleções PLC
         const ALERT_REFRESH_MS = 1000;
         let lastAlertText = '';
         let lastVisible = false;
@@ -682,6 +956,8 @@ function inicializarClassification() {
                 renderClaw(visible);
                 renderClawGreen(showGreen);
             }
+            // Atualiza seleções dos cards a partir do PLC (captura alterações feitas diretamente no PLC)
+            refreshSelectionsFromPLC();
         }, ALERT_REFRESH_MS);
 
         // Pausa quando aba não está visível para economizar recursos
@@ -717,6 +993,7 @@ function inicializarClassification() {
                             renderClaw(visible);
                             renderClawGreen(showGreen);
                         }
+                        refreshSelectionsFromPLC();
                     }, ALERT_REFRESH_MS);
                 }
             }
