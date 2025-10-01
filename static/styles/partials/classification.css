@@ -50,6 +50,18 @@
     display: block;
     z-index: 2;
 }
+
+/* Garra verde com movimento contínuo para direita */
+.claw-banner-green {
+    background-image: url('/static/images/pages/icons/status/icone_garra_verde.png');
+    animation: claw-scroll 1.5s linear infinite;
+   /* animation-direction: reverse;  movimento para direita ou esquerda */
+}
+
+@keyframes claw-scroll {
+    0%   { background-position: 0 50%; }
+    100% { background-position: 110px 50%; }
+}
 .embaladora-grid {
     flex: 1;
     display: flex;

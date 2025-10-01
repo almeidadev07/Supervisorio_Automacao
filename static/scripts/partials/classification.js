@@ -138,6 +138,11 @@ function inicializarClassification() {
         if (!el) return;
         el.style.visibility = visible ? 'visible' : 'hidden';
     }
+    function renderClawGreen(visible) {
+        const el = document.getElementById('claw-banner-green');
+        if (!el) return;
+        el.style.visibility = visible ? 'visible' : 'hidden';
+    }
 
     // Utils
     function arraysEqual(a, b) {
@@ -661,17 +666,21 @@ function inicializarClassification() {
         const ALERT_REFRESH_MS = 1000;
         let lastAlertText = '';
         let lastVisible = false;
+        let lastGreenVisible = false;
         let alertTimer = setInterval(async () => {
             const { rawAlert, rawStatus } = await getAlertAndStatus();
             const text = computeAlertText(rawAlert);
             const bit8Set = ((rawStatus >>> 8) & 1) === 1; // bit 8 == 1?
             const visible = (rawAlert !== 0) && !bit8Set;
+            const showGreen = bit8Set; // quando bit8 = 1, mostra garra verde animada
 
-            if (text !== lastAlertText || visible !== lastVisible) {
+            if (text !== lastAlertText || visible !== lastVisible || showGreen !== lastGreenVisible) {
                 lastAlertText = text;
                 lastVisible = visible;
+                lastGreenVisible = showGreen;
                 renderAlert(text, visible);
                 renderClaw(visible);
+                renderClawGreen(showGreen);
             }
         }, ALERT_REFRESH_MS);
 
@@ -699,11 +708,14 @@ function inicializarClassification() {
                         const text = computeAlertText(rawAlert);
                         const bit8Set = ((rawStatus >>> 8) & 1) === 1;
                         const visible = (rawAlert !== 0) && !bit8Set;
-                        if (text !== lastAlertText || visible !== lastVisible) {
+                        const showGreen = bit8Set;
+                        if (text !== lastAlertText || visible !== lastVisible || showGreen !== lastGreenVisible) {
                             lastAlertText = text;
                             lastVisible = visible;
+                            lastGreenVisible = showGreen;
                             renderAlert(text, visible);
                             renderClaw(visible);
+                            renderClawGreen(showGreen);
                         }
                     }, ALERT_REFRESH_MS);
                 }
