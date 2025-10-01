@@ -89,17 +89,20 @@ function inicializarClassification() {
         labelAtiva = null;
     }
 
-    // Alert tag reader
-    async function getAlertValue() {
-        const TAG = 'XLCLASS_DB1_PRINCIPAL_ALARME_CLASSIFICADORA';
+    // Alert/claw tags reader (lê ambas as tags necessárias de uma vez)
+    async function getAlertAndStatus() {
+        const TAG_ALERT = 'XLCLASS_DB1_PRINCIPAL_ALARME_CLASSIFICADORA';
+        const TAG_STATUS = 'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_01';
+        const names = `${TAG_ALERT},${TAG_STATUS}`;
         try {
-            const res = await fetch(`/api/read_tags?names=${encodeURIComponent(TAG)}`, { cache: 'no-store' });
+            const res = await fetch(`/api/read_tags?names=${encodeURIComponent(names)}`, { cache: 'no-store' });
             if (!res.ok) throw new Error('bad');
             const data = await res.json();
-            const raw = Number(data?.values?.[TAG] ?? 0);
-            return Number.isFinite(raw) ? raw : 0;
+            const rawAlert = Number(data?.values?.[TAG_ALERT] ?? 0) || 0;
+            const rawStatus = Number(data?.values?.[TAG_STATUS] ?? 0) || 0;
+            return { rawAlert, rawStatus };
         } catch (_) {
-            return 0;
+            return { rawAlert: 0, rawStatus: 0 };
         }
     }
     function computeAlertText(rawValue) {
@@ -120,16 +123,20 @@ function inicializarClassification() {
             default: return '';
         }
     }
-    function renderAlert(text) {
+    function renderAlert(text, visible) {
         const el = document.getElementById('classification-alert');
         if (!el) return;
-        if (text && text.trim() !== '') {
-            el.textContent = text;
-            el.style.display = '';
+        el.textContent = text || '';
+        if (visible && text && text.trim() !== '') {
+            el.style.visibility = 'visible';
         } else {
-            el.textContent = '';
-            el.style.display = 'none';
+            el.style.visibility = 'hidden';
         }
+    }
+    function renderClaw(visible) {
+        const el = document.getElementById('claw-banner');
+        if (!el) return;
+        el.style.visibility = visible ? 'visible' : 'hidden';
     }
 
     // Utils
@@ -653,12 +660,18 @@ function inicializarClassification() {
         // Polling do alerta de parada
         const ALERT_REFRESH_MS = 1000;
         let lastAlertText = '';
+        let lastVisible = false;
         let alertTimer = setInterval(async () => {
-            const val = await getAlertValue();
-            const text = computeAlertText(val);
-            if (text !== lastAlertText) {
+            const { rawAlert, rawStatus } = await getAlertAndStatus();
+            const text = computeAlertText(rawAlert);
+            const bit8Set = ((rawStatus >>> 8) & 1) === 1; // bit 8 == 1?
+            const visible = (rawAlert !== 0) && !bit8Set;
+
+            if (text !== lastAlertText || visible !== lastVisible) {
                 lastAlertText = text;
-                renderAlert(text);
+                lastVisible = visible;
+                renderAlert(text, visible);
+                renderClaw(visible);
             }
         }, ALERT_REFRESH_MS);
 
@@ -682,11 +695,15 @@ function inicializarClassification() {
                 }, LABEL_REFRESH_MS);
                 if (!alertTimer) {
                     alertTimer = setInterval(async () => {
-                        const val = await getAlertValue();
-                        const text = computeAlertText(val);
-                        if (text !== lastAlertText) {
+                        const { rawAlert, rawStatus } = await getAlertAndStatus();
+                        const text = computeAlertText(rawAlert);
+                        const bit8Set = ((rawStatus >>> 8) & 1) === 1;
+                        const visible = (rawAlert !== 0) && !bit8Set;
+                        if (text !== lastAlertText || visible !== lastVisible) {
                             lastAlertText = text;
-                            renderAlert(text);
+                            lastVisible = visible;
+                            renderAlert(text, visible);
+                            renderClaw(visible);
                         }
                     }, ALERT_REFRESH_MS);
                 }
