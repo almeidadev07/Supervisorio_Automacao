@@ -11,6 +11,24 @@
     font-weight: 700;
     color: #4a5568;
 }
+.classification-alert {
+    display: inline-flex;
+    align-self: center;
+    width: auto;
+    max-width: 100%;
+    margin: 0 0 8px 0;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1px solid #b91c1c;
+    background: #dc2626;
+    color: #ffffff;
+    font-size: 20px;
+    line-height: 1.3;
+    text-align: center;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.06);
+    box-sizing: border-box;
+    white-space: normal;
+}
 .embaladora-grid {
     flex: 1;
     display: flex;
@@ -206,6 +224,43 @@
     padding: 8px 0;
     justify-self: center; /* centraliza no grid */
 }
+.edit-labels-btn {
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+}
+.labels-editor-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.labels-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 16px;
+}
+.label-row {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    align-items: center;
+    gap: 8px;
+}
+.label-row input {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+.labels-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 8px;
+}
 .egg-class {
     background: #f8fafc;
     padding: 6px 10px;
@@ -254,7 +309,8 @@
 /* Força tamanho compacto apenas no modal de classificação/receitas,
    evitando herdar tamanhos globais de outros modais (ex.: balança) */
 #class-modal .modal-content,
-#recipe-modal .modal-content {
+#recipe-modal .modal-content,
+#labels-editor-modal .modal-content {
     width: 110% !important;
     max-width: 660px !important;
     padding: 10px !important;
@@ -266,7 +322,8 @@
 }
 
 #class-modal .modal-content h2,
-#recipe-modal .modal-content h2 {
+#recipe-modal .modal-content h2,
+#labels-editor-modal .modal-content h2 {
     font-size: 30px !important;
     margin-bottom: 8px !important;
     text-align: left !important;
@@ -292,6 +349,87 @@
     margin-bottom: 12px;
 }
 .modal-body { width: 100%; box-sizing: border-box; max-height: calc(100vh - 220px); overflow-y: auto; }
+.labels-editor-form { max-height: none; }
+#labels-editor-modal .modal-content { max-height: 90vh !important; width: 95% !important; max-width: 760px !important; }
+#labels-editor-modal .modal-body { max-height: calc(90vh - 120px); overflow-y: auto; }
+
+/* Teclado virtual simples */
+.simple-keyboard {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    background: #ffffff;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    z-index: 2147483647; /* garante acima de qualquer modal */
+    width: min(600px, 95vw);
+}
+
+.keyboard-header {
+    margin-bottom: 12px;
+}
+
+.keyboard-header input {
+    width: 100%;
+    padding: 12px 10px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 18px;
+    text-align: center;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.keyboard-keys {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.keyboard-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+
+.key-btn {
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f8fafc;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    min-width: 50px;
+    transition: all 0.2s;
+}
+
+.key-btn:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+}
+
+.key-btn:active {
+    transform: translateY(1px);
+    background: #cbd5e1;
+}
+
+.key-ok {
+    background: #22c55e !important;
+    color: white !important;
+    border-color: #16a34a !important;
+}
+
+.key-cancel {
+    background: #ef4444 !important;
+    color: white !important;
+    border-color: #dc2626 !important;
+}
 .class-options {
     display: grid;
     gap: 12px;
@@ -439,4 +577,28 @@
     height: 20px;
     border-radius: 50%;
     flex-shrink: 0;
+}
+
+/* Garantia de exibição e interação do teclado virtual de texto nesta tela */
+#teclado-virtual-texto {
+    position: fixed;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%);
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 8px;
+    box-shadow: 0 16px 32px rgba(0,0,0,0.15);
+    display: none; /* mostrado via JS */
+    z-index: 100000; /* acima de qualquer modal desta tela */
+    width: min(520px, 96vw);
+    pointer-events: auto;
+}
+#teclado-virtual-texto .key,
+#teclado-virtual-texto .key-wide,
+#teclado-virtual-texto .key-accept,
+#teclado-virtual-texto .key-cancel {
+    cursor: pointer;
+    user-select: none;
 }

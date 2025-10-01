@@ -1,6 +1,6 @@
 <div class="classification-wrapper">
-    
     <div class="embaladora-grid">
+        <div id="classification-alert" class="classification-alert" style="display:none;"></div>
         <div class="grid-row" id="status-row"></div>
         <div class="grid-row" id="header-row"></div>
         <div class="grid-content" id="embaladora-grid"></div>
@@ -31,6 +31,33 @@
         </div>
     </div>
 </div>
+
+<!-- Modal para editar nomes das faixas C1..C7 -->
+<div id="labels-editor-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Editar Nomes das Classes</h2>
+            <button class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="labels-editor-form" class="labels-editor-form">
+                <div class="labels-grid">
+                    <div class="label-row"><label for="lbl-C1">C1</label><input id="lbl-C1" type="text" placeholder="Nome C1" inputmode="text" /></div>
+                    <div class="label-row"><label for="lbl-C2">C2</label><input id="lbl-C2" type="text" placeholder="Nome C2" inputmode="text" /></div>
+                    <div class="label-row"><label for="lbl-C3">C3</label><input id="lbl-C3" type="text" placeholder="Nome C3" inputmode="text" /></div>
+                    <div class="label-row"><label for="lbl-C4">C4</label><input id="lbl-C4" type="text" placeholder="Nome C4" inputmode="text" /></div>
+                    <div class="label-row"><label for="lbl-C5">C5</label><input id="lbl-C5" type="text" placeholder="Nome C5" inputmode="text" /></div>
+                    <div class="label-row"><label for="lbl-C6">C6</label><input id="lbl-C6" type="text" placeholder="Nome C6" inputmode="text" /></div>
+                    <div class="label-row"><label for="lbl-C7">C7</label><input id="lbl-C7" type="text" placeholder="Nome C7" inputmode="text" /></div>
+                </div>
+                <div class="labels-actions">
+                    <button type="button" id="labels-cancel" class="control-btn">Cancelar</button>
+                    <button type="submit" id="labels-save" class="control-btn save-btn">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <!-- Modal para gerenciar receitas -->
 <div id="recipe-modal" class="modal" style="display:none;">
     <div class="modal-content">
@@ -44,6 +71,53 @@
                 <button id="save-recipe-btn" class="control-btn save-btn">Salvar</button>
             </div>
             <div id="recipe-list" class="recipe-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Teclado virtual simples integrado -->
+<div id="simple-keyboard" class="simple-keyboard" style="display:none;">
+    <div class="keyboard-header">
+        <input id="keyboard-input" type="text" placeholder="Digite aqui..." />
+    </div>
+    <div class="keyboard-keys">
+        <div class="keyboard-row">
+            <button type="button" class="key-btn" data-key="Q">Q</button>
+            <button type="button" class="key-btn" data-key="W">W</button>
+            <button type="button" class="key-btn" data-key="E">E</button>
+            <button type="button" class="key-btn" data-key="R">R</button>
+            <button type="button" class="key-btn" data-key="T">T</button>
+            <button type="button" class="key-btn" data-key="Y">Y</button>
+            <button type="button" class="key-btn" data-key="U">U</button>
+            <button type="button" class="key-btn" data-key="I">I</button>
+            <button type="button" class="key-btn" data-key="O">O</button>
+            <button type="button" class="key-btn" data-key="P">P</button>
+        </div>
+        <div class="keyboard-row">
+            <button type="button" class="key-btn" data-key="A">A</button>
+            <button type="button" class="key-btn" data-key="S">S</button>
+            <button type="button" class="key-btn" data-key="D">D</button>
+            <button type="button" class="key-btn" data-key="F">F</button>
+            <button type="button" class="key-btn" data-key="G">G</button>
+            <button type="button" class="key-btn" data-key="H">H</button>
+            <button type="button" class="key-btn" data-key="J">J</button>
+            <button type="button" class="key-btn" data-key="K">K</button>
+            <button type="button" class="key-btn" data-key="L">L</button>
+            <button type="button" class="key-btn" data-key="backspace">⌫</button>
+        </div>
+        <div class="keyboard-row">
+            <button type="button" class="key-btn" data-key="Z">Z</button>
+            <button type="button" class="key-btn" data-key="X">X</button>
+            <button type="button" class="key-btn" data-key="C">C</button>
+            <button type="button" class="key-btn" data-key="V">V</button>
+            <button type="button" class="key-btn" data-key="B">B</button>
+            <button type="button" class="key-btn" data-key="N">N</button>
+            <button type="button" class="key-btn" data-key="M">M</button>
+            <button type="button" class="key-btn" data-key="space">ESPAÇO</button>
+        </div>
+        <div class="keyboard-row">
+            <button type="button" class="key-btn key-ok" data-key="ok">OK</button>
+            <button type="button" class="key-btn key-cancel" data-key="cancel">CANCELAR</button>
         </div>
     </div>
 </div>

@@ -47,8 +47,100 @@ function inicializarClassification() {
                 console.error('Falha ao ler labels do PLC (classification):', e);
                 return Array.from({ length: 7 }, () => null);
             }
+        },
+        async setLabel(index, text) {
+            const i = Number(index) >>> 0;
+            if (i > 6) return false;
+            const tag = `XLCLASS_DB202_NOME_DINAMICO[${i}]`;
+            try {
+                const res = await fetch('/api/write_tags', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ [tag]: String(text || '') })
+                });
+                const data = await res.json();
+                return !!(data && data.ok);
+            } catch (_) {
+                return false;
+            }
         }
     };
+    // Teclado virtual para textos das faixas
+    const tecladoTexto = document.getElementById('teclado-virtual-texto');
+    const tecladoTextoInput = document.getElementById('kbd-texto-input');
+    let labelAtiva = null;
+    let tecladoTextoMaiusculo = true;
+
+    function abrirTecladoTexto(inputEl) {
+        labelAtiva = inputEl;
+        if (tecladoTexto && tecladoTextoInput) {
+            tecladoTextoInput.value = inputEl.value || '';
+            tecladoTexto.style.display = 'block';
+            setTimeout(() => tecladoTextoInput.focus(), 0);
+        }
+    }
+
+    async function fecharTecladoTexto(confirmar) {
+        if (confirmar && labelAtiva && tecladoTextoInput) {
+            const novo = tecladoTextoInput.value.trim();
+            labelAtiva.value = novo;
+        }
+        if (tecladoTexto) tecladoTexto.style.display = 'none';
+        labelAtiva = null;
+    }
+
+    // Alert tag reader
+    async function getAlertValue() {
+        const TAG = 'XLCLASS_DB1_PRINCIPAL_ALARME_CLASSIFICADORA';
+        try {
+            const res = await fetch(`/api/read_tags?names=${encodeURIComponent(TAG)}`, { cache: 'no-store' });
+            if (!res.ok) throw new Error('bad');
+            const data = await res.json();
+            const raw = Number(data?.values?.[TAG] ?? 0);
+            return Number.isFinite(raw) ? raw : 0;
+        } catch (_) {
+            return 0;
+        }
+    }
+    function computeAlertText(rawValue) {
+        const v = Number(rawValue) >>> 0;
+        if (!v) return '';
+        const embaladora = Math.trunc((v - 1) / 10) + 1; // 1..N
+        const tipoAlerta = v % 10; // 0..9
+        // Exibir como 1-based para o usuário
+        switch (tipoAlerta) {
+            case 1: return `MÁQUINA PARADA - EMERGÊNCIA - EMBALADORA ${embaladora}`;
+            case 2: return `MÁQUINA PARADA - DESLIGA CLASSIFICADORA FRENTE - EMBALADORA ${embaladora}`;
+            case 3: return `MÁQUINA PARADA - DESLIGA CLASSIFICADORA TRAZ - EMBALADORA ${embaladora}`;
+            case 4: return `MÁQUINA PARADA - FALTA DE BANDEJA - EMBALADORA ${embaladora}`;
+            case 5: return `MÁQUINA PARADA - ACÚMULO DE BANDEJA - EMBALADORA ${embaladora}`;
+            case 6: return `MÁQUINA PARADA - ACÚMULO DE OVOS - EMBALADORA ${embaladora}`;
+            case 7: return `MÁQUINA PARADA - TAMPA DO DESCEDOR ABERTA - EMBALADORA ${embaladora}`;
+            case 8: return `MÁQUINA PARADA - TAMPA DA CLASSIFICADORA ABERTA - EMBALADORA ${embaladora}`;
+            default: return '';
+        }
+    }
+    function renderAlert(text) {
+        const el = document.getElementById('classification-alert');
+        if (!el) return;
+        if (text && text.trim() !== '') {
+            el.textContent = text;
+            el.style.display = '';
+        } else {
+            el.textContent = '';
+            el.style.display = 'none';
+        }
+    }
+
+    // Utils
+    function arraysEqual(a, b) {
+        if (!Array.isArray(a) || !Array.isArray(b)) return false;
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+            if ((a[i] || null) !== (b[i] || null)) return false;
+        }
+        return true;
+    }
     function renderStatus() {
         const statusRow = document.getElementById('status-row');
         if (!statusRow) return;
@@ -129,7 +221,7 @@ function inicializarClassification() {
         const classList = document.getElementById('classes-list');
         if (!classList) return;
         
-        classList.innerHTML = state.classesOvos.map(classe => {
+        const html = state.classesOvos.map(classe => {
             const id = classe.id;
             const ids = ['C1','C2','C3','C4','C5','C6','C7'];
             const isRange = ids.includes(id);
@@ -143,6 +235,25 @@ function inicializarClassification() {
                 </div>
             `;
         }).join('');
+        classList.innerHTML = html + `
+            <button id="edit-labels-btn" class="control-btn edit-labels-btn" title="Editar nomes das faixas" style="width:36px;height:36px;">
+                <img src="/static/images/pages/icons/comandos/icone_editar.png" alt="Editar" />
+            </button>
+        `;
+        
+        // Adiciona event listener ao botão de editar após criá-lo
+        const editLabelsBtn = document.getElementById('edit-labels-btn');
+        if (editLabelsBtn) {
+            editLabelsBtn.addEventListener('click', () => {
+                // Pré-carrega inputs com os rótulos atuais
+                const ids = ['C1','C2','C3','C4','C5','C6','C7'];
+                ids.forEach((_, idx) => {
+                    const inp = document.getElementById(`lbl-C${idx+1}`);
+                    if (inp) inp.value = state.dynamicLabels[idx] || '';
+                });
+                showModal('labels-editor-modal');
+            });
+        }
     }
     function showClassModal(embaladora) {
         if (!embaladora) return;
@@ -436,6 +547,68 @@ function inicializarClassification() {
                 renderGrid();
             });
         }
+        const labelsModal = document.getElementById('labels-editor-modal');
+        if (labelsModal) {
+            const cancelBtn = document.getElementById('labels-cancel');
+            if (cancelBtn) cancelBtn.addEventListener('click', () => hideModal('labels-editor-modal'));
+            const form = document.getElementById('labels-editor-form');
+            if (form) {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const inputs = [
+                        document.getElementById('lbl-C1'),
+                        document.getElementById('lbl-C2'),
+                        document.getElementById('lbl-C3'),
+                        document.getElementById('lbl-C4'),
+                        document.getElementById('lbl-C5'),
+                        document.getElementById('lbl-C6'),
+                        document.getElementById('lbl-C7')
+                    ];
+                    // Escreve em série para simplificar (pode ser paralelizado se necessário)
+                    let ok = true;
+                    for (let i = 0; i < inputs.length; i++) {
+                        const success = await api.setLabel(i, inputs[i]?.value ?? '');
+                        if (!success) ok = false;
+                    }
+                    if (!ok) {
+                        alert('Falha ao salvar algumas faixas no PLC.');
+                    }
+                    // Atualiza estado e UI
+                    const labels = await api.getLabels();
+                    if (Array.isArray(labels) && labels.length === 7) {
+                        state.dynamicLabels = labels.map(v => (v && v.trim() !== '' ? v.trim() : null));
+                        renderGrid();
+                        renderClassesList();
+                    }
+                    hideModal('labels-editor-modal');
+                });
+                
+                // Adiciona event listeners para abrir teclado virtual nos inputs
+                setTimeout(() => {
+                    const inputs = ['lbl-C1', 'lbl-C2', 'lbl-C3', 'lbl-C4', 'lbl-C5', 'lbl-C6', 'lbl-C7'];
+                    inputs.forEach(id => {
+                        const input = document.getElementById(id);
+                        if (input) {
+                            // Remove listeners existentes para evitar duplicação
+                            input.removeEventListener('click', abrirTecladoSimples);
+                            input.removeEventListener('focus', abrirTecladoSimples);
+                            input.removeEventListener('touchstart', abrirTecladoSimples);
+
+                            // Adiciona novos listeners sem bloquear o foco padrão
+                            input.addEventListener('click', () => {
+                                abrirTecladoSimples(input);
+                            });
+                            input.addEventListener('focus', () => {
+                                abrirTecladoSimples(input);
+                            });
+                            input.addEventListener('touchstart', () => {
+                                abrirTecladoSimples(input);
+                            }, { passive: true });
+                        }
+                    });
+                }, 100);
+            }
+        }
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) hideModal(modal.id);
@@ -462,6 +635,64 @@ function inicializarClassification() {
             }
         });
 
+        // Polling periódico para atualizar nomes das faixas do PLC automaticamente
+        const LABEL_REFRESH_MS = 2000; // 2s (ajuste se necessário)
+        let labelTimer = setInterval(async () => {
+            try {
+                const labels = await api.getLabels();
+                if (Array.isArray(labels) && labels.length === 7) {
+                    const normalized = labels.map(v => (v && v.trim() !== '' ? v.trim() : null));
+                    if (!arraysEqual(state.dynamicLabels, normalized)) {
+                        state.dynamicLabels = normalized;
+                        renderClassesList();
+                    }
+                }
+            } catch (_) { /* ignora erros transitórios */ }
+        }, LABEL_REFRESH_MS);
+
+        // Polling do alerta de parada
+        const ALERT_REFRESH_MS = 1000;
+        let lastAlertText = '';
+        let alertTimer = setInterval(async () => {
+            const val = await getAlertValue();
+            const text = computeAlertText(val);
+            if (text !== lastAlertText) {
+                lastAlertText = text;
+                renderAlert(text);
+            }
+        }, ALERT_REFRESH_MS);
+
+        // Pausa quando aba não está visível para economizar recursos
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (labelTimer) { clearInterval(labelTimer); labelTimer = null; }
+                if (alertTimer) { clearInterval(alertTimer); alertTimer = null; }
+            } else if (!labelTimer) {
+                labelTimer = setInterval(async () => {
+                    try {
+                        const labels = await api.getLabels();
+                        if (Array.isArray(labels) && labels.length === 7) {
+                            const normalized = labels.map(v => (v && v.trim() !== '' ? v.trim() : null));
+                            if (!arraysEqual(state.dynamicLabels, normalized)) {
+                                state.dynamicLabels = normalized;
+                                renderClassesList();
+                            }
+                        }
+                    } catch (_) {}
+                }, LABEL_REFRESH_MS);
+                if (!alertTimer) {
+                    alertTimer = setInterval(async () => {
+                        const val = await getAlertValue();
+                        const text = computeAlertText(val);
+                        if (text !== lastAlertText) {
+                            lastAlertText = text;
+                            renderAlert(text);
+                        }
+                    }, ALERT_REFRESH_MS);
+                }
+            }
+        });
+
         // Simulate active status updates
         setInterval(() => {
             state.embaladoras = state.embaladoras.map(emb => ({
@@ -474,6 +705,142 @@ function inicializarClassification() {
 
     // Start initialization
     initialize();
+}
+
+// Funções para o teclado virtual simples
+let currentInput = null;
+let suppressKeyboardOpenUntil = 0;
+
+function abrirTecladoSimples(inputEl) {
+    if (Date.now() < suppressKeyboardOpenUntil) {
+        return;
+    }
+    console.log('Abrindo teclado para:', inputEl.id);
+    currentInput = inputEl;
+    const teclado = document.getElementById('simple-keyboard');
+    const input = document.getElementById('keyboard-input');
+    
+    if (teclado && input) {
+        // Garante que o teclado esteja fora de contextos de empilhamento (ex.: menu)
+        try {
+            if (teclado.parentNode !== document.body) {
+                document.body.appendChild(teclado);
+            }
+        } catch (_) {}
+        input.value = inputEl.value || '';
+        teclado.style.display = 'block';
+        input.focus();
+        console.log('Teclado aberto');
+    } else {
+        console.log('Erro: teclado ou input não encontrado');
+    }
+}
+
+function fecharTecladoSimples(confirmar) {
+    const teclado = document.getElementById('simple-keyboard');
+    const input = document.getElementById('keyboard-input');
+    
+    if (confirmar && currentInput && input) {
+        const novoValor = input.value.trim();
+        currentInput.value = novoValor;
+        try {
+            currentInput.dispatchEvent(new Event('input', { bubbles: true }));
+            currentInput.dispatchEvent(new Event('change', { bubbles: true }));
+        } catch (_) {}
+    }
+    
+    if (teclado) {
+        teclado.style.display = 'none';
+    }
+    // Evita reabrir imediatamente ao perder/ganhar foco
+    suppressKeyboardOpenUntil = Date.now() + 400;
+    if (currentInput) {
+        try { currentInput.blur(); } catch (_) {}
+    }
+    currentInput = null;
+}
+
+// Event listeners para o teclado virtual simples
+function setupVirtualKeyboard() {
+    const teclado = document.getElementById('simple-keyboard');
+    if (!teclado) return;
+    if (teclado.dataset.bound === 'true') return; // evita bind duplicado
+    teclado.dataset.bound = 'true';
+    
+    // Impede propagação para elementos atrás
+    const stop = (e) => { e.stopPropagation(); };
+    // Use apenas mousedown/touchstart para bloquear "fechar ao clicar fora"
+    teclado.addEventListener('mousedown', stop);
+    teclado.addEventListener('touchstart', stop, { passive: true });
+
+    // Manipulação das teclas
+    teclado.addEventListener('click', function(e) {
+        const btn = e.target.closest('.key-btn');
+        if (!btn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const input = document.getElementById('keyboard-input');
+        if (!input) return;
+
+        const key = btn.dataset.key;
+        console.log('Virtual key click:', key);
+
+        if (key === 'backspace') {
+            input.value = input.value.slice(0, -1);
+        } else if (key === 'ok') {
+            fecharTecladoSimples(true);
+        } else if (key === 'cancel') {
+            fecharTecladoSimples(false);
+        } else if (key === 'space') {
+            input.value += ' ';
+        } else if (key) {
+            input.value += key;
+        }
+
+        input.focus();
+    });
+
+    // Suporte a teclado físico quando o campo do teclado virtual estiver focado
+    const kbdInput = document.getElementById('keyboard-input');
+    if (kbdInput && kbdInput.dataset.bound !== 'true') {
+        kbdInput.dataset.bound = 'true';
+        kbdInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                fecharTecladoSimples(true);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                fecharTecladoSimples(false);
+            }
+        });
+    }
+
+    // Fecha ao clicar fora do teclado
+    const shouldIgnoreTarget = (el) => {
+        if (!el) return false;
+        if (el.closest && el.closest('#simple-keyboard')) return true; // clique dentro do teclado
+        // campos que disparam a abertura do teclado
+        if (el.id && /^lbl-C[1-7]$/.test(el.id)) return true;
+        return false;
+    };
+    const outsideHandler = (e) => {
+        const isVisible = teclado && teclado.style.display !== 'none';
+        if (!isVisible) return;
+        const target = e.target;
+        if (shouldIgnoreTarget(target)) return;
+        fecharTecladoSimples(false);
+    };
+    document.addEventListener('mousedown', outsideHandler, true);
+    document.addEventListener('touchstart', outsideHandler, { passive: true, capture: true });
+}
+
+// Garante inicialização mesmo se o script carregar após DOMContentLoaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupVirtualKeyboard);
+} else {
+    setupVirtualKeyboard();
 }
 
 // Call the initialization function when the page loads
