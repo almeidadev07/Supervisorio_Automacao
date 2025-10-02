@@ -70,10 +70,10 @@
             <button class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
-            <div class="recipe-form">
-                <input type="text" id="recipe-name" placeholder="Nome da Receita" />
-                <button id="save-recipe-btn" class="control-btn save-btn">Salvar</button>
-            </div>
+            <form class="recipe-form">
+                <input type="text" id="recipe-name" placeholder="Nome da Receita" required />
+                <button type="submit" id="save-recipe-btn" class="control-btn save-btn">Salvar</button>
+            </form>
             <div id="recipe-list" class="recipe-list"></div>
         </div>
     </div>

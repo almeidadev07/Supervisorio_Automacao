@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Recipe Loader</title>
+</head>
+<body>
+    <h1>Teste do Recipe Loader</h1>
+    <button id="test-btn">Testar Recipe Loader</button>
+    <div id="output"></div>
+
+    <script src="recipe_loader.js"></script>
+    <script>
+        document.getElementById('test-btn').addEventListener('click', function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<h2>Testando Recipe Loader...</h2>';
+            
+            try {
+                // Verifica se RecipeLoader está disponível
+                if (typeof RecipeLoader === 'undefined') {
+                    output.innerHTML += '<p style="color: red;">❌ RecipeLoader não está disponível!</p>';
+                    return;
+                }
+                
+                output.innerHTML += '<p style="color: green;">✅ RecipeLoader está disponível!</p>';
+                
+                // Cria instância
+                const recipeLoader = new RecipeLoader();
+                output.innerHTML += '<p style="color: green;">✅ RecipeLoader instanciado com sucesso!</p>';
+                
+                // Cria receita de teste
+                const receitaTeste = recipeLoader.createExampleRecipe();
+                output.innerHTML += '<p>Receita de teste criada:</p>';
+                output.innerHTML += '<pre>' + JSON.stringify(receitaTeste, null, 2) + '</pre>';
+                
+                // Valida receita
+                const erros = recipeLoader.validateRecipe(receitaTeste);
+                if (erros.length > 0) {
+                    output.innerHTML += '<p style="color: red;">❌ Erros na receita:</p>';
+                    output.innerHTML += '<ul>';
+                    erros.forEach(erro => {
+                        output.innerHTML += '<li>' + erro + '</li>';
+                    });
+                    output.innerHTML += '</ul>';
+                } else {
+                    output.innerHTML += '<p style="color: green;">✅ Receita válida!</p>';
+                }
+                
+                // Gera tags PLC
+                const tags = recipeLoader.generatePLCTagsForRecipe(receitaTeste);
+                output.innerHTML += '<p>Tags geradas para PLC:</p>';
+                output.innerHTML += '<pre>' + JSON.stringify(tags, null, 2) + '</pre>';
+                
+                // Testa mapeamento de embaladoras
+                output.innerHTML += '<h3>Teste de Mapeamento de Embaladoras:</h3>';
+                const embaladoras = ['IND', 'E01', 'E15', 'E16', 'E24', 'SPJ'];
+                embaladoras.forEach(emb => {
+                    const mapping = recipeLoader.getEmbaladoraBitAndIndex(emb);
+                    output.innerHTML += `<p>${emb}: ${mapping ? `index=${mapping[0]}, bit=${mapping[1]}` : 'inválido'}</p>`;
+                });
+                
+                output.innerHTML += '<p style="color: green;">✅ Teste concluído com sucesso!</p>';
+                
+            } catch (error) {
+                output.innerHTML += '<p style="color: red;">❌ Erro durante o teste:</p>';
+                output.innerHTML += '<pre>' + error.message + '</pre>';
+                output.innerHTML += '<pre>' + error.stack + '</pre>';
+            }
+        });
+    </script>
+</body>
+</html>

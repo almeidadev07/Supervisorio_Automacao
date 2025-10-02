@@ -24,7 +24,9 @@ function inicializarClassification() {
         selectedEmbaladora: null,
         presets: [],
         tiposOvo: ['branco', 'vermelho', 'misto'],
-        dynamicLabels: Array.from({ length: 7 }, () => null)
+        dynamicLabels: Array.from({ length: 7 }, () => null),
+        isLoadingRecipe: false, // Flag para evitar que PLC sobrescreva durante carregamento
+        lastRecipeLoad: null // Timestamp da última receita carregada
     };
 
     // API helpers (reutiliza a lógica da tela de faixa de peso para nomes dinâmicos)
@@ -202,19 +204,104 @@ function inicializarClassification() {
         }
     }
     async function writeWords(payload) {
-        try {
-            const res = await fetch('/api/write_tags', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            return !!data?.ok;
-        } catch (_) {
-            return false;
-        }
+        console.log('=== writeWords ===');
+        console.log('Payload:', payload);
+		try {
+			// Primeira tentativa: API padrão
+			const res = await fetch('/api/write_tags', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+			console.log('Response status:', res.status);
+			let data;
+			try { data = await res.json(); } catch (_) { data = null; }
+			console.log('Response data:', data);
+			if (res.ok && data && data.ok) {
+				console.log('write_tags padrão OK');
+				return true;
+			}
+			// Fallback: API aprimorada
+			console.warn('write_tags padrão falhou, tentando /api/enhanced/write_tags');
+			const resEnhanced = await fetch('/api/enhanced/write_tags', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ tag_values: payload })
+			});
+			console.log('Enhanced status:', resEnhanced.status);
+			let enhancedData;
+			try { enhancedData = await resEnhanced.json(); } catch (_) { enhancedData = null; }
+			console.log('Enhanced data:', enhancedData);
+			if (enhancedData && enhancedData.ok) {
+				return true;
+			}
+			// Fallback final: escrever em pequenos lotes (ou 1 a 1)
+			console.warn('Enhanced também falhou; tentando escrita fracionada por partes...');
+			const entries = Object.entries(payload);
+			const chunkSize = 6;
+			let allOk = true;
+			for (let i = 0; i < entries.length; i += chunkSize) {
+				const slice = entries.slice(i, i + chunkSize);
+				const sliceObj = Object.fromEntries(slice);
+				try {
+					const r = await fetch('/api/write_tags', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(sliceObj)
+					});
+					let d; try { d = await r.json(); } catch (_) { d = null; }
+					const ok = r.ok && d && d.ok;
+					if (!ok) {
+						allOk = false;
+						console.warn('Falha em lote parcial, tentando item a item...');
+						for (const [k, v] of slice) {
+							try {
+								const r1 = await fetch('/api/write_tags', {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify({ [k]: v })
+								});
+								let d1; try { d1 = await r1.json(); } catch (_) { d1 = null; }
+								if (!(r1.ok && d1 && d1.ok)) {
+									allOk = false;
+									console.error('Falha ao escrever tag individual:', k, d1);
+								}
+							} catch (e1) {
+								allOk = false;
+								console.error('Erro tag individual:', k, e1);
+							}
+							await new Promise(rp => setTimeout(rp, 20));
+						}
+					}
+				} catch (e2) {
+					allOk = false;
+					console.error('Erro na escrita por lotes:', e2);
+				}
+				await new Promise(rp => setTimeout(rp, 30));
+			}
+			return allOk;
+		} catch (error) {
+			console.error('Erro em writeWords:', error);
+			return false;
+		}
     }
     async function refreshSelectionsFromPLC() {
+        // Não atualiza se estiver carregando uma receita
+        if (state.isLoadingRecipe) {
+            console.log('Pulando refreshSelectionsFromPLC - carregando receita');
+            return;
+        }
+        
+        // Verifica se há configurações recentes (últimos 15 segundos)
+        const now = Date.now();
+        if (state.lastRecipeLoad && (now - state.lastRecipeLoad) < 15000) {
+            console.log('Pulando refreshSelectionsFromPLC - receita carregada recentemente');
+            return;
+        }
+        
+        // Removida proteção que impedia sincronização quando há presets salvos
+        // Esta proteção estava impedindo a sincronização durante carregamento de receitas
+        
         // Reutiliza a leitura das palavras e aplica se mudou
         const pList = ['P1','P2','P3','P4','P5','P6','P7','P9','P10'];
         const tags = [];
@@ -340,10 +427,19 @@ function inicializarClassification() {
         renderGrid();
     }
     async function syncSelectionToPLC(embId, classId, tipo) {
+        console.log(`=== syncSelectionToPLC INICIADA ===`);
+        console.log(`Parâmetros recebidos:`);
+        console.log(`- embId: ${embId} (tipo: ${typeof embId})`);
+        console.log(`- classId: ${classId} (tipo: ${typeof classId})`);
+        console.log(`- tipo: ${tipo} (tipo: ${typeof tipo})`);
+        
         const mapping = getEmbBitAndIndex(embId);
         const p = classIdToP(classId);
+        console.log(`Mapping:`, mapping, `P:`, p);
+        
         // SPJ usa palavras de classes a ignorar (branco/vermelho)
         if (embId === 'SPJ') {
+            console.log('Processando SPJ...');
             const tagW = 'XLCLASS_DB200_CLASSIFICACAO_CLASSES_A_IGNORAR';
             const tagR = 'XLCLASS_DB201_CLASSIFICACAO_CLASSES_A_IGNORAR';
             const current = await readWords([tagW, tagR]);
@@ -365,9 +461,17 @@ function inicializarClassification() {
                 else { nextW = setBit(wW, b, false); nextR = setBit(wR, b, false); }
             }
             const payload = { [tagW]: nextW, [tagR]: nextR };
-            return await writeWords(payload);
+            console.log('Payload SPJ:', payload);
+            const result = await writeWords(payload);
+            console.log('Resultado SPJ:', result);
+            return result;
         }
-        if (!mapping || !p) return false;
+
+        // Para embaladoras normais (IND, E01-E24)
+        if (!mapping || !p) {
+            console.log('Mapping ou P inválido, retornando false');
+            return false;
+        }
         const { index, bit } = mapping;
         const tagWhite = `XLCLASS_DB200_CLASSIFICACAO_${p}[${index}]`;
         const tagRed = `XLCLASS_DB201_CLASSIFICACAO_${p}[${index}]`;
@@ -395,8 +499,195 @@ function inicializarClassification() {
         const payload = {};
         payload[tagWhite] = nextWhite;
         payload[tagRed] = nextRed;
-        return await writeWords(payload);
+        console.log('Payload embaladora:', payload);
+        const result = await writeWords(payload);
+        console.log('Resultado embaladora:', result);
+        return result;
     }
+
+	// Escreve TODAS as seleções atuais (de todos os cards) em uma única chamada ao PLC
+	async function syncAllSelectionsToPLC() {
+		console.log('=== syncAllSelectionsToPLC INICIADA ===');
+		// Mapeamento de índices disponíveis pelas embaladoras
+		const indexSet = new Set();
+		const embMappings = [];
+		for (const emb of state.embaladoras) {
+			if (emb.id === 'SPJ') continue;
+			const mapping = getEmbBitAndIndex(emb.id);
+			if (!mapping) continue;
+			indexSet.add(mapping.index);
+			embMappings.push({ id: emb.id, bit: mapping.bit, index: mapping.index, classes: emb.classes || [] });
+		}
+		const allIndices = Array.from(indexSet);
+		// Lista de P's usados na lógica atual
+		const pList = ['P1','P2','P3','P4','P5','P6','P7','P9','P10'];
+		// Acumuladores: por P e index, os WORDs branco/vermelho que iremos escrever
+		const acc = {};
+		for (const p of pList) {
+			acc[p] = {};
+			for (const idx of allIndices) {
+				acc[p][idx] = { white: 0 >>> 0, red: 0 >>> 0 };
+			}
+		}
+		// Agrega as seleções de todas embaladoras
+		for (const { id: embId, bit, index, classes } of embMappings) {
+			for (const cls of classes) {
+				const p = classIdToP(cls.id);
+				if (!p) continue;
+				const target = acc[p]?.[index];
+				if (!target) continue;
+				if (cls.tipo === 'branco') {
+					target.white = setBit(target.white >>> 0, bit, true) >>> 0;
+					target.red = setBit(target.red >>> 0, bit, false) >>> 0;
+				} else if (cls.tipo === 'vermelho') {
+					target.white = setBit(target.white >>> 0, bit, false) >>> 0;
+					target.red = setBit(target.red >>> 0, bit, true) >>> 0;
+				} else if (cls.tipo === 'misto') {
+					target.white = setBit(target.white >>> 0, bit, true) >>> 0;
+					target.red = setBit(target.red >>> 0, bit, true) >>> 0;
+				}
+			}
+		}
+		// Monta payload
+		const payload = {};
+		for (const p of pList) {
+			for (const idx of allIndices) {
+				const words = acc[p][idx];
+				payload[`XLCLASS_DB200_CLASSIFICACAO_${p}[${idx}]`] = Number(words.white) >>> 0;
+				payload[`XLCLASS_DB201_CLASSIFICACAO_${p}[${idx}]`] = Number(words.red) >>> 0;
+			}
+		}
+		// SPJ (classes a ignorar)
+		const spj = state.embaladoras.find(e => e.id === 'SPJ');
+		if (spj) {
+			let wW = 0 >>> 0;
+			let wR = 0 >>> 0;
+			for (const cls of (spj.classes || [])) {
+				const b = spjClassToIgnoreBit(cls.id);
+				if (b === null) continue;
+				const isCrackVisio = (cls.id === 'CRACK' || cls.id === 'VISIO');
+				if (isCrackVisio) {
+					if (cls.tipo === 'misto') {
+						wW = setBit(wW >>> 0, b, true) >>> 0;
+						wR = setBit(wR >>> 0, b, false) >>> 0;
+					} else {
+						wW = setBit(wW >>> 0, b, false) >>> 0;
+						wR = setBit(wR >>> 0, b, false) >>> 0;
+					}
+				} else {
+					if (cls.tipo === 'branco') {
+						wW = setBit(wW >>> 0, b, true) >>> 0;
+						wR = setBit(wR >>> 0, b, false) >>> 0;
+					} else if (cls.tipo === 'vermelho') {
+						wW = setBit(wW >>> 0, b, false) >>> 0;
+						wR = setBit(wR >>> 0, b, true) >>> 0;
+					} else if (cls.tipo === 'misto') {
+						wW = setBit(wW >>> 0, b, true) >>> 0;
+						wR = setBit(wR >>> 0, b, true) >>> 0;
+					}
+				}
+			}
+			payload['XLCLASS_DB200_CLASSIFICACAO_CLASSES_A_IGNORAR'] = Number(wW) >>> 0;
+			payload['XLCLASS_DB201_CLASSIFICACAO_CLASSES_A_IGNORAR'] = Number(wR) >>> 0;
+		}
+		console.log('Payload completo (bulk):', payload);
+		const ok = await writeWords(payload);
+		console.log('Resultado bulk:', ok);
+		return ok;
+	}
+	// Expose helper globally to avoid scope issues
+	window.syncAllSelectionsToPLC = syncAllSelectionsToPLC;
+
+	// Programa uma embaladora específica com base no estado atual (limpa e seta apenas seu bit)
+	async function programEmbaladoraFromState(emb) {
+		try {
+			if (!emb || !emb.id) return true;
+			if (emb.id === 'SPJ') {
+				let wW = 0 >>> 0;
+				let wR = 0 >>> 0;
+				for (const cls of (emb.classes || [])) {
+					const b = spjClassToIgnoreBit(cls.id);
+					if (b === null) continue;
+					const isCrackVisio = (cls.id === 'CRACK' || cls.id === 'VISIO');
+					if (isCrackVisio) {
+						if (cls.tipo === 'misto') { wW = setBit(wW, b, true); wR = setBit(wR, b, false); }
+					} else {
+						if (cls.tipo === 'branco') { wW = setBit(wW, b, true); wR = setBit(wR, b, false); }
+						else if (cls.tipo === 'vermelho') { wW = setBit(wW, b, false); wR = setBit(wR, b, true); }
+						else if (cls.tipo === 'misto') { wW = setBit(wW, b, true); wR = setBit(wR, b, true); }
+					}
+				}
+				const payload = {
+					'XLCLASS_DB200_CLASSIFICACAO_CLASSES_A_IGNORAR': Number(wW) >>> 0,
+					'XLCLASS_DB201_CLASSIFICACAO_CLASSES_A_IGNORAR': Number(wR) >>> 0
+				};
+				return await writeWords(payload);
+			}
+			const mapping = getEmbBitAndIndex(emb.id);
+			if (!mapping) return false;
+			const { index, bit } = mapping;
+			const pList = ['P1','P2','P3','P4','P5','P6','P7','P9','P10'];
+			// Lê as palavras atuais do índice dessa embaladora
+			const readTags = [];
+			for (const p of pList) {
+				readTags.push(`XLCLASS_DB200_CLASSIFICACAO_${p}[${index}]`);
+				readTags.push(`XLCLASS_DB201_CLASSIFICACAO_${p}[${index}]`);
+			}
+			const current = await readWords(readTags);
+			const payload = {};
+			for (const p of pList) {
+				let wWhite = Number(current[`XLCLASS_DB200_CLASSIFICACAO_${p}[${index}]`] ?? 0) >>> 0;
+				let wRed = Number(current[`XLCLASS_DB201_CLASSIFICACAO_${p}[${index}]`] ?? 0) >>> 0;
+				// Define o bit conforme o estado desejado dos cards
+				const desired = (emb.classes || []).find(c => classIdToP(c.id) === p);
+				let desiredTipo = desired ? desired.tipo : null;
+				if (desiredTipo === 'branco') { wWhite = setBit(wWhite, bit, true); wRed = setBit(wRed, bit, false); }
+				else if (desiredTipo === 'vermelho') { wWhite = setBit(wWhite, bit, false); wRed = setBit(wRed, bit, true); }
+				else if (desiredTipo === 'misto') { wWhite = setBit(wWhite, bit, true); wRed = setBit(wRed, bit, true); }
+				else { wWhite = setBit(wWhite, bit, false); wRed = setBit(wRed, bit, false); }
+				payload[`XLCLASS_DB200_CLASSIFICACAO_${p}[${index}]`] = Number(wWhite) >>> 0;
+				payload[`XLCLASS_DB201_CLASSIFICACAO_${p}[${index}]`] = Number(wRed) >>> 0;
+			}
+			return await writeWords(payload);
+		} catch (e) {
+			console.error('Erro em programEmbaladoraFromState', emb?.id, e);
+			return false;
+		}
+	}
+
+	// Força escrita individual de TODAS as classes para TODAS as embaladoras (set/clear)
+	async function syncFullStateToPLC() {
+		console.log('=== syncFullStateToPLC (per-class) INICIADA ===');
+		let allOk = true;
+		// Fase 1: limpa tudo (garante que o que não está no card seja removido)
+		for (const emb of state.embaladoras) {
+			for (const classObj of state.classesOvos) {
+				try {
+					const ok = await syncSelectionToPLC(emb.id, classObj.id, null);
+					if (!ok) allOk = false;
+					await new Promise(r => setTimeout(r, 30));
+				} catch (_) {
+					allOk = false;
+				}
+			}
+		}
+		// Fase 2: aplica apenas o que está nos cards
+		for (const emb of state.embaladoras) {
+			for (const classe of (emb.classes || [])) {
+				try {
+					const ok = await syncSelectionToPLC(emb.id, classe.id, classe.tipo);
+					if (!ok) allOk = false;
+					await new Promise(r => setTimeout(r, 50));
+				} catch (_) {
+					allOk = false;
+				}
+			}
+		}
+		console.log('syncFullStateToPLC concluída. Sucesso:', allOk);
+		return allOk;
+	}
+	// Expose helper globally to avoid scope issues
+	window.syncFullStateToPLC = syncFullStateToPLC;
     function renderStatus() {
         const statusRow = document.getElementById('status-row');
         if (!statusRow) return;
@@ -432,7 +723,88 @@ function inicializarClassification() {
             });
         });
     }
-    
+
+	// Verifica no PLC se o estado corresponde aos cards e tenta corrigir discrepâncias
+	async function verifySelectionsWithPLC() {
+		console.log('=== verifySelectionsWithPLC INICIADA ===');
+		// Monta lista de tags a ler
+		const tags = [];
+		const pList = ['P1','P2','P3','P4','P5','P6','P7','P9','P10'];
+		const indexSet = new Set();
+		for (const emb of state.embaladoras) {
+			if (emb.id === 'SPJ') continue;
+			const mapping = getEmbBitAndIndex(emb.id);
+			if (mapping) indexSet.add(mapping.index);
+		}
+		for (const p of pList) {
+			for (const idx of indexSet) {
+				tags.push(`XLCLASS_DB200_CLASSIFICACAO_${p}[${idx}]`);
+				tags.push(`XLCLASS_DB201_CLASSIFICACAO_${p}[${idx}]`);
+			}
+		}
+		tags.push('XLCLASS_DB200_CLASSIFICACAO_CLASSES_A_IGNORAR');
+		tags.push('XLCLASS_DB201_CLASSIFICACAO_CLASSES_A_IGNORAR');
+
+		const values = await readWords(tags);
+		let ok = true;
+		// Confere por embaladora
+		for (const emb of state.embaladoras) {
+			if (emb.id === 'SPJ') {
+				let expectedW = 0 >>> 0;
+				let expectedR = 0 >>> 0;
+				for (const cls of (emb.classes || [])) {
+					const b = spjClassToIgnoreBit(cls.id);
+					if (b === null) continue;
+					const isCrackVisio = (cls.id === 'CRACK' || cls.id === 'VISIO');
+					if (isCrackVisio) {
+						if (cls.tipo === 'misto') { expectedW = setBit(expectedW, b, true); expectedR = setBit(expectedR, b, false); }
+					} else {
+						if (cls.tipo === 'branco') { expectedW = setBit(expectedW, b, true); expectedR = setBit(expectedR, b, false); }
+						else if (cls.tipo === 'vermelho') { expectedW = setBit(expectedW, b, false); expectedR = setBit(expectedR, b, true); }
+						else if (cls.tipo === 'misto') { expectedW = setBit(expectedW, b, true); expectedR = setBit(expectedR, b, true); }
+					}
+				}
+				const readW = Number(values['XLCLASS_DB200_CLASSIFICACAO_CLASSES_A_IGNORAR'] ?? 0) >>> 0;
+				const readR = Number(values['XLCLASS_DB201_CLASSIFICACAO_CLASSES_A_IGNORAR'] ?? 0) >>> 0;
+				if (readW !== expectedW || readR !== expectedR) {
+					console.warn('Discrepância SPJ detectada, corrigindo...');
+					await syncSelectionToPLC('SPJ', 'C1', null); // no-op para despertar conexão
+					await syncFullStateToPLC();
+					ok = false;
+				}
+				continue;
+			}
+			const mapping = getEmbBitAndIndex(emb.id);
+			if (!mapping) continue;
+			const { index, bit } = mapping;
+			for (const classObj of state.classesOvos) {
+				const p = classIdToP(classObj.id);
+				if (!p) continue;
+				const desired = (emb.classes || []).find(c => c.id === classObj.id);
+				const desiredTipo = desired ? desired.tipo : null;
+				const wW = Number(values[`XLCLASS_DB200_CLASSIFICACAO_${p}[${index}]`] ?? 0) >>> 0;
+				const wR = Number(values[`XLCLASS_DB201_CLASSIFICACAO_${p}[${index}]`] ?? 0) >>> 0;
+				const haveWhite = ((wW >>> bit) & 1) === 1;
+				const haveRed = ((wR >>> bit) & 1) === 1;
+				let expectedWhite = false, expectedRed = false;
+				if (desiredTipo === 'branco') { expectedWhite = true; expectedRed = false; }
+				else if (desiredTipo === 'vermelho') { expectedWhite = false; expectedRed = true; }
+				else if (desiredTipo === 'misto') { expectedWhite = true; expectedRed = true; }
+				else { expectedWhite = false; expectedRed = false; }
+				if (haveWhite !== expectedWhite || haveRed !== expectedRed) {
+					console.warn('Discrepância detectada, corrigindo...', emb.id, classObj.id, desiredTipo);
+					await syncSelectionToPLC(emb.id, classObj.id, desiredTipo);
+					await new Promise(r => setTimeout(r, 20));
+					ok = false;
+				}
+			}
+		}
+		console.log('verifySelectionsWithPLC concluída. OK:', ok);
+		return ok;
+	}
+	// Expose helper globally to avoid scope issues
+	window.verifySelectionsWithPLC = verifySelectionsWithPLC;
+	
     function handleEmbaladoraClick(embId) {
         console.log('Clicked embaladora:', embId);
         const embaladora = state.embaladoras.find(e => e.id === embId);
@@ -650,12 +1022,45 @@ function inicializarClassification() {
         renderGrid();
     }
     function handleSalvarPreset() {
-        const nomePreset = document.getElementById('recipe-name').value.trim();
-        if (!nomePreset) {
-            alert('Por favor, insira um nome para a receita');
+        console.log('=== INÍCIO handleSalvarPreset ===');
+        const nomeInput = document.getElementById('recipe-name');
+        if (!nomeInput) {
+            console.error('Campo recipe-name não encontrado');
             return;
         }
-        const editingId = document.getElementById('recipe-name').dataset.editing;
+        
+        // Força o foco e aguarda um pouco para garantir que o valor está atualizado
+        nomeInput.focus();
+        
+        // Aguarda um pouco para garantir que o valor esteja atualizado
+        setTimeout(() => {
+            const nomePreset = nomeInput.value.trim();
+            console.log('Nome do preset:', nomePreset);
+            console.log('Valor bruto do input:', nomeInput.value);
+            console.log('Valor após trim:', nomePreset);
+            console.log('Tamanho do nome:', nomePreset.length);
+            
+            // Validação mais robusta - verifica se é uma string válida e não vazia
+            if (!nomePreset || 
+                nomePreset === '' || 
+                nomePreset.length === 0 || 
+                nomePreset === 'undefined' || 
+                nomePreset === 'null' ||
+                typeof nomePreset !== 'string' ||
+                nomePreset.replace(/\s/g, '').length === 0) {
+                console.log('Nome inválido, pulando salvamento');
+                return;
+            }
+            
+            console.log('Nome válido, continuando com salvamento...');
+            continueSalvarPreset(nomePreset);
+        }, 200); // Aumentei o delay para 200ms
+    }
+    
+    function continueSalvarPreset(nomePreset) {
+        console.log('=== CONTINUANDO SALVAMENTO ===');
+        const nomeInput = document.getElementById('recipe-name');
+        const editingId = nomeInput.dataset.editing;
         // Cria uma cópia profunda da configuração atual
         const configuracaoAtual = state.embaladoras.map(emb => ({
             id: emb.id,
@@ -669,13 +1074,13 @@ function inicializarClassification() {
         }));
         console.log('Salvando preset com configuração:', configuracaoAtual);
         const novoPreset = {
-            id: editingId ? Number(editandoId) : Date.now(),
+            id: editingId ? Number(editingId) : Date.now(),
             nome: nomePreset,
             configuracao: configuracaoAtual,
             dataCriacao: new Date().toISOString()
         };
         if (editingId) {
-            const index = state.presets.findIndex(p => p.id === Number(editandoId));
+            const index = state.presets.findIndex(p => p.id === Number(editingId));
             if (index !== -1) {
                 state.presets[index] = novoPreset;
             }
@@ -690,8 +1095,10 @@ function inicializarClassification() {
             console.error('Erro ao salvar no localStorage:', error);
         }
         renderPresets();
-        document.getElementById('recipe-name').value = '';
-        delete document.getElementById('recipe-name').dataset.editing;
+        
+        // Limpa o campo e remove dados de edição
+        nomeInput.value = '';
+        delete nomeInput.dataset.editing;
         
         // Feedback visual
         const saveBtn = document.getElementById('save-recipe-btn');
@@ -702,11 +1109,32 @@ function inicializarClassification() {
             saveBtn.textContent = originalText;
             saveBtn.style.backgroundColor = '';
         }, 1500);
+        
+        console.log('=== FIM SALVAMENTO ===');
     }
     function renderPresets() {
+        console.log('renderPresets chamado');
         const presetList = document.getElementById('recipe-list');
-        if (!presetList) return;
+        if (!presetList) {
+            console.log('Elemento recipe-list não encontrado');
+            return;
+        }
         
+        // Carrega do localStorage se ainda não carregado nesta sessão
+        try {
+            const raw = localStorage.getItem('classification_presets');
+            console.log('Dados do localStorage:', raw);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    state.presets = parsed;
+                    console.log('Presets carregados do localStorage:', state.presets);
+                }
+            }
+        } catch (e) { 
+            console.error('Erro ao carregar presets do localStorage:', e);
+        }
+
         presetList.innerHTML = state.presets.map(preset => {
             const embaladorasConfiguradas = preset.configuracao.filter(emb => emb.classes.length > 0).length;
             const totalClasses = preset.configuracao.reduce((acc, emb) => acc + emb.classes.length, 0);
@@ -746,23 +1174,47 @@ function inicializarClassification() {
             });
         });
     }
-    function handleLoadPreset(presetId) {
+    // Mantém as helpers necessárias acima desta função para evitar 'is not defined'
+    async function handleLoadPreset(presetId) {
+        console.log('=== INÍCIO handleLoadPreset ===');
+        console.log('ID do preset:', presetId, 'tipo:', typeof presetId);
+        console.log('Presets disponíveis:', state.presets);
+        console.log('Presets IDs:', state.presets.map(p => p.id));
+        
         const preset = state.presets.find(p => p.id === Number(presetId));
         if (!preset) {
             console.error('Preset não encontrado:', presetId);
+            console.error('IDs disponíveis:', state.presets.map(p => p.id));
             return;
         }
-        console.log('Carregando preset:', preset);
+        console.log('Preset encontrado:', preset);
+        console.log('Configuração do preset:', preset.configuracao);
+        console.log('Quantidade de embaladoras na configuração:', preset.configuracao.length);
+
+        // Ativa flag para evitar que PLC sobrescreva durante carregamento
+        state.isLoadingRecipe = true;
+        state.lastRecipeLoad = Date.now();
+        console.log('Flag isLoadingRecipe ativada e timestamp definido');
 
         // Limpa todas as classes primeiro
+        console.log('Limpando classes existentes...');
         state.embaladoras.forEach(emb => {
             emb.classes = [];
         });
 
         // Aplica as configurações do preset
-        preset.configuracao.forEach(configEmb => {
+        console.log('Aplicando configurações do preset...');
+        console.log('Estado das embaladoras ANTES da aplicação:', state.embaladoras.map(emb => ({id: emb.id, classes: emb.classes.length})));
+        
+        preset.configuracao.forEach((configEmb, index) => {
+            console.log(`Processando configuração ${index}:`, configEmb);
             const emb = state.embaladoras.find(e => e.id === configEmb.id);
+            console.log(`Embaladora encontrada para ${configEmb.id}:`, emb ? 'SIM' : 'NÃO');
+            
             if (emb && Array.isArray(configEmb.classes)) {
+                console.log(`Aplicando configuração para ${configEmb.id}:`, configEmb.classes);
+                console.log(`Classes antes:`, emb.classes);
+                
                 // Copia todas as propriedades, inclusive tipo
                 emb.classes = configEmb.classes.map(classe => ({
                     id: classe.id,
@@ -770,17 +1222,124 @@ function inicializarClassification() {
                     cor: classe.cor,
                     tipo: classe.tipo
                 }));
+                
+                console.log(`Classes aplicadas para ${configEmb.id}:`, emb.classes);
+            } else {
+                console.log(`Pulando ${configEmb.id} - embaladora não encontrada ou classes inválidas`);
             }
         });
+        
+        console.log('Estado das embaladoras APÓS a aplicação:', state.embaladoras.map(emb => ({id: emb.id, classes: emb.classes.length})));
+        
+        console.log('Estado final após aplicar preset:', state.embaladoras);
 
-        // Força atualização do grid e dos botões
+        // Primeiro atualiza a interface visual
+        console.log('Atualizando interface visual...');
         renderGrid();
         renderStatus();
         renderHeaders();
         renderClassesList();
+        
+        // Força uma segunda atualização após um pequeno delay para garantir que a interface seja atualizada
+        setTimeout(() => {
+            console.log('Forçando segunda atualização da interface...');
+            renderGrid();
+        }, 100);
+
+        // NOVA IMPLEMENTAÇÃO: Usa o carregador de receitas para gravar no PLC
+        let syncSuccess = false;
+        try {
+            console.log('=== VERIFICANDO DISPONIBILIDADE DO RECIPE LOADER ===');
+            console.log('typeof RecipeLoader:', typeof RecipeLoader);
+            console.log('window.RecipeLoader:', window.RecipeLoader);
+            
+            // NOVA IMPLEMENTAÇÃO: Sincronização otimizada em lote
+            console.log('🔧 SINCRONIZAÇÃO OTIMIZADA: Escrevendo receita no PLC em lote...');
+            console.log('Verificando disponibilidade das funções:');
+            console.log('syncAllSelectionsToPLC:', typeof syncAllSelectionsToPLC);
+            
+            if (typeof syncAllSelectionsToPLC === 'function') {
+                // Usa a função otimizada que escreve tudo de uma vez
+                console.log('Usando syncAllSelectionsToPLC para escrita em lote...');
+                syncSuccess = await syncAllSelectionsToPLC();
+                console.log('Resultado da sincronização em lote:', syncSuccess);
+            } else {
+                console.error('❌ Função de sincronização em lote não está disponível!');
+                console.error('syncAllSelectionsToPLC:', typeof syncAllSelectionsToPLC);
+                syncSuccess = false;
+            }
+            
+            // Verifica se o RecipeLoader está disponível (comentado temporariamente)
+            /*
+            if (typeof RecipeLoader !== 'undefined') {
+                console.log('✅ RecipeLoader disponível, usando carregador de receitas...');
+                const recipeLoader = new RecipeLoader();
+                console.log('RecipeLoader instanciado:', recipeLoader);
+                
+                // Valida a receita antes de carregar
+                console.log('Validando receita...');
+                const erros = recipeLoader.validateRecipe(preset);
+                console.log('Erros de validação:', erros);
+                
+                if (erros.length > 0) {
+                    console.error('❌ Erros na receita:', erros);
+                    showNotification('Receita inválida: ' + erros.join(', '));
+                    return;
+                }
+                
+                console.log('✅ Receita válida, carregando no PLC...');
+                // Carrega a receita no PLC usando o carregador
+                syncSuccess = await recipeLoader.loadRecipeToPLC(preset, writeWords);
+                console.log('Resultado do carregamento:', syncSuccess);
+                
+                if (syncSuccess) {
+                    console.log('✅ Receita carregada com sucesso usando RecipeLoader');
+                } else {
+                    console.warn('⚠️ Falha ao carregar receita com RecipeLoader, tentando método antigo...');
+                    // Fallback para o método antigo
+                    syncSuccess = await syncFullStateToPLC();
+                    const verified = await verifySelectionsWithPLC();
+                    syncSuccess = syncSuccess && verified;
+                }
+            } else {
+                console.log('❌ RecipeLoader não disponível, usando método antigo...');
+                // Método antigo como fallback
+                syncSuccess = await syncFullStateToPLC();
+                const verified = await verifySelectionsWithPLC();
+                syncSuccess = syncSuccess && verified;
+            }
+            */
+        } catch (error) {
+            console.error('❌ Erro ao carregar receita:', error);
+            console.error('Stack trace:', error.stack);
+            // Fallback para o método antigo em caso de erro
+            try {
+                console.log('Tentando fallback...');
+                syncSuccess = await syncFullStateToPLC();
+                const verified = await verifySelectionsWithPLC();
+                syncSuccess = syncSuccess && verified;
+                console.log('Resultado do fallback:', syncSuccess);
+            } catch (fallbackError) {
+                console.error('❌ Erro no fallback:', fallbackError);
+                syncSuccess = false;
+            }
+        }
 
         hideModal('recipe-modal');
-        showNotification('Receita carregada com sucesso!');
+        
+        if (syncSuccess) {
+            showNotification('Receita carregada com sucesso!');
+        } else {
+            showNotification('Receita carregada, mas alguns dados podem não ter sido sincronizados com o PLC');
+        }
+        
+        // Mantém a flag ativa por muito mais tempo para evitar sobrescrita do PLC
+        setTimeout(() => {
+            state.isLoadingRecipe = false;
+            console.log('Flag isLoadingRecipe desativada após delay');
+        }, 10000); // 10 segundos de proteção
+        
+        console.log('=== FIM handleLoadPreset ===');
     }
     function handleEditPreset(presetId) {
         const preset = state.presets.find(p => p.id === Number(presetId));
@@ -806,22 +1365,268 @@ function inicializarClassification() {
         const modal = document.getElementById(modalId);
         if (modal) modal.classList.remove('show');
     }
+    function showNotification(message) {
+        // Cria uma notificação simples
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #22c55e;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            z-index: 10000;
+            font-size: 14px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Remove após 3 segundos
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 3000);
+    }
+    
+    // Função de teste para debug
+    function testRecipeSystem() {
+        console.log('=== TESTE DO SISTEMA DE RECEITAS ===');
+        console.log('Estado atual das embaladoras:', state.embaladoras);
+        console.log('Presets carregados:', state.presets);
+        console.log('Elementos DOM:');
+        console.log('- recipe-modal:', document.getElementById('recipe-modal'));
+        console.log('- recipe-name:', document.getElementById('recipe-name'));
+        console.log('- save-recipe-btn:', document.getElementById('save-recipe-btn'));
+        console.log('- recipe-list:', document.getElementById('recipe-list'));
+        
+        // Testa se consegue criar um preset de teste
+        const testPreset = {
+            id: Date.now(),
+            nome: 'Teste Debug',
+            configuracao: [{
+                id: 'E01',
+                nome: 'E01',
+                classes: [{
+                    id: 'C1',
+                    nome: 'C1',
+                    cor: '#FF3399',
+                    tipo: 'branco'
+                }]
+            }],
+            dataCriacao: new Date().toISOString()
+        };
+        
+        console.log('Preset de teste criado:', testPreset);
+        state.presets.push(testPreset);
+        renderPresets();
+        console.log('Preset de teste adicionado à lista');
+        console.log('=====================================');
+    }
+    
+    // Função para testar carregamento
+    function testLoadRecipe() {
+        if (state.presets.length > 0) {
+            console.log('Testando carregamento da primeira receita...');
+            handleLoadPreset(state.presets[0].id);
+        } else {
+            console.log('Nenhuma receita disponível para teste');
+        }
+    }
+    
+    // Função para testar sincronização manual
+    async function testManualSync() {
+        console.log('=== TESTE DE SINCRONIZAÇÃO MANUAL ===');
+        console.log('Estado atual das embaladoras:', state.embaladoras);
+        
+        // Testa com uma embaladora específica
+        const testEmb = state.embaladoras.find(emb => emb.id === 'E01');
+        if (testEmb) {
+            console.log('Testando com E01:', testEmb);
+            if (testEmb.classes.length > 0) {
+                const testClass = testEmb.classes[0];
+                console.log('Testando sincronização:', testEmb.id, testClass.id, testClass.tipo);
+                const result = await syncSelectionToPLC(testEmb.id, testClass.id, testClass.tipo);
+                console.log('Resultado da sincronização manual:', result);
+            } else {
+                console.log('E01 não tem classes para testar');
+            }
+        } else {
+            console.log('E01 não encontrada');
+        }
+    }
+    
+    // Função para testar API diretamente
+    async function testAPI() {
+        console.log('=== TESTE DA API ===');
+        const testPayload = {
+            'XLCLASS_DB200_CLASSIFICACAO_P1[0]': 1
+        };
+        console.log('Enviando payload de teste:', testPayload);
+        const result = await writeWords(testPayload);
+        console.log('Resultado da API:', result);
+    }
+    
+    // Função para testar carregamento específico
+    async function testLoadSpecificRecipe(recipeIndex = 0) {
+        console.log('=== TESTE DE CARREGAMENTO ESPECÍFICO ===');
+        console.log('Presets disponíveis:', state.presets);
+        
+        if (state.presets.length === 0) {
+            console.log('Nenhuma receita disponível');
+            return;
+        }
+        
+        const recipe = state.presets[recipeIndex];
+        console.log(`Carregando receita ${recipeIndex}:`, recipe.nome);
+        console.log('Configuração:', recipe.configuracao);
+        
+        // Chama a função de carregamento
+        await handleLoadPreset(recipe.id);
+        
+        console.log('=== FIM TESTE DE CARREGAMENTO ===');
+    }
+    
+    // Função para testar sincronização simples
+    async function testSimpleSync() {
+        console.log('=== TESTE DE SINCRONIZAÇÃO SIMPLES ===');
+        
+        // Testa com uma configuração simples
+        const testConfig = {
+            embId: 'E01',
+            classId: 'C1',
+            tipo: 'branco'
+        };
+        
+        console.log('Testando com:', testConfig);
+        const result = await syncSelectionToPLC(testConfig.embId, testConfig.classId, testConfig.tipo);
+        console.log('Resultado:', result);
+        
+        console.log('=== FIM TESTE SIMPLES ===');
+    }
+    
+    // Função para verificar estado atual
+    function checkCurrentState() {
+        console.log('=== ESTADO ATUAL ===');
+        console.log('Embaladoras:', state.embaladoras.map(emb => ({
+            id: emb.id,
+            classesCount: emb.classes.length,
+            classes: emb.classes.map(c => ({id: c.id, tipo: c.tipo}))
+        })));
+        console.log('Presets:', state.presets.length);
+        console.log('isLoadingRecipe:', state.isLoadingRecipe);
+        console.log('lastRecipeLoad:', state.lastRecipeLoad);
+        console.log('=== FIM ESTADO ===');
+    }
+    
+    // Torna as funções de teste disponíveis globalmente
+    window.testRecipeSystem = testRecipeSystem;
+    window.testLoadRecipe = testLoadRecipe;
+    window.testManualSync = testManualSync;
+    window.testAPI = testAPI;
+    window.testLoadSpecificRecipe = testLoadSpecificRecipe;
+    window.testSimpleSync = testSimpleSync;
+    window.checkCurrentState = checkCurrentState;
     function setupEventListeners() {
         document.querySelectorAll('.close-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const modal = e.target.closest('.modal');
-                if (modal) hideModal(modal.id);
+                if (modal) {
+                    // Se for o modal de receitas, limpa o campo
+                    if (modal.id === 'recipe-modal') {
+                        const nomeInput = document.getElementById('recipe-name');
+                        if (nomeInput) {
+                            nomeInput.value = '';
+                            delete nomeInput.dataset.editing;
+                        }
+                        const saveBtn = document.getElementById('save-recipe-btn');
+                        if (saveBtn) {
+                            saveBtn.textContent = 'Salvar';
+                            saveBtn.style.backgroundColor = '';
+                        }
+                    }
+                    hideModal(modal.id);
+                }
             });
         });
         const recipeBtn = document.getElementById('recipe-btn');
         if (recipeBtn) {
             recipeBtn.addEventListener('click', () => {
+                // Limpa o campo de nome quando abrir o modal para nova receita
+                const nomeInput = document.getElementById('recipe-name');
+                if (nomeInput) {
+                    nomeInput.value = '';
+                    delete nomeInput.dataset.editing;
+                }
+                // Reseta o botão para "Salvar"
+                const saveBtn = document.getElementById('save-recipe-btn');
+                if (saveBtn) {
+                    saveBtn.textContent = 'Salvar';
+                    saveBtn.style.backgroundColor = '';
+                }
                 showModal('recipe-modal');
             });
         }
         const saveRecipeBtn = document.getElementById('save-recipe-btn');
         if (saveRecipeBtn) {
-            saveRecipeBtn.addEventListener('click', handleSalvarPreset);
+            console.log('Botão save-recipe-btn encontrado, adicionando listener');
+            saveRecipeBtn.addEventListener('click', (e) => {
+                console.log('Botão salvar clicado');
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Remove o foco do input para evitar abrir teclado
+                const nomeInput = document.getElementById('recipe-name');
+                if (nomeInput) {
+                    nomeInput.blur();
+                }
+                
+                // Pequeno delay para garantir que o valor do input esteja atualizado
+                setTimeout(() => {
+                    handleSalvarPreset();
+                }, 50);
+            });
+        } else {
+            console.log('Botão save-recipe-btn NÃO encontrado');
+        }
+        
+        // Removido listener do formulário para evitar conflitos - apenas o botão será usado
+        
+        // Adiciona listener para o input também (Enter) e teclado virtual
+        const recipeNameInput = document.getElementById('recipe-name');
+        if (recipeNameInput) {
+            console.log('Input recipe-name encontrado, adicionando listeners');
+            
+            // Listener para Enter
+            recipeNameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    console.log('Enter pressionado no input');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSalvarPreset();
+                }
+            });
+            
+            // Listener para abrir teclado virtual apenas no click
+            recipeNameInput.addEventListener('click', () => {
+                console.log('Abrindo teclado virtual para nome da receita');
+                abrirTecladoSimples(recipeNameInput);
+            });
+            
+            // Removido listener de focus para evitar abrir teclado automaticamente
+            // recipeNameInput.addEventListener('focus', () => {
+            //     console.log('Foco no input, abrindo teclado virtual');
+            //     abrirTecladoSimples(recipeNameInput);
+            // });
+            
+            recipeNameInput.addEventListener('touchstart', () => {
+                console.log('Touch no input, abrindo teclado virtual');
+                abrirTecladoSimples(recipeNameInput);
+            }, { passive: true });
+        } else {
+            console.log('Input recipe-name NÃO encontrado');
         }
         const clearBtn = document.getElementById('clear-btn');
         if (clearBtn) {
@@ -901,12 +1706,15 @@ function inicializarClassification() {
 
     // Initialization
     function initialize() {
+        console.log('Inicializando sistema de classificação...');
         renderStatus();
         renderHeaders();
         renderGrid();
         renderClassesList();
-        renderPresets();
+        console.log('Chamando setupEventListeners...');
         setupEventListeners();
+        console.log('Chamando renderPresets...');
+        renderPresets();
 
         // Carrega nomes dinâmicos das classes (C1..C7) como na tela de faixa de peso
         api.getLabels().then((labels) => {
@@ -918,8 +1726,8 @@ function inicializarClassification() {
             }
         });
 
-        // Carrega seleções atuais do PLC para refletir nos cards
-        loadSelectionsFromPLC();
+        // REMOVIDO: loadSelectionsFromPLC() - não carrega mais automaticamente do PLC
+        // As seleções só são carregadas quando o usuário carrega uma receita
 
         // Polling periódico para atualizar nomes das faixas do PLC automaticamente
         const LABEL_REFRESH_MS = 2000; // 2s (ajuste se necessário)
@@ -936,7 +1744,7 @@ function inicializarClassification() {
             } catch (_) { /* ignora erros transitórios */ }
         }, LABEL_REFRESH_MS);
 
-        // Polling do alerta de parada e das seleções PLC
+        // Polling apenas do alerta de parada (SEM sincronização automática)
         const ALERT_REFRESH_MS = 1000;
         let lastAlertText = '';
         let lastVisible = false;
@@ -956,8 +1764,7 @@ function inicializarClassification() {
                 renderClaw(visible);
                 renderClawGreen(showGreen);
             }
-            // Atualiza seleções dos cards a partir do PLC (captura alterações feitas diretamente no PLC)
-            refreshSelectionsFromPLC();
+            // REMOVIDO: refreshSelectionsFromPLC() - não sincroniza mais automaticamente
         }, ALERT_REFRESH_MS);
 
         // Pausa quando aba não está visível para economizar recursos
@@ -993,7 +1800,7 @@ function inicializarClassification() {
                             renderClaw(visible);
                             renderClawGreen(showGreen);
                         }
-                        refreshSelectionsFromPLC();
+                        // REMOVIDO: refreshSelectionsFromPLC() - não sincroniza mais automaticamente
                     }, ALERT_REFRESH_MS);
                 }
             }
@@ -1153,3 +1960,4 @@ if (document.readyState === 'loading') {
 document.addEventListener('DOMContentLoaded', function() {
     inicializarClassification();
 });
+
