@@ -82,6 +82,69 @@ function inicializarClassification() {
         }
     }
 
+    // Subscrição por tela (habilita somente as tags necessárias quando a tela está aberta)
+    const clientId = `classification-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    let heartbeatTimer = null;
+    function buildSubscribedTags() {
+        const tags = [];
+        // Palavras de classificação por P e índices 0 e 1 (DB200/DB201)
+        const pList = ['P1','P2','P3','P4','P5','P6','P7','P9','P10'];
+        for (const p of pList) {
+            tags.push(`XLCLASS_DB200_CLASSIFICACAO_${p}[0]`);
+            tags.push(`XLCLASS_DB200_CLASSIFICACAO_${p}[1]`);
+            tags.push(`XLCLASS_DB201_CLASSIFICACAO_${p}[0]`);
+            tags.push(`XLCLASS_DB201_CLASSIFICACAO_${p}[1]`);
+        }
+        // SPJ palavras de ignorar
+        tags.push('XLCLASS_DB200_CLASSIFICACAO_CLASSES_A_IGNORAR');
+        tags.push('XLCLASS_DB201_CLASSIFICACAO_CLASSES_A_IGNORAR');
+        // Status principal lido para ícones e power
+        tags.push('XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_01');
+        // Comandos de classificação (bit 8 do lixo)
+        tags.push('XLCLASS_DB200_CLASSIFICACAO_COMANDO_STATUS');
+        tags.push('XLCLASS_DB201_CLASSIFICACAO_COMANDO_STATUS');
+        // Labels dinâmicos C1..C7
+        for (let i = 0; i < 7; i++) tags.push(`XLCLASS_DB202_NOME_DINAMICO[${i}]`);
+        return tags;
+    }
+    async function subscribeScreen() {
+        try {
+            await fetch('/api/subscribe_tags', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ client_id: clientId, tags: buildSubscribedTags() })
+            }).catch(() => {});
+        } catch (_) {}
+    }
+    async function unsubscribeScreen() {
+        try {
+            await fetch('/api/unsubscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ client_id: clientId })
+            }).catch(() => {});
+        } catch (_) {}
+    }
+    async function heartbeatScreen() {
+        try {
+            await fetch('/api/heartbeat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ client_id: clientId })
+            }).catch(() => {});
+        } catch (_) {}
+    }
+    function startHeartbeat() {
+        if (heartbeatTimer) clearInterval(heartbeatTimer);
+        heartbeatTimer = setInterval(heartbeatScreen, 15000);
+    }
+    function stopHeartbeat() {
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
+    }
+
     async function fecharTecladoTexto(confirmar) {
         if (confirmar && labelAtiva && tecladoTextoInput) {
             const novo = tecladoTextoInput.value.trim();
@@ -144,6 +207,32 @@ function inicializarClassification() {
         const el = document.getElementById('claw-banner-green');
         if (!el) return;
         el.style.visibility = visible ? 'visible' : 'hidden';
+    }
+
+    // Power (Liga/Desliga) helpers
+    const POWER_STATUS_TAG = 'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_01';
+    const POWER_STATUS_BIT = 12; // bit 12
+    function updatePowerButtonsFromStatus(rawStatus) {
+        const onBtn = document.getElementById('power-btn-on');
+        const offBtn = document.getElementById('power-btn-off');
+        if (!onBtn || !offBtn) return;
+        const isOn = (((Number(rawStatus) >>> 0) >>> POWER_STATUS_BIT) & 1) === 1;
+        onBtn.style.display = isOn ? 'inline-block' : 'none';
+        offBtn.style.display = isOn ? 'none' : 'inline-block';
+    }
+    async function togglePowerBit() {
+        try {
+            const current = await readWords([POWER_STATUS_TAG]);
+            const v = Number(current[POWER_STATUS_TAG] ?? 0) >>> 0;
+            const isOn = (((v >>> POWER_STATUS_BIT) & 1) === 1);
+            const next = setBit(v, POWER_STATUS_BIT, !isOn) >>> 0;
+            const ok = await writeWords({ [POWER_STATUS_TAG]: next });
+            if (!ok) console.warn('Falha ao escrever bit de liga/desliga');
+            // Atualiza UI imediatamente
+            updatePowerButtonsFromStatus(next);
+        } catch (e) {
+            console.error('Erro ao alternar liga/desliga:', e);
+        }
     }
 
     // Utils
@@ -285,16 +374,16 @@ function inicializarClassification() {
 			return false;
 		}
     }
-    async function refreshSelectionsFromPLC() {
-        // Não atualiza se estiver carregando uma receita
-        if (state.isLoadingRecipe) {
+    async function refreshSelectionsFromPLC(force = false) {
+        // Não atualiza se estiver carregando uma receita (a menos que force=true)
+        if (!force && state.isLoadingRecipe) {
             console.log('Pulando refreshSelectionsFromPLC - carregando receita');
             return;
         }
         
-        // Verifica se há configurações recentes (últimos 15 segundos)
+        // Verifica se há configurações recentes (últimos 15 segundos) (a menos que force=true)
         const now = Date.now();
-        if (state.lastRecipeLoad && (now - state.lastRecipeLoad) < 15000) {
+        if (!force && state.lastRecipeLoad && (now - state.lastRecipeLoad) < 15000) {
             console.log('Pulando refreshSelectionsFromPLC - receita carregada recentemente');
             return;
         }
@@ -1630,11 +1719,48 @@ function inicializarClassification() {
         }
         const clearBtn = document.getElementById('clear-btn');
         if (clearBtn) {
-            clearBtn.addEventListener('click', () => {
-                state.embaladoras.forEach(emb => emb.classes = []);
-                renderGrid();
+            clearBtn.addEventListener('click', async () => {
+                // NÃO limpa localmente; o PLC executa a limpeza.
+                // Envia comando: setar bit 8 nas duas tags de comando (pulso)
+                const BIT = 8;
+                const CMD_R = 'XLCLASS_DB201_CLASSIFICACAO_COMANDO_STATUS';
+                const CMD_W = 'XLCLASS_DB200_CLASSIFICACAO_COMANDO_STATUS';
+                try {
+                    const current = await readWords([CMD_R, CMD_W]);
+                    const vR = Number(current[CMD_R] ?? 0) >>> 0;
+                    const vW = Number(current[CMD_W] ?? 0) >>> 0;
+                    const nextR = setBit(vR, BIT, true) >>> 0;
+                    const nextW = setBit(vW, BIT, true) >>> 0;
+                    const ok1 = await writeWords({ [CMD_R]: nextR, [CMD_W]: nextW });
+                    if (!ok1) console.warn('Falha ao setar comando bit 8');
+                    // Reset curto do pulso
+                    setTimeout(async () => {
+                        try {
+                            const resetR = setBit(nextR, BIT, false) >>> 0;
+                            const resetW = setBit(nextW, BIT, false) >>> 0;
+                            await writeWords({ [CMD_R]: resetR, [CMD_W]: resetW });
+                        } catch (_) {}
+                    }, 150);
+
+                    // Após o pulso, solicita atualização das seleções a partir do PLC
+                    // Faz algumas tentativas para aguardar a lógica do PLC concluir a limpeza
+                    const retries = [200, 500, 900];
+                    for (const delay of retries) {
+                        setTimeout(() => {
+                            refreshSelectionsFromPLC(true);
+                        }, delay);
+                    }
+                } catch (e) {
+                    console.error('Erro no comando de limpar (bit 8):', e);
+                }
             });
         }
+
+        // Power buttons listeners
+        const powerOnBtn = document.getElementById('power-btn-on');
+        const powerOffBtn = document.getElementById('power-btn-off');
+        if (powerOnBtn) powerOnBtn.addEventListener('click', togglePowerBit);
+        if (powerOffBtn) powerOffBtn.addEventListener('click', togglePowerBit);
         const labelsModal = document.getElementById('labels-editor-modal');
         if (labelsModal) {
             const cancelBtn = document.getElementById('labels-cancel');
@@ -1716,6 +1842,10 @@ function inicializarClassification() {
         console.log('Chamando renderPresets...');
         renderPresets();
 
+        // Subscrição quando a tela abre
+        subscribeScreen();
+        startHeartbeat();
+
         // Carrega nomes dinâmicos das classes (C1..C7) como na tela de faixa de peso
         api.getLabels().then((labels) => {
             if (Array.isArray(labels) && labels.length === 7) {
@@ -1726,8 +1856,8 @@ function inicializarClassification() {
             }
         });
 
-        // REMOVIDO: loadSelectionsFromPLC() - não carrega mais automaticamente do PLC
-        // As seleções só são carregadas quando o usuário carrega uma receita
+        // Força leitura do PLC ao abrir a tela para preencher os cards
+        setTimeout(() => { refreshSelectionsFromPLC(true); }, 150);
 
         // Polling periódico para atualizar nomes das faixas do PLC automaticamente
         const LABEL_REFRESH_MS = 2000; // 2s (ajuste se necessário)
@@ -1751,6 +1881,8 @@ function inicializarClassification() {
         let lastGreenVisible = false;
         let alertTimer = setInterval(async () => {
             const { rawAlert, rawStatus } = await getAlertAndStatus();
+            // Atualiza power pela leitura do status
+            updatePowerButtonsFromStatus(rawStatus);
             const text = computeAlertText(rawAlert);
             const bit8Set = ((rawStatus >>> 8) & 1) === 1; // bit 8 == 1?
             const visible = (rawAlert !== 0) && !bit8Set;
@@ -1772,8 +1904,15 @@ function inicializarClassification() {
             if (document.hidden) {
                 if (labelTimer) { clearInterval(labelTimer); labelTimer = null; }
                 if (alertTimer) { clearInterval(alertTimer); alertTimer = null; }
-            } else if (!labelTimer) {
-                labelTimer = setInterval(async () => {
+                stopHeartbeat();
+                unsubscribeScreen();
+            } else {
+                // Ao voltar para esta aba/tela, força leitura do PLC para repovoar os cards
+                setTimeout(() => { refreshSelectionsFromPLC(true); }, 200);
+                subscribeScreen();
+                startHeartbeat();
+                if (!labelTimer) {
+                    labelTimer = setInterval(async () => {
                     try {
                         const labels = await api.getLabels();
                         if (Array.isArray(labels) && labels.length === 7) {
@@ -1784,10 +1923,12 @@ function inicializarClassification() {
                             }
                         }
                     } catch (_) {}
-                }, LABEL_REFRESH_MS);
+                    }, LABEL_REFRESH_MS);
+                }
                 if (!alertTimer) {
                     alertTimer = setInterval(async () => {
-                        const { rawAlert, rawStatus } = await getAlertAndStatus();
+                    const { rawAlert, rawStatus } = await getAlertAndStatus();
+                    updatePowerButtonsFromStatus(rawStatus);
                         const text = computeAlertText(rawAlert);
                         const bit8Set = ((rawStatus >>> 8) & 1) === 1;
                         const visible = (rawAlert !== 0) && !bit8Set;

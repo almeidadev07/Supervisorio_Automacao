@@ -242,6 +242,18 @@
     width: 100%;
     padding: 0 10px;
 }
+
+.control-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.control-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
 .control-btn {
     padding: 0;
     border-radius: 12px;

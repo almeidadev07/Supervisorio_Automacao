@@ -2,15 +2,17 @@ function inicializarBalance() {
     console.log('Inicializando Balance...');
 
     // Estado
-    let calibrationEnabled = false;
+    let calibrationEnabled = false; // Controlado pelo usuário (botão toggle)
+    let calibrationButtonsEnabled = false; // Controlado pela tag do PLC (status > 9)
     let selectedLine = null;
+    let selectedWeightType = null; // 'min' ou 'max'
     let lastToggleTime = 0; // Timestamp do último toggle manual
     let isToggling = false; // Flag para evitar múltiplos cliques
     let pollingInterval = null; // Referência do intervalo de polling
     let lines = Array.from({ length: 18 }, (_, i) => ({
         number: i + 1,
-        weight: Math.floor(Math.random() * 500) + 50,
-        calibrated: Math.random() > 0.3
+        weight: 0,
+        calibrated: false
     }));
 
     // Elementos DOM
@@ -30,12 +32,12 @@ function inicializarBalance() {
             card.className = 'balance-card';
             card.innerHTML = `
                 <h3>Linha ${line.number}</h3>
-                <span class="weight-value">${line.weight}g</span>
+                <span class="weight-value">${Number(line.weight || 0)} g</span>
                 <div class="calibrate-actions" style="height: 90px;">
-                    <button class="calibrate-btn" data-line="${line.number}" style="visibility:${calibrationEnabled ? 'visible' : 'hidden'};" ${calibrationEnabled ? '' : 'tabindex="-1" aria-hidden="true"'}>
+                    <button class="calibrate-btn" data-line="${line.number}" style="visibility:${calibrationButtonsEnabled ? 'visible' : 'hidden'};" ${calibrationButtonsEnabled ? '' : 'tabindex="-1" aria-hidden="true"'}>
                         <img src="/static/images/pages/icons/comandos/01%20-%20Bot%C3%A3o_Calibrar.png" alt="Calibrar" />
                     </button>
-                    <div class="status-icons" data-line="${line.number}" style="visibility:${!calibrationEnabled ? 'visible' : 'hidden'};">
+                    <div class="status-icons" data-line="${line.number}" style="visibility:${!calibrationButtonsEnabled ? 'visible' : 'hidden'};">
                         <img class="status-check" src="/static/images/pages/icons/status/00_Check_Laranja_2.png" alt="Calibrado" style="display: none;" />
                         <img class="status-error" src="/static/images/pages/icons/status/00_Erro.png" alt="Erro" style="display: none;" />
                     </div>
@@ -44,8 +46,8 @@ function inicializarBalance() {
             balanceGrid.appendChild(card);
         });
 
-        // Adiciona evento aos botões de calibrar *somente* se calibração estiver habilitada
-        if (calibrationEnabled) {
+        // Adiciona evento aos botões de calibrar *somente* se botões estiverem habilitados
+        if (calibrationButtonsEnabled) {
             document.querySelectorAll('.calibrate-btn').forEach(btn => {
                 btn.removeEventListener('click', handleCalibrateClick);
                 btn.addEventListener('click', handleCalibrateClick);
@@ -53,7 +55,7 @@ function inicializarBalance() {
         }
         
         // Atualiza ícones de status após criar a grid
-        if (!calibrationEnabled && lastStatusValues.pendente01 !== null && lastStatusValues.pendente02 !== null) {
+        if (!calibrationButtonsEnabled && lastStatusValues.pendente01 !== null && lastStatusValues.pendente02 !== null) {
             updateStatusIcons(lastStatusValues.pendente01, lastStatusValues.pendente02);
         }
         
@@ -61,6 +63,16 @@ function inicializarBalance() {
         console.log('Grid criada. Elementos .status-icons:', document.querySelectorAll('.status-icons').length);
         console.log('Elementos .status-check:', document.querySelectorAll('.status-check').length);
         console.log('Elementos .status-error:', document.querySelectorAll('.status-error').length);
+    }
+
+    // Atualiza apenas os valores de peso na UI (sem recriar a grid)
+    function updateWeightSpans() {
+        document.querySelectorAll('.balance-card').forEach((card, idx) => {
+            const span = card.querySelector('.weight-value');
+            if (!span) return;
+            const w = Number(lines[idx]?.weight || 0);
+            span.textContent = `${w} g`;
+        });
     }
 
     // Abre modal para escolher peso (mínimo ou máximo)
@@ -105,12 +117,12 @@ function inicializarBalance() {
         // Atualiza grid imediatamente
         updateGrid();
         
-        // Se habilitando, mostra loading
+        // Se habilitando, mostra loading baseado na tag do PLC
         if (calibrationEnabled) {
             try { 
-                simulateLoading(); 
+                startCalibrationLoading(); 
             } catch (e) { 
-                console.warn('Falha ao iniciar simulação de carregamento:', e); 
+                console.warn('Falha ao iniciar carregamento baseado no PLC:', e); 
             }
         }
         
@@ -153,21 +165,110 @@ function inicializarBalance() {
 
     // Quando usuário escolhe peso mínimo ou máximo
     function handleWeightSelection(weightType) {
+        selectedWeightType = weightType; // Armazena o tipo selecionado
         hideModals();
         showConfirmationModal(weightType);
     }
 
-    // Confirma a calibração da linha selecionada
-    function handleConfirmCalibration() {
-        if (selectedLine) {
-            const index = lines.findIndex(l => l.number === selectedLine.number);
-            if (index !== -1) {
-                lines[index].calibrated = true;
-                // Se quiser, atualize o peso conforme o tipo de calibração aqui
-                // Exemplo:
-                // lines[index].weight = newWeightValue;
+    // Função para calcular a tag e bit corretos baseado na linha e tipo de peso
+    function getCalibrationTagAndBit(lineNumber, weightType) {
+        let tagName, bitIndex;
+        
+        if (lineNumber <= 16) {
+            // Linhas 1-16: usa XLCLASS_DB229_CALIBRAR_PESO_MINIMO_01 e XLCLASS_DB229_CALIBRAR_PESO_MAXIMO_01
+            tagName = weightType === 'min' ? 
+                'XLCLASS_DB229_CALIBRAR_PESO_MINIMO_01' : 
+                'XLCLASS_DB229_CALIBRAR_PESO_MAXIMO_01';
+            
+            // Mapeamento de bits: linha 1->bit8, linha 2->bit9, ..., linha 8->bit15, linha 9->bit0, ..., linha 16->bit7
+            if (lineNumber <= 8) {
+                bitIndex = lineNumber + 7; // 1->8, 2->9, ..., 8->15
+            } else {
+                bitIndex = lineNumber - 9; // 9->0, 10->1, ..., 16->7
+            }
+        } else {
+            // Linhas 17-18: usa XLCLASS_DB229_CALIBRAR_PESO_MINIMO_02 e XLCLASS_DB229_CALIBRAR_PESO_MAXIMO_02
+            tagName = weightType === 'min' ? 
+                'XLCLASS_DB229_CALIBRAR_PESO_MINIMO_02' : 
+                'XLCLASS_DB229_CALIBRAR_PESO_MAXIMO_02';
+            
+            // Linha 17->bit8, linha 18->bit9
+            if (lineNumber === 17) {
+                bitIndex = 8; // Linha 17 -> bit 8
+            } else if (lineNumber === 18) {
+                bitIndex = 9; // Linha 18 -> bit 9
             }
         }
+        
+        return { tagName, bitIndex };
+    }
+
+    // Função para escrever no PLC o comando de calibração
+    async function writeCalibrationCommand(lineNumber, weightType) {
+        try {
+            const { tagName, bitIndex } = getCalibrationTagAndBit(lineNumber, weightType);
+            
+            console.log(`Calibrando ${weightType === 'min' ? 'peso mínimo' : 'peso máximo'} da linha ${lineNumber}`);
+            console.log(`Tag: ${tagName}, Bit: ${bitIndex}`);
+            
+            // Lê o valor atual da tag
+            const res = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { cache: 'no-store' }).then(r=>r.json());
+            if (!res || !res.values) {
+                throw new Error('Falha ao ler tag do PLC');
+            }
+            
+            let currentValue = Number(res.values[tagName] || 0) >>> 0;
+            console.log(`Valor atual da tag ${tagName}:`, currentValue);
+            
+            // Seta o bit correspondente para 1
+            const newValue = currentValue | (1 << bitIndex);
+            console.log(`Novo valor a ser escrito:`, newValue);
+            
+            // Escreve no PLC
+            const writeRes = await fetch('/api/write_tags', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ [tagName]: newValue })
+            });
+            
+            if (!writeRes.ok) {
+                throw new Error('Falha ao escrever no PLC');
+            }
+            
+            console.log(`✅ Comando de calibração enviado com sucesso para linha ${lineNumber}`);
+            return true;
+            
+        } catch (error) {
+            console.error(`❌ Erro ao enviar comando de calibração para linha ${lineNumber}:`, error);
+            return false;
+        }
+    }
+
+    // Confirma a calibração da linha selecionada
+    async function handleConfirmCalibration() {
+        if (selectedLine && selectedWeightType) {
+            console.log(`Confirmando calibração: Linha ${selectedLine.number}, Tipo: ${selectedWeightType}`);
+            
+            // Envia comando para o PLC
+            const success = await writeCalibrationCommand(selectedLine.number, selectedWeightType);
+            
+            if (success) {
+                // Atualiza estado local
+                const index = lines.findIndex(l => l.number === selectedLine.number);
+                if (index !== -1) {
+                    lines[index].calibrated = true;
+                }
+                
+                console.log(`✅ Calibração de peso ${selectedWeightType === 'min' ? 'mínimo' : 'máximo'} da linha ${selectedLine.number} enviada com sucesso!`);
+            } else {
+                console.error(`❌ Erro ao enviar comando de calibração para linha ${selectedLine.number}. Tente novamente.`);
+            }
+        }
+        
+        // Limpa seleções
+        selectedLine = null;
+        selectedWeightType = null;
+        
         hideModals();
         updateGrid();
     }
@@ -224,9 +325,9 @@ function inicializarBalance() {
         }
     }
 
-    // Função para simular carregamento (para teste)
-    function simulateLoading() {
-        console.log('Iniciando simulação de carregamento...');
+    // Função para iniciar carregamento baseado na tag do PLC
+    function startCalibrationLoading() {
+        console.log('Iniciando carregamento baseado na tag do PLC...');
         toggleLoadingModal(true);
         
         // Aguardar o modal aparecer
@@ -236,12 +337,6 @@ function inicializarBalance() {
             const progressText = document.getElementById('loading-progress-text');
             const progressBar = document.querySelector('.progress-bar');
             
-            console.log('Elementos encontrados:', {
-                progressFill: !!progressFill,
-                progressText: !!progressText,
-                progressBar: !!progressBar
-            });
-            
             if (progressLeft && progressRight) {
                 progressLeft.style.width = '0%';
                 progressRight.style.width = '0%';
@@ -249,30 +344,82 @@ function inicializarBalance() {
             
             if (progressText) {
                 progressText.textContent = '0%';
-                console.log('Texto de progresso inicializado');
             }
             
             if (progressBar) {
                 progressBar.style.opacity = '1';
                 progressBar.style.visibility = 'visible';
                 progressBar.style.display = 'block';
-                console.log('Container da barra inicializado');
             }
         }, 200);
         
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += 0.5;
-            updateProgress(progress);
-            console.log('Progresso:', progress);
-            
-            if (progress >= 10) {
-                clearInterval(interval);
+        // Inicia polling da tag de status
+        startCalibrationStatusPolling();
+    }
+
+    // Função para monitorar status da calibração via PLC
+    function startCalibrationStatusPolling() {
+        const CALIBRATION_STATUS_TAG = 'XLCLASS_DB229_PESAGEM_STATUS_PASSO_CALIBRACAO';
+        let calibrationPollingInterval = null;
+        
+        const pollCalibrationStatus = async () => {
+            try {
+                const res = await fetch(`/api/read_tags?names=${encodeURIComponent(CALIBRATION_STATUS_TAG)}`, { cache: 'no-store' }).then(r=>r.json());
+                if (!res || !res.values) {
+                    console.warn('Falha ao ler status da calibração');
+                    return;
+                }
+                
+                const statusValue = Number(res.values[CALIBRATION_STATUS_TAG] || 0);
+                console.log('Status da calibração:', statusValue);
+                
+                // Verifica se está no intervalo válido (1-9)
+                if (statusValue >= 1 && statusValue <= 9) {
+                    // Calcula porcentagem baseada no valor (1=11%, 9=100%)
+                    const percentage = Math.round((statusValue / 9) * 100);
+                    updateProgress(statusValue); // Usa o valor direto (1-9) para a função updateProgress
+                    console.log(`Calibração em andamento: passo ${statusValue} (${percentage}%)`);
+                    
+                    // Desabilita botões durante o processo
+                    if (calibrationButtonsEnabled) {
+                        calibrationButtonsEnabled = false;
+                        updateGrid();
+                    }
+                } else if (statusValue > 9) {
+                    // Calibração finalizada (valor > 9) - habilita botões
+                    console.log('Calibração finalizada (status > 9) - habilitando botões');
+                    calibrationButtonsEnabled = true;
+                    updateGrid();
+                    
+                    clearInterval(calibrationPollingInterval);
+                    setTimeout(() => {
+                        toggleLoadingModal(false);
+                    }, 500);
+                } else {
+                    // Valor 0 ou inválido - desabilita botões e para o polling
+                    console.log('Calibração não iniciada ou valor inválido - desabilitando botões');
+                    calibrationButtonsEnabled = false;
+                    updateGrid();
+                    
+                    clearInterval(calibrationPollingInterval);
+                    setTimeout(() => {
+                        toggleLoadingModal(false);
+                    }, 500);
+                }
+            } catch (error) {
+                console.error('Erro ao ler status da calibração:', error);
+                clearInterval(calibrationPollingInterval);
                 setTimeout(() => {
                     toggleLoadingModal(false);
                 }, 500);
             }
-        }, 300);
+        };
+        
+        // Inicia polling a cada 500ms
+        calibrationPollingInterval = setInterval(pollCalibrationStatus, 500);
+        
+        // Primeira leitura imediata
+        pollCalibrationStatus();
     }
 
     // Cache para evitar piscar (desabilitado temporariamente para debug)
@@ -353,7 +500,10 @@ function inicializarBalance() {
             const CMD_TAG = 'XLCLASS_DB229_PESAGEM_COMANDO_STATUS';
             const PENDENTE_01 = 'XLCLASS_DB229_PESAGEM_CAL_PENDENTE_01';
             const PENDENTE_02 = 'XLCLASS_DB229_PESAGEM_CAL_PENDENTE_02';
-            const names = `${SPEED_TAG},${CMD_TAG},${PENDENTE_01},${PENDENTE_02}`;
+            // Tags de peso instantâneo das linhas 1..18 => índices 0..17
+            const instantTags = Array.from({ length: 18 }, (_, i) => `XLCLASS_DB229_PESAGEM_INSTANTANEO[${i}]`);
+            const CALIBRATION_STATUS_TAG = 'XLCLASS_DB229_PESAGEM_STATUS_PASSO_CALIBRACAO';
+            const names = `${SPEED_TAG},${CMD_TAG},${PENDENTE_01},${PENDENTE_02},${CALIBRATION_STATUS_TAG},${instantTags.join(',')}`;
             const res = await fetch(`/api/read_tags?names=${encodeURIComponent(names)}`, { cache: 'no-store' }).then(r=>r.json());
             if (!res || !res.ok || !res.values) throw new Error('bad');
             
@@ -362,6 +512,18 @@ function inicializarBalance() {
             const bit8 = ((cmd >> 8) & 1) === 1;
             const pendente01 = Number(res.values[PENDENTE_01] || 0) >>> 0;
             const pendente02 = Number(res.values[PENDENTE_02] || 0) >>> 0;
+            const calibrationStatus = Number(res.values[CALIBRATION_STATUS_TAG] || 0);
+
+            // Atualiza pesos das linhas a partir das tags instantâneas
+            for (let i = 0; i < 18; i++) {
+                const tag = `XLCLASS_DB229_PESAGEM_INSTANTANEO[${i}]`;
+                const val = Number(res.values[tag] ?? 0);
+                if (Number.isFinite(val)) {
+                    lines[i].weight = val;
+                }
+            }
+            // Atualiza UI dos pesos
+            updateWeightSpans();
 
             // Mostra ou oculta o botão conforme velocidade
             const machineStopped = !(Number.isFinite(vReal) && vReal > 0);
@@ -375,8 +537,16 @@ function inicializarBalance() {
             // NUNCA atualiza o estado da calibração via polling - apenas via clique do usuário
             // O estado é controlado 100% pelo usuário
             
-            // Atualiza ícones apenas se calibração desativada
-            if (!calibrationEnabled) {
+            // Controla botões de calibração baseado no status do PLC
+            const newButtonsEnabled = calibrationStatus > 9;
+            if (newButtonsEnabled !== calibrationButtonsEnabled) {
+                calibrationButtonsEnabled = newButtonsEnabled;
+                console.log(`Botões de calibração ${calibrationButtonsEnabled ? 'habilitados' : 'desabilitados'} (status: ${calibrationStatus})`);
+                updateGrid();
+            }
+            
+            // Atualiza ícones apenas se botões de calibração desativados
+            if (!calibrationButtonsEnabled) {
                 updateStatusIcons(pendente01, pendente02);
             }
             
@@ -387,6 +557,82 @@ function inicializarBalance() {
         }
     }
 
+    // ========== Subscrição por tela (ativa drivers só quando a tela está aberta) ==========
+    const clientId = `balance-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    let heartbeatTimer = null;
+
+    function buildSubscribedTags() {
+        const tags = [];
+        // Tags de peso instantâneo das linhas 1..18
+        for (let i = 0; i < 18; i++) {
+            tags.push(`XLCLASS_DB229_PESAGEM_INSTANTANEO[${i}]`);
+        }
+        // Tags de comando e status
+        tags.push('XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_REAL');
+        tags.push('XLCLASS_DB229_PESAGEM_COMANDO_STATUS');
+        tags.push('XLCLASS_DB229_PESAGEM_CAL_PENDENTE_01');
+        tags.push('XLCLASS_DB229_PESAGEM_CAL_PENDENTE_02');
+        tags.push('XLCLASS_DB229_PESAGEM_STATUS_PASSO_CALIBRACAO');
+        return tags;
+    }
+
+    async function subscribeScreen() {
+        try {
+            const res = await fetch('/api/subscribe_tags', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    client_id: clientId, 
+                    tags: buildSubscribedTags(), 
+                    screen_name: 'tela_pesagem' 
+                })
+            });
+            await res.json().catch(() => ({}));
+            startHeartbeat();
+            console.log('✅ Subscrição de tags ativada para tela de balança');
+        } catch (error) {
+            console.error('❌ Erro ao ativar subscrição de tags:', error);
+        }
+    }
+
+    async function unsubscribeScreen() {
+        try {
+            stopHeartbeat();
+            await fetch('/api/unsubscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ client_id: clientId })
+            });
+            console.log('✅ Subscrição de tags desativada para tela de balança');
+        } catch (error) {
+            console.error('❌ Erro ao desativar subscrição de tags:', error);
+        }
+    }
+
+    async function heartbeatScreen() {
+        try {
+            await fetch('/api/heartbeat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ client_id: clientId })
+            });
+        } catch (error) {
+            console.error('❌ Erro no heartbeat:', error);
+        }
+    }
+
+    function startHeartbeat() {
+        if (heartbeatTimer) clearInterval(heartbeatTimer);
+        heartbeatTimer = setInterval(heartbeatScreen, 15000); // 15 segundos
+    }
+
+    function stopHeartbeat() {
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
+    }
+
     // ========== Integração com PLC ==========
     async function connectToPLC() {
         // Primeira leitura imediata
@@ -394,6 +640,9 @@ function inicializarBalance() {
         
         // Inicia polling
         startPolling();
+        
+        // Inicia subscrição
+        subscribeScreen();
     }
 
     // ========== Função de Teste ==========
@@ -522,6 +771,19 @@ function inicializarBalance() {
     
     // Conectar com PLC
     connectToPLC();
+
+    // ========== Controle de Visibilidade da Aba ==========
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            // Aba oculta: para polling e desativa subscrição
+            stopPolling();
+            unsubscribeScreen();
+        } else {
+            // Aba visível: reinicia polling e ativa subscrição
+            startPolling();
+            subscribeScreen();
+        }
+    });
 }
 
 // Torna a função disponível globalmente para ser chamada depois do DOM carregar

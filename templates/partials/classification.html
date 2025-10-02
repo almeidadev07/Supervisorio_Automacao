@@ -11,15 +11,29 @@
     </div>
     
     <div class="control-row">
-        <button id="recipe-btn" class="control-btn recipe-btn" style="width:64px;height:64px;">
-            <img src="{{ url_for('static', filename='images/pages/icons/comandos/botão_elevador_baixo.png') }}" alt="Receita" />
-        </button>
+        <div class="control-left">
+            <button id="recipe-btn" class="control-btn recipe-btn" style="width:64px;height:64px;">
+                <img src="{{ url_for('static', filename='images/pages/icons/comandos/botão_elevador_baixo.png') }}" alt="Receita" />
+            </button>
+
+            <!-- Botão Liga/Desliga (imagens sobrepostas) -->
+            <div id="power-switch" style="position:relative; width:64px; height:64px; margin-left:8px; display:inline-block; vertical-align:top;">
+                <button id="power-btn-on" class="control-btn" title="Ligado" style="position:absolute; left:0; top:0; width:64px; height:64px; padding:0; display:none;">
+                    <img src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado" style="width:64px; height:64px;" />
+                </button>
+                <button id="power-btn-off" class="control-btn" title="Desligado" style="position:absolute; left:0; top:0; width:64px; height:64px; padding:0; display:none;">
+                    <img src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado" style="width:64px; height:64px;" />
+                </button>
+            </div>
+        </div>
         
         <div class="classes-group" id="classes-list"></div>
         
-        <button id="clear-btn" class="control-btn clear-btn" style="width:64px;height:64px;">
-            <img src="{{ url_for('static', filename='images/pages/icons/comandos/botão_lixo.png') }}" alt="Limpar" />
-        </button>
+        <div class="control-right">
+            <button id="clear-btn" class="control-btn clear-btn" style="width:64px;height:64px;">
+                <img src="{{ url_for('static', filename='images/pages/icons/comandos/botão_lixo.png') }}" alt="Limpar" />
+            </button>
+        </div>
     </div>
 </div>
 <!-- Modal para seleção de classe -->
