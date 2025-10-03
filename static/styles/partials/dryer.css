@@ -1,0 +1,285 @@
+.dryer-layout {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: calc(100vh - 140px);
+  padding-top: 40px;
+  color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* mesmo da tela de lavadora */
+  font-weight: 700;
+}
+
+.dryer-layout .units-grid {
+  display: grid;
+  grid-template-columns: repeat(6, max-content);
+  gap: 32px;
+  justify-content: center;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* Primeira linha: 4 colunas (Ventilador 1-4) */
+.dryer-layout .units-grid > *:nth-child(1) {
+  grid-column: 2; /* Ventilador 1 - coluna 2 */
+  grid-row: 1;
+}
+
+.dryer-layout .units-grid > *:nth-child(2) {
+  grid-column: 3; /* Ventilador 2 - coluna 3 */
+  grid-row: 1;
+}
+
+.dryer-layout .units-grid > *:nth-child(3) {
+  grid-column: 4; /* Ventilador 3 - coluna 4 */
+  grid-row: 1;
+}
+
+.dryer-layout .units-grid > *:nth-child(4) {
+  grid-column: 5; /* Ventilador 4 - coluna 5 */
+  grid-row: 1;
+}
+
+/* Segunda linha: 6 colunas (Ventiladores, Ventilador 5-8, Auto Limp.) */
+.dryer-layout .units-grid > *:nth-child(5) {
+  grid-column: 1; /* Ventiladores - coluna 1 */
+  grid-row: 2;
+}
+
+.dryer-layout .units-grid > *:nth-child(6) {
+  grid-column: 2; /* Ventilador 5 - coluna 2 */
+  grid-row: 2;
+}
+
+.dryer-layout .units-grid > *:nth-child(7) {
+  grid-column: 3; /* Ventilador 6 - coluna 3 */
+  grid-row: 2;
+}
+
+.dryer-layout .units-grid > *:nth-child(8) {
+  grid-column: 4; /* Ventilador 7 - coluna 4 */
+  grid-row: 2;
+}
+
+.dryer-layout .units-grid > *:nth-child(9) {
+  grid-column: 5; /* Ventilador 8 - coluna 5 */
+  grid-row: 2;
+}
+
+.dryer-layout .units-grid > *:nth-child(10) {
+  grid-column: 6; /* Auto Limp. Secadora - coluna 6 */
+  grid-row: 2;
+}
+
+.dryer-layout .motor-unit {
+  background: #6a6a6a;
+  padding: 14px 16px 10px 16px;
+  border-radius: 16px; /* mesmo da tela de lavadora */
+  width: 170px;
+  max-width: 350px;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.dryer-layout .motor-unit h3 {
+  font-family: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  text-align: center;
+  color: white;
+}
+
+.dryer-layout .motor-visual {
+  position: relative;
+  width: 110px;
+  height: 90px;
+  margin: 0 auto;
+}
+.dryer-layout .motor-visual img {
+  position: absolute;
+  inset: 0;
+  width: 110px;
+  height: 90px;
+  display: none;
+}
+.dryer-layout .motor-visual .motor-gray { display: block; }
+
+.dryer-layout .controls-row {
+  gap: 1px;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  visibility: hidden;
+  min-height: 90px;
+}
+
+.dryer-layout .power-toggle {
+  position: relative;
+  width: 80px;
+  height: 65px;
+  cursor: pointer;
+}
+
+.dryer-layout .power-toggle img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 80px;
+  height: 65px;
+  object-fit: contain;
+}
+
+.dryer-layout .power-on {
+  display: none;
+}
+
+.dryer-layout .power-off {
+  display: block;
+}
+
+.dryer-layout .direction-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 6px;
+  visibility: hidden;
+}
+.dryer-layout .direction-toggle { position: relative; width: 80px; height: 65px; }
+.dryer-layout .direction-toggle img { position: absolute; inset: 0; width: 80px; height: 65px; }
+
+/* Estilos específicos para Auto Limp. Secadora - igual à lavadora */
+#auto-limp-secadora .motor-visual {
+  position: relative !important;
+  width: 110px !important;
+  height: 90px !important;
+  margin: -10px auto 0 auto !important; /* alinha com os outros motores */
+  display: block !important;
+  align-self: center !important;       /* garante centralização no container */
+}
+
+#auto-limp-secadora .motor-visual img {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 110px !important;
+  height: 110px !important; /* mesmo tamanho dos outros boxes */
+  object-fit: contain !important;
+}
+
+#auto-limp-secadora .controls-row {
+  gap: 1px !important;
+  margin-top: 5px !important;        /* espaço reduzido entre motor e botões */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important; /* centraliza os botões na base */
+  width: 100% !important;
+  visibility: hidden;                 /* evita flash fora de posição mantendo espaço */
+  min-height: 90px !important;        /* igual aos aquecedores para alinhar a linha de botões */
+}
+
+#auto-limp-secadora .mode-toggle {
+  position: relative !important;
+  width: 80px !important;
+  height: 65px !important;
+  cursor: pointer !important;
+}
+
+#auto-limp-secadora .mode-toggle img {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 80px !important;
+  height: 65px !important;
+  object-fit: contain !important;
+}
+
+#auto-limp-secadora .power-toggle {
+  position: relative !important;
+  width: 80px !important;
+  height: 65px !important;
+  cursor: pointer !important;
+}
+
+#auto-limp-secadora .power-toggle img {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 80px !important;
+  height: 65px !important;
+  object-fit: contain !important;
+}
+
+#auto-limp-secadora .direction-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  margin-top: 2px !important;         /* reduz espaço entre botões */
+  visibility: hidden;                 /* evita flash fora de posição */
+}
+
+#auto-limp-secadora .direction-toggle {
+  position: relative !important;
+  width: 80px !important;
+  height: 65px !important;
+  cursor: pointer !important;
+}
+
+#auto-limp-secadora .direction-toggle img {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 80px !important;
+  height: 65px !important;
+  object-fit: contain !important;
+}
+
+/* Estilos específicos para Ventiladores - sem motor, apenas botão */
+#ventiladores {
+  width: 170px !important; /* Largura aumentada */
+  height: 140px;
+  max-width: 170px !important;
+  min-height: 50px !important; /* Altura aumentada */
+  padding: 12px 14px 8px 14px !important; /* Padding aumentado */
+}
+
+#ventiladores h3 {
+  font-size: 20px !important; /* Fonte menor */
+  margin-bottom: 8px !important; /* Espaço muito reduzido entre texto e botão */
+}
+
+#ventiladores .motor-visual {
+  display: none !important; /* Remove o motor */
+}
+
+#ventiladores .controls-row {
+  margin-top: 5px !important; /* Espaço reduzido entre texto e botão */
+  visibility: hidden; /* evita flash fora de posição */
+  min-height: 70px !important; /* Altura reduzida para botão */
+  display: flex !important;
+  justify-content: center !important; /* Centraliza o botão no eixo X */
+  align-items: center !important;
+  width: 100% !important;
+}
+
+#ventiladores .power-toggle {
+  width: 80px !important; /* Mesmo tamanho dos outros botões */
+  height: 65px !important;
+  position: relative !important;
+}
+
+#ventiladores .power-toggle img {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 80px !important;
+  height: 65px !important;
+  object-fit: contain !important;
+}
+

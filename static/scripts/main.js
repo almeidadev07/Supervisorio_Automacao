@@ -54,6 +54,7 @@ function hideAllContainers() {
         'classification-container',
         'input-container',
         'washer-container',
+        'dryer-container',
         'windows-container', // Adicionar windows-container
         'diagram-container'
     ];
@@ -211,6 +212,30 @@ function showWasher(event) {
     }
 }
 
+// ✅ Exibe a tela da secadora
+function showDryer(event) {
+    hideAllContainers();
+    const dryerContainer = document.getElementById('dryer-container');
+    if (dryerContainer) {
+        dryerContainer.style.display = 'block';
+    }
+
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
+
+    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+    if (event?.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+
+    if (typeof window.inicializarDryer === 'function' && !window.dryerInitialized) {
+        console.log('🔧 Inicializando sistema Dryer...');
+        window.inicializarDryer();
+        window.dryerInitialized = true;
+    }
+}
+
 // Função para exibir a tela de diagramas
 function showDiagram(event) {
     hideAllContainers();
@@ -273,6 +298,7 @@ Promise.all([
     loadScript('/static/scripts/partials/login.js'),  // Caminho atualizado para partials
     loadScript('/static/scripts/partials/input.js'),  // Caminho atualizado para partials
     loadScript('/static/scripts/partials/washer.js'), // ✅ Script da lavadora
+    loadScript('/static/scripts/partials/dryer.js'), // ✅ Script da secadora
     loadScript('/static/scripts/partials/diagram.js'), 
     loadScript('/static/scripts/partials/windows.js') 
 
@@ -334,6 +360,7 @@ window.showBalance = showBalance;
 window.showClassification = showClassification;
 window.showInput = showInput;
 window.showWasher = showWasher; // ✅ Exportação global da função da lavadora
+window.showDryer = showDryer;   // ✅ Exportação global da função da secadora
 window.showDiagram = showDiagram;
 window.showWindows = showWindows;
 document.addEventListener('DOMContentLoaded', function() {
@@ -347,5 +374,6 @@ window.showBalance = showBalance;
 window.showClassification = showClassification;
 window.showInput = showInput;
 window.showWasher = showWasher; // ✅ Exportação global da função da lavadora
+window.showDryer = showDryer;   // ✅ Exportação global da função da secadora
 window.showDiagram = showDiagram;
 window.showWindows = showWindows;

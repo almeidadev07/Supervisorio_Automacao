@@ -49,6 +49,10 @@
                     {% include 'partials/washer.html' %}
                 </div>
 
+                <div id="dryer-container" class="container" style="display: none;">
+                    {% include 'partials/dryer.html' %}
+                </div>
+
                 <!-- Diagrama -->
                 <div id="diagram-container" style="display: none;">
                     {% include 'partials/diagram.html' %}
@@ -100,5 +104,7 @@
     <script src="{{ url_for('static', filename='scripts/machine_select.js') }}" defer></script>
     <script src="{{ url_for('static', filename='scripts/recipe_loader.js') }}" defer></script>
     <script src="{{ url_for('static', filename='scripts/main.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/dryer.css') }}">
+    <script src="{{ url_for('static', filename='scripts/partials/dryer.js') }}" defer></script>
 </body>
 </html>
