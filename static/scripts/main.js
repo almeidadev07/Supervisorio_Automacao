@@ -363,17 +363,5 @@ window.showWasher = showWasher; // ✅ Exportação global da função da lavado
 window.showDryer = showDryer;   // ✅ Exportação global da função da secadora
 window.showDiagram = showDiagram;
 window.showWindows = showWindows;
-document.addEventListener('DOMContentLoaded', function() {
-    showGrid(); // Ensure the grid is displayed correctly on initial load
-});
-// Exporta funções para o escopo global
-window.showGrid = showGrid;
-window.showAlarm = showAlarm;
-window.showWeightRange = showWeightRange;
-window.showBalance = showBalance;
-window.showClassification = showClassification;
-window.showInput = showInput;
-window.showWasher = showWasher; // ✅ Exportação global da função da lavadora
-window.showDryer = showDryer;   // ✅ Exportação global da função da secadora
-window.showDiagram = showDiagram;
-window.showWindows = showWindows;
+
+

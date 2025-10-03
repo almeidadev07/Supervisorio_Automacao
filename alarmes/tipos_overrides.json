@@ -321,6 +321,24 @@
     "14": "nr12",
     "15": "emergency"
   },
+  "XLCLASS_DB104_INFO_DISPOSITIVOS_MODULO_ERRO_EMB15_EMB30_INTERNO": {
+    "0": "hardware",
+    "1": "hardware",
+    "2": "hardware",
+    "3": "hardware",
+    "4": "hardware",
+    "5": "hardware",
+    "6": "hardware",
+    "7": "hardware",
+    "8": "hardware",
+    "9": "hardware",
+    "10": "hardware",
+    "11": "hardware",
+    "12": "hardware",
+    "13": "hardware",
+    "14": "hardware",
+    "15": "hardware"
+  },
   "XLCLASS_DB104_INFO_DISPOSITIVOS_RMT_DESCONEC_EMB15_EMB30_INTERNO": {
     "0": "hardware",
     "1": "hardware",
@@ -356,24 +374,6 @@
     "13": "nr12",
     "14": "nr12",
     "15": "emergency"
-  },
-  "XLCLASS_DB104_INFO_DISPOSITIVOS_MODULO_ERRO_EMB15_EMB30_INTERNO": {
-    "0": "hardware",
-    "1": "hardware",
-    "2": "hardware",
-    "3": "hardware",
-    "4": "hardware",
-    "5": "hardware",
-    "6": "hardware",
-    "7": "hardware",
-    "8": "hardware",
-    "9": "hardware",
-    "10": "hardware",
-    "11": "hardware",
-    "12": "hardware",
-    "13": "hardware",
-    "14": "hardware",
-    "15": "hardware"
   },
   "XLCLASS_DB04_PRINCIPAL_EMERG_EMB16": {
     "0": "emergency",

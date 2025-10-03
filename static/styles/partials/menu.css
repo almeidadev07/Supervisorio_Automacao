@@ -27,6 +27,22 @@
     z-index: 1000;
 }
 
+/* Garantir que o logo sempre fique centralizado */
+.logo-btn {
+    order: 0; /* Logo sempre no meio */
+    flex-shrink: 0;
+}
+
+/* Grupos de menu esquerdo */
+.menu-left {
+    order: -1; /* Sempre à esquerda do logo */
+}
+
+/* Grupos de menu direito */
+.menu-right {
+    order: 1; /* Sempre à direita do logo */
+}
+
 /* Estado inicial - menu fechado (todos os botões no centro) */
 #menu.closed {
     transform: translateX(-50%) scale(0.9);
@@ -165,6 +181,23 @@
 /* Estado selecionado - apenas o botão clicado fica vermelho escuro */
 .menu-btn.selected::before {
     background: #7f1d1d; /* Vermelho escuro para botão selecionado */
+}
+
+/* Estilos específicos para botões do menu técnico */
+.menu-btn-tecnico::before {
+    background: #374151; /* Cinza escuro para botões técnicos */
+}
+
+.menu-btn-tecnico:hover::before {
+    background: #1f2937; /* Cinza mais escuro no hover */
+}
+
+.menu-btn-tecnico:active::before {
+    background: #111827; /* Cinza muito escuro no active */
+}
+
+.menu-btn-tecnico.selected::before {
+    background: #1f2937; /* Cinza escuro para botão técnico selecionado */
 }
 
 .menu-btn.zoomed {

@@ -6,8 +6,7 @@ const users = {
     }
 };
 
-let inactivityTimeout;
-const TIMEOUT_DURATION = 5000; // 5 segundos
+// Removido: logout automático por inatividade
 
 let currentUser = {
     username: 'operator',
@@ -15,10 +14,7 @@ let currentUser = {
     displayName: 'Operador'
 };
 
-function resetInactivityTimer() {
-    clearTimeout(inactivityTimeout);
-    inactivityTimeout = setTimeout(handleLogout, TIMEOUT_DURATION);
-}
+// Removido: função de reset de timer de inatividade
 
 function handleLogin(event) {
     event.preventDefault();
@@ -34,7 +30,6 @@ function handleLogin(event) {
         hideLoginModal();
         updateUIByRole();
         updateUserDisplay();
-        resetInactivityTimer();
     } else {
         alert('Usuário ou senha inválidos!');
     }
@@ -76,6 +71,26 @@ function updateUIByRole() {
     adminButtons.forEach(btn => {
         btn.style.display = currentUser.role === 'administrator' ? 'block' : 'none';
     });
+    
+    // Controlar visibilidade dos menus baseado no tipo de usuário
+    const menuOperadorLeft = document.getElementById('menu-operador-left');
+    const menuOperadorRight = document.getElementById('menu-operador');
+    const menuTecnicoLeft = document.getElementById('menu-tecnico-left');
+    const menuTecnicoRight = document.getElementById('menu-tecnico-right');
+    
+    if (currentUser.role === 'Tec') {
+        // Usuário técnico: mostrar apenas menus técnicos, esconder menu operador
+        if (menuOperadorLeft) menuOperadorLeft.style.display = 'none';
+        if (menuOperadorRight) menuOperadorRight.style.display = 'none';
+        if (menuTecnicoLeft) menuTecnicoLeft.style.display = 'flex';
+        if (menuTecnicoRight) menuTecnicoRight.style.display = 'flex';
+    } else {
+        // Usuário operador: mostrar menu esquerdo e operador, esconder menus técnicos
+        if (menuOperadorLeft) menuOperadorLeft.style.display = 'flex';
+        if (menuOperadorRight) menuOperadorRight.style.display = 'flex';
+        if (menuTecnicoLeft) menuTecnicoLeft.style.display = 'none';
+        if (menuTecnicoRight) menuTecnicoRight.style.display = 'none';
+    }
 }
 
 function isAdmin() {
@@ -109,10 +124,7 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// Inicializar monitoramento de atividade
-document.addEventListener('mousemove', resetInactivityTimer);
-document.addEventListener('keypress', resetInactivityTimer);
-document.addEventListener('click', resetInactivityTimer);
+// Removido: monitoramento de atividade para logout automático
 
 // Atualizar display do usuário na inicialização
 document.addEventListener('DOMContentLoaded', function() {
