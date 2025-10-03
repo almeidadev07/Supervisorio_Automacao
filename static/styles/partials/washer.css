@@ -9,6 +9,9 @@
   padding: 20px;
   min-height: calc(90vh - 80px); /* centraliza considerando altura aproximada do menu */
   justify-content: center; /* centraliza verticalmente */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* mesmo da tela de classificação */
+  font-weight: 700;
+  color: #ffffff;
 }
 
 #washer-container .container {
@@ -154,10 +157,11 @@
 }
 
 .motor-unit h3 {
+  font-family: inherit;
   font-size: 1.25rem;
   margin-bottom: 56px; /* mais espaço abaixo do título */
-  color: #e6edf3;
-  font-weight: 600;
+  color: inherit;
+  font-weight: inherit;
 }
 
 /* Espaços verticais e tamanhos maiores para ícones e botões do Sugador */
@@ -182,11 +186,141 @@
   justify-content: center !important; /* centraliza os botões na base */
   width: 100% !important;
   visibility: hidden;                 /* evita flash fora de posição mantendo espaço */
+  min-height: 90px !important;        /* igual aos aquecedores para alinhar a linha de botões */
+}
+
+/* Estilos para o Auto Limp. Lavadora - igual ao Sugador de Gotas */
+#auto-limpeza .motor-visual {
+  position: relative !important;
+  width: 120px !important;
+  height: 100px !important;
+  margin: -27px auto 0 auto !important; /* sobe o motor, reduz espaço do texto */
+  display: block !important;
+  align-self: center !important;       /* garante centralização no container */
+}
+
+#auto-limpeza .motor-visual img {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 120px !important;
+  height: 100px !important; /* mesmo tamanho dos outros boxes */
+  object-fit: contain !important;
+}
+
+#auto-limpeza .controls-row {
+  gap: 1px !important;
+  margin-top: auto !important;        /* empurra para a parte de baixo do box */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important; /* centraliza os botões na base */
+  width: 100% !important;
+  visibility: hidden;                 /* evita flash fora de posição mantendo espaço */
+  min-height: 90px !important;        /* igual aos aquecedores para alinhar a linha de botões */
+}
+
+#auto-limpeza .controls-row img {
+  width: 90px !important;
+  height: 75px !important; /* botões mais largos/altos */
+}
+
+/* Estilos para o botão de direção do Auto Limp. Lavadora */
+#auto-limpeza .direction-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  margin-top: 2px !important;         /* reduz espaço entre botões */
+  visibility: hidden;                 /* evita flash fora de posição */
+}
+
+#auto-limpeza .direction-toggle {
+  position: relative !important;
+  width: 90px !important;
+  height: 75px !important;
+  cursor: pointer !important;
+}
+
+#auto-limpeza .direction-toggle img {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 90px !important;
+  height: 75px !important;
+  object-fit: contain !important;
+}
+
+#auto-limpeza .direction-anti {
+  display: block !important;
+}
+
+#auto-limpeza .direction-horario {
+  display: none !important;
 }
 
 #sugador-gotas .controls-row img {
   width: 90px !important;
   height: 75px !important; /* botões mais largos/altos */
+}
+
+/* ========== Aquecedor 1: mesmos tamanhos e anti-flash ========== */
+#aquecedor-1 .motor-visual {
+  margin: 0 auto !important;
+  width: 120px !important;
+  height: 120px !important;
+  display: block !important;
+  align-self: center !important;
+}
+
+#aquecedor-1 .motor-visual img {
+  width: 120px !important;
+  height: 100px !important;
+}
+
+#aquecedor-1 .controls-row {
+  gap: 1px !important;
+  margin-top: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  visibility: hidden; /* oculta até primeiro render JS para evitar flash */
+  min-height: 90px !important; /* reserva área para não pular */
+}
+
+#aquecedor-1 .controls-row img {
+  width: 90px !important;
+  height: 75px !important;
+}
+
+/* ========== Aquecedor 2: espelha Aquecedor 1 ========== */
+#aquecedor-2 .motor-visual {
+  margin: 0 auto !important;
+  width: 120px !important;
+  height: 120px !important;
+  display: block !important;
+  align-self: center !important;
+}
+
+#aquecedor-2 .motor-visual img {
+  width: 120px !important;
+  height: 100px !important;
+}
+
+#aquecedor-2 .controls-row {
+  gap: 1px !important;
+  margin-top: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  visibility: hidden; /* oculta até primeiro render JS para evitar flash */
+  min-height: 90px !important; /* reserva área para não pular */
+}
+
+#aquecedor-2 .controls-row img {
+  width: 90px !important;
+  height: 75px !important;
 }
 
 .motor-icon {
