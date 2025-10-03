@@ -4,9 +4,11 @@
   display: flex;
   flex-direction: column;
   gap: 30px;
-  max-width: 1000px;
-  margin: auto;
+  max-width: 1400px;
+  margin: 0 auto;
   padding: 20px;
+  min-height: calc(90vh - 80px); /* centraliza considerando altura aproximada do menu */
+  justify-content: center; /* centraliza verticalmente */
 }
 
 #washer-container .container {
@@ -128,49 +130,92 @@
 /* Estilos para a parte dos motores (mantidos do original) */
 .units-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(4, max-content);
+  gap: 32px;
+  align-items: stretch;
+  justify-items: center;
+  justify-content: center; /* centraliza o conjunto no eixo horizontal */
 }
 
 .motor-unit {
-  background: #fff;
-  border-radius: 12px;
-  padding: 15px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  background: #6a6a6a; /* cinza médio solicitado */
+  border-radius: 16px;
+  padding: 20px 18px 26px; /* mais respiro interno */
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35);
   text-align: center;
+  border: 1px solid rgba(255,255,255,0.06);
+  width: 180px; /* mantém largura compacta */
+  max-width: 380px;
+  min-height: 320px; /* aumenta altura do box */
+  display: flex;              /* layout interno em coluna */
+  flex-direction: column;
+  justify-content: flex-start; /* fluxo natural; uso de auto margins para posicionar */
+  align-items: center;        /* centraliza horizontalmente */
 }
 
 .motor-unit h3 {
-  font-size: 1rem;
-  margin-bottom: 10px;
-  color: #333;
+  font-size: 1.25rem;
+  margin-bottom: 56px; /* mais espaço abaixo do título */
+  color: #e6edf3;
+  font-weight: 600;
+}
+
+/* Espaços verticais e tamanhos maiores para ícones e botões do Sugador */
+#sugador-gotas .motor-visual {
+  margin: 0 auto !important;           /* centraliza horizontalmente */
+  width: 120px !important;             /* sobrepõe inline style do HTML */
+  height: 120px !important;            /* dá mais área para centralização visual */
+  display: block !important;
+  align-self: center !important;       /* garante centralização no container */
+}
+
+#sugador-gotas .motor-visual img {
+  width: 120px !important;
+  height: 100px !important; /* ícone do motor maior */
+}
+
+#sugador-gotas .controls-row {
+  gap: 1px !important;
+  margin-top: auto !important;        /* empurra para a parte de baixo do box */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important; /* centraliza os botões na base */
+  width: 100% !important;
+  visibility: hidden;                 /* evita flash fora de posição mantendo espaço */
+}
+
+#sugador-gotas .controls-row img {
+  width: 90px !important;
+  height: 75px !important; /* botões mais largos/altos */
 }
 
 .motor-icon {
-  width: 50px;
-  height: 50px;
-  background: #ddd;
-  margin: 0 auto 10px;
-  border-radius: 4px;
+  width: 60px;
+  height: 94px;
+  background: linear-gradient(180deg, #1b2436 0%, #101828 100%);
+  margin: 0 auto 12px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 28px;
+  color: #9fb3c8;
+  border: 1px solid rgba(255,255,255,0.06);
 }
 
 .btn-group {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .btn {
-  width: 36px;
-  height: 36px;
+  width: 64px;
+  height: 54px;
   border: none;
-  border-radius: 8px;
-  background: #eee;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #1f2a44 0%, #162036 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -178,17 +223,18 @@
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
+  color: #e6edf3;
+  border: 1px solid rgba(255,255,255,0.06);
 }
 
 .btn:hover {
-  transform: scale(1.05);
-  filter: brightness(1.1);
+  transform: translateY(-1px);
+  filter: brightness(1.06);
 }
 
 .btn.active {
-  box-shadow: 0 0 10px rgba(255,255,255,0.8), inset 0 0 0 3px rgba(255,255,255,0.6);
-  filter: brightness(1.2);
-  transform: scale(1.1);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.12) inset, 0 6px 18px rgba(16,24,40,0.6);
+  filter: brightness(1.1);
 }
 
 .btn.hand { 

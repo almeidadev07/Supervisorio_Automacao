@@ -4,6 +4,7 @@ function inicializarBalance() {
     // Estado
     let calibrationEnabled = false; // Controlado pelo usuário (botão toggle)
     let calibrationButtonsEnabled = false; // Controlado pela tag do PLC (status > 9)
+    let plcConnected = false; // Status da comunicação com o PLC
     let selectedLine = null;
     let selectedWeightType = null; // 'min' ou 'max'
     let lastToggleTime = 0; // Timestamp do último toggle manual
@@ -32,7 +33,7 @@ function inicializarBalance() {
             card.className = 'balance-card';
             card.innerHTML = `
                 <h3>Linha ${line.number}</h3>
-                <span class="weight-value">${Number(line.weight || 0)} g</span>
+                <span class="weight-value">${plcConnected ? `${Number(line.weight || 0)} g` : '### g'}</span>
                 <div class="calibrate-actions" style="height: 90px;">
                     <button class="calibrate-btn" data-line="${line.number}" style="visibility:${calibrationButtonsEnabled ? 'visible' : 'hidden'};" ${calibrationButtonsEnabled ? '' : 'tabindex="-1" aria-hidden="true"'}>
                         <img src="/static/images/pages/icons/comandos/01%20-%20Bot%C3%A3o_Calibrar.png" alt="Calibrar" />
@@ -70,8 +71,14 @@ function inicializarBalance() {
         document.querySelectorAll('.balance-card').forEach((card, idx) => {
             const span = card.querySelector('.weight-value');
             if (!span) return;
-            const w = Number(lines[idx]?.weight || 0);
-            span.textContent = `${w} g`;
+            
+            if (plcConnected) {
+                const w = Number(lines[idx]?.weight || 0);
+                // Só mostra valor se for um número válido e diferente de 0, ou se for 0 mas com conexão confirmada
+                span.textContent = `${w} g`;
+            } else {
+                span.textContent = '### g';
+            }
         });
     }
 
@@ -79,7 +86,14 @@ function inicializarBalance() {
     function showWeightModal(line) {
         selectedLine = line;
         document.getElementById('modal-line-number').textContent = line.number;
-        document.getElementById('modal-current-value').textContent = line.weight;
+        
+        if (plcConnected) {
+            const w = Number(line.weight || 0);
+            document.getElementById('modal-current-value').textContent = w;
+        } else {
+            document.getElementById('modal-current-value').textContent = '###';
+        }
+        
         weightModal.style.display = 'flex';
     }
 
@@ -515,13 +529,30 @@ function inicializarBalance() {
             const calibrationStatus = Number(res.values[CALIBRATION_STATUS_TAG] || 0);
 
             // Atualiza pesos das linhas a partir das tags instantâneas
+            let validValuesCount = 0;
             for (let i = 0; i < 18; i++) {
                 const tag = `XLCLASS_DB229_PESAGEM_INSTANTANEO[${i}]`;
-                const val = Number(res.values[tag] ?? 0);
+                const hasTag = res.values && Object.prototype.hasOwnProperty.call(res.values, tag);
+                if (!hasTag) {
+                    continue; // não sobrescreve peso com 0 quando não há dado
+                }
+                const raw = res.values[tag];
+                const val = Number(raw);
                 if (Number.isFinite(val)) {
                     lines[i].weight = val;
+                    validValuesCount++;
                 }
             }
+            
+            // Só marca como conectado se conseguiu ler pelo menos algumas tags válidas
+            const wasConnected = plcConnected;
+            plcConnected = validValuesCount > 0;
+            
+            // Log de mudança de estado
+            if (wasConnected !== plcConnected) {
+                console.log(`Status de conexão mudou: ${wasConnected ? 'conectado' : 'desconectado'} -> ${plcConnected ? 'conectado' : 'desconectado'} (${validValuesCount} valores válidos)`);
+            }
+            
             // Atualiza UI dos pesos
             updateWeightSpans();
 
@@ -552,6 +583,10 @@ function inicializarBalance() {
             
         } catch(e) {
             console.error('Erro na leitura do PLC:', e);
+            // Marca como desconectado em caso de erro
+            plcConnected = false;
+            updateWeightSpans(); // Atualiza para mostrar ###
+            
             // Em falha, oculta visualmente mantendo o espaço
             if (toggleBtn) toggleBtn.style.visibility = 'hidden';
         }
@@ -712,6 +747,7 @@ function inicializarBalance() {
     }
 
     // Inicialização inicial da grid
+    plcConnected = false; // Inicia como desconectado
     updateGrid();
     
     // Botão de teste removido (funcionando corretamente)

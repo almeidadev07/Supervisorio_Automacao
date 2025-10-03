@@ -1,60 +1,39 @@
 <!-- partials/washer.html - Versão Corrigida -->
 <div class="washer-layout">
-    <div class="container" id="washer-container">
-        <!-- Acumuladora -->
-        <div class="unit">
-            <h2>Acumuladora</h2>
-            <div class="jog-switch">
-                <input type="checkbox" id="jog1" class="toggle"/>
-                <label for="jog1">Jog</label>
-            </div>
-            <div class="gauge-container">
-                <div class="gauge" id="gauge1">
-                    <span id="gaugeVal1">0%</span>
-                </div>
-                <div class="slider-wrapper">
-                    <input type="range" min="0" max="100" value="0" class="slider" id="slider1"/>
-                    <div class="limite">Limitação: <span id="limite1">0%</span></div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Removido: container da Acumuladora -->
     
     <!-- Parte de baixo - Motores -->
     <div class="units-grid">
-        <div class="motor-unit">
+        <div class="motor-unit" id="sugador-gotas">
             <h3>Sugador de Gotas</h3>
-            <div class="motor-icon">🔧</div>
-            <div class="btn-group">
-                <button class="btn hand" title="Jog Manual">✋</button>
-                <button class="btn power" title="Ligar/Desligar">⏻</button>
+            <div class="motor-visual" style="position:relative; width:84px; height:84px; margin:8px auto;">
+                <img class="motor-gray" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Motor Cinza.png') }}" alt="Motor Cinza" style="position:absolute; inset:0; width:84px; height:84px; display:block;" />
+                <img class="motor-green" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Motor Verde.png') }}" alt="Motor Verde" style="position:absolute; inset:0; width:84px; height:84px; display:none;" />
+                <img class="motor-blue" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Motor Azul.png') }}" alt="Motor Azul" style="position:absolute; inset:0; width:84px; height:84px; display:none;" />
+                <img class="motor-red" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Motor Vermelho.png') }}" alt="Motor Vermelho" style="position:absolute; inset:0; width:84px; height:84px; display:none;" />
+            </div>
+            <div class="controls-row">
+                <div class="mode-toggle">
+                    <img class="mode-auto" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Auto.png') }}" alt="Auto" />
+                    <img class="mode-manual" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Manual.png') }}" alt="Manual" />
+                </div>
+                <div class="power-toggle">
+                    <img class="power-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado" />
+                    <img class="power-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado" />
+                </div>
             </div>
         </div>
 
-        <div class="motor-unit">
+        <div class="motor-unit" id="aquecedor-1">
             <h3>Aquecedor 1</h3>
-            <div class="motor-icon">🔥</div>
-            <div class="btn-group">
-                <button class="btn power" title="Ligar/Desligar">⏻</button>
-            </div>
         </div>
 
-        <div class="motor-unit">
+        <div class="motor-unit" id="aquecedor-2">
             <h3>Aquecedor 2</h3>
-            <div class="motor-icon">🔥</div>
-            <div class="btn-group">
-                <button class="btn power" title="Ligar/Desligar">⏻</button>
-            </div>
         </div>
 
-        <div class="motor-unit">
+        <div class="motor-unit" id="auto-limpeza">
             <h3>Auto Limp. Lavadora</h3>
-            <div class="motor-icon">🧽</div>
-            <div class="btn-group">
-                <button class="btn hand" title="Jog Manual">✋</button>
-                <button class="btn power" title="Ligar/Desligar">⏻</button>
-                <button class="btn timer" title="Timer">⏱️</button>
-            </div>
         </div>
     </div>
 </div>
