@@ -1,0 +1,44 @@
+<!-- Tela de Gráficos -->
+<div class="graphics-container">
+    <div class="graphics-header">
+        <h1>Gráficos de Produção</h1>
+        <div class="graphics-controls">
+            <button id="btn-refresh-graphics" class="control-btn">
+                <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Relatorio.png') }}" alt="Atualizar">
+                Atualizar
+            </button>
+            <button id="btn-export-graphics" class="control-btn">
+                <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Relatorio.png') }}" alt="Exportar">
+                Exportar
+            </button>
+        </div>
+    </div>
+    
+    <div class="graphics-content">
+        <div class="chart-container">
+            <canvas id="classesChart" width="800" height="400"></canvas>
+        </div>
+        
+        <div class="chart-legend">
+            <div class="legend-item">
+                <div class="legend-color real-flow"></div>
+                <span>Fluxo Real</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color programmed-flow"></div>
+                <span>Fluxo Programado</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="graphics-info">
+        <div class="info-item">
+            <span class="info-label">Última atualização:</span>
+            <span class="info-value" id="last-update">--:--:--</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Total de ovos:</span>
+            <span class="info-value" id="total-eggs">0</span>
+        </div>
+    </div>
+</div>

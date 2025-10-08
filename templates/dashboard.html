@@ -63,6 +63,11 @@
                     {% include 'partials/windows.html' %}
                 </div>
                 
+                <!-- Graphics container -->
+                <div id="graphics-container" class="container" style="display: none;">
+                    {% include 'partials/graphics.html' %}
+                </div>
+                
                 <!-- Componentes de interface -->
                 {% include 'partials/virtual_keyboard.html' %}
             </div>
@@ -106,5 +111,6 @@
     <script src="{{ url_for('static', filename='scripts/main.js') }}" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/dryer.css') }}">
     <script src="{{ url_for('static', filename='scripts/partials/dryer.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/graphics.css') }}">
 </body>
 </html>

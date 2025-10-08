@@ -1,5 +1,6 @@
 # app/__init__.py
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
+from datetime import datetime, timezone
 from flask_socketio import SocketIO
 import json
 import os
@@ -112,6 +113,24 @@ def create_app():
     @app.route('/')
     def index():
         return render_template('dashboard.html')
+
+    # Endpoint simples para hora do servidor (Windows/local)
+    @app.route('/api/time', methods=['GET'])
+    def server_time():
+        try:
+            # Usa timezone local do sistema e retorna ISO 8601 com offset
+            now = datetime.now().astimezone()
+            return now.isoformat()
+        except Exception as e:
+            # Fallback robusto
+            try:
+                now = datetime.now(timezone.utc)
+                return now.isoformat()
+            except Exception:
+                return jsonify({
+                    'error': 'failed to get time',
+                    'message': str(e)
+                }), 500
     
     return app, socketio
 

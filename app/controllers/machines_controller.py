@@ -259,6 +259,112 @@ def write_tags():
         logger.error(f"Erro ao escrever tags: {e}")
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+@machines_bp.route('/write_word_bit', methods=['POST'])
+def write_word_bit():
+    """Escreve um bit específico dentro de uma tag WORD com read-modify-write.
+    Payload: { "name": "TAG_WORD", "bit": 0-15, "mode": "set"|"clear"|"pulse"|"toggle"|"state", "pulse_ms": optional, "value": 0|1 }
+    """
+    try:
+        payload = request.json or {}
+        name = payload.get('name')
+        bit = int(payload.get('bit', -1))
+        mode = (payload.get('mode') or 'set').lower()
+        pulse_ms = int(payload.get('pulse_ms', 200))
+        pure = bool(payload.get('pure', False))  # se True, escreve somente o bit (0..1<<bit), ignorando outros
+        no_clear = bool(payload.get('no_clear', False))  # se True em pulse, não limpa após setar
+
+        if not name or bit < 0 or bit > 15:
+            return jsonify({'ok': False, 'error': 'Parâmetros inválidos (name e bit 0..15 obrigatórios)'}), 400
+
+        cfg = current_app.plc_controller.active_config
+        if not cfg:
+            return jsonify({'ok': False, 'error': 'No machine selected'}), 400
+
+        # Valida no comm_map e tipo WORD
+        machine = cfg.get('name')
+        comm_map = (current_app.comm_map or {}).get(machine, [])
+        tag_def = next((t for t in comm_map if isinstance(t, dict) and t.get('name') == name), None)
+        if not tag_def:
+            return jsonify({'ok': False, 'error': f'Tag {name} não encontrada no comm_map'}), 400
+        if (tag_def.get('type') or '').upper() != 'WORD':
+            return jsonify({'ok': False, 'error': f'Tag {name} não é WORD'}), 400
+
+        # Lê valor atual somente quando necessário
+        need_read = not (pure and mode in ('set', 'clear'))
+        if need_read:
+            values = current_app.plc_controller.read_tags([name]) or {}
+            if name not in values or values[name] is None:
+                return jsonify({'ok': False, 'error': 'Falha ao ler valor atual'}), 500
+            word = int(values[name]) & 0xFFFF
+        else:
+            word = 0
+
+        def do_write(new_word: int) -> bool:
+            return current_app.plc_controller.write_tags({ name: int(new_word) })
+
+        if mode == 'set':
+            new_word = ((1 << bit) & 0xFFFF) if pure else ((word | (1 << bit)) & 0xFFFF)
+            ok = do_write(new_word)
+            return jsonify({'ok': bool(ok), 'written': new_word}) if ok else (jsonify({'ok': False, 'error': 'Falha ao escrever WORD'}), 500)
+        elif mode == 'clear':
+            new_word = 0 if pure else ((word & ~(1 << bit)) & 0xFFFF)
+            ok = do_write(new_word)
+            return jsonify({'ok': bool(ok), 'written': new_word}) if ok else (jsonify({'ok': False, 'error': 'Falha ao escrever WORD'}), 500)
+        elif mode == 'pulse':
+            set_word = ((1 << bit) & 0xFFFF) if pure else ((word | (1 << bit)) & 0xFFFF)
+            ok1 = do_write(set_word)
+            if not ok1:
+                return jsonify({'ok': False, 'error': 'Falha ao setar bit'}), 500
+            if no_clear:
+                return jsonify({'ok': True, 'set_word': set_word, 'cleared': False})
+            import time as _t
+            _t.sleep(max(0, pulse_ms) / 1000.0)
+            clear_word = (set_word & ~(1 << bit)) & 0xFFFF
+            ok2 = do_write(clear_word)
+            if not ok2:
+                return jsonify({'ok': False, 'error': 'Falha ao limpar bit após pulso'}), 500
+            return jsonify({'ok': True, 'set_word': set_word, 'clear_word': clear_word})
+        elif mode == 'toggle':
+            # Inverte o bit e escreve (pure=True escreve só o bit como 0/1 absoluto)
+            current_on = ((word >> bit) & 1) == 1
+            if pure:
+                new_word = (1 << bit) if (not current_on) else 0
+            else:
+                if current_on:
+                    new_word = (word & ~(1 << bit)) & 0xFFFF
+                else:
+                    new_word = (word | (1 << bit)) & 0xFFFF
+            ok = do_write(new_word)
+            if not ok:
+                return jsonify({'ok': False, 'error': 'Falha ao escrever WORD no toggle'}), 500
+            new_on = 1 if ((new_word >> bit) & 1) == 1 else 0
+            return jsonify({'ok': True, 'written': new_word, 'bit': bit, 'value': new_on})
+        elif mode == 'state':
+            # Define explicitamente o estado do bit (0/1). Se pure=True, escreve somente o bit; senão read-modify-write.
+            val = 1 if int(payload.get('value', 0)) else 0
+            if pure:
+                new_word = (1 << bit) if val == 1 else 0
+            else:
+                if need_read is False:
+                    # Garante leitura para r-m-w
+                    values = current_app.plc_controller.read_tags([name]) or {}
+                    if name not in values or values[name] is None:
+                        return jsonify({'ok': False, 'error': 'Falha ao ler valor atual'}), 500
+                    word = int(values[name]) & 0xFFFF
+                if val == 1:
+                    new_word = (word | (1 << bit)) & 0xFFFF
+                else:
+                    new_word = (word & ~(1 << bit)) & 0xFFFF
+            ok = do_write(new_word)
+            if not ok:
+                return jsonify({'ok': False, 'error': 'Falha ao escrever WORD no state'}), 500
+            return jsonify({'ok': True, 'written': new_word, 'bit': bit, 'value': val})
+        else:
+            return jsonify({'ok': False, 'error': 'mode inválido (use set|clear|pulse)'}), 400
+    except Exception as e:
+        logger.error(f"Erro em write_word_bit: {e}")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 @machines_bp.route('/debug/db_read', methods=['GET'])
 def debug_db_read():
     """Low-level DB read to diagnose connectivity/optimized DB issues.

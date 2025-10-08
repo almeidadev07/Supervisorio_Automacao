@@ -1,0 +1,244 @@
+/* ========== Estilos para Tela de Gráficos ========== */
+
+.graphics-container {
+    width: 100%;
+    height: calc(100vh - 140px); /* Subtrai altura do menu (reduzido mais um pouco) */
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+}
+
+.graphics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    flex-shrink: 0;
+}
+
+.graphics-header h1 {
+    color: #2c3e50;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.graphics-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.graphics-controls .control-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.graphics-controls .control-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+}
+
+.graphics-controls .control-btn:active {
+    transform: translateY(0);
+}
+
+.graphics-controls .control-btn img {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(1);
+}
+
+.graphics-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    margin-bottom: 15px;
+    min-height: 0; /* Permite que o flex item encolha */
+}
+
+.chart-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+    max-height: 400px;
+    background: rgba(248, 249, 250, 0.8);
+    border-radius: 15px;
+    padding: 15px;
+    position: relative;
+    overflow: hidden;
+}
+
+#classesChart {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(240, 242, 245, 0.8);
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.legend-color.real-flow {
+    background: #6c757d;
+}
+
+.legend-color.programmed-flow {
+    background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+}
+
+.graphics-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    flex-shrink: 0;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.info-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.info-value {
+    font-size: 1.2rem;
+    color: #2c3e50;
+    font-weight: 700;
+}
+
+/* Responsividade */
+@media screen and (max-width: 1200px) {
+    .graphics-header h1 {
+        font-size: 2rem;
+    }
+    
+    .chart-container {
+        min-height: 300px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .graphics-container {
+        padding: 15px;
+    }
+    
+    .graphics-header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .graphics-header h1 {
+        font-size: 1.8rem;
+    }
+    
+    .graphics-controls {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .graphics-controls .control-btn {
+        padding: 10px 16px;
+        font-size: 0.9rem;
+    }
+    
+    .chart-legend {
+        flex-direction: column;
+        gap: 15px;
+        align-items: center;
+    }
+    
+    .graphics-info {
+        flex-direction: column;
+        gap: 15px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .graphics-container {
+        padding: 10px;
+    }
+    
+    .graphics-content {
+        padding: 20px;
+    }
+    
+    .chart-container {
+        min-height: 250px;
+        padding: 15px;
+    }
+    
+    .graphics-controls .control-btn {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+    
+    .graphics-controls .control-btn img {
+        width: 16px;
+        height: 16px;
+    }
+}

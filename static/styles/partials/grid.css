@@ -1,3 +1,52 @@
+/* ==== Resumo do Gráfico (Grid 10) ==== */
+.graphics-summary-title {
+	margin: 0 0 10px 0; /* mais espaço entre o título e o gráfico */
+	font-size: 1.05em;
+	color: #2c3e50;
+}
+
+.mini-classes-chart-container {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    padding: 4px 0px; /* padding consistente e positivo para evitar clipping */
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center; /* centraliza horizontalmente o gráfico */
+}
+
+#mini-classes-chart {
+    width: 100% !important;  /* reduz ligeiramente a largura para melhor centralização visual */
+    height: 100% !important;
+}
+.peripheral-btn.alarm-toggle {
+    border: 2px solid #667eea;
+    background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7));
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    color: #667eea;
+    transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+
+.peripheral-btn.alarm-toggle.active {
+    background: linear-gradient(135deg, #4285f4, #1a73e8);
+    border-color: #4285f4;
+    color: #fff;
+    box-shadow: 0 8px 25px rgba(66, 134, 244, 0.4);
+}
+
+.peripheral-btn.alarm-toggle:hover {
+    filter: brightness(0.98);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.peripheral-btn.alarm-toggle:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+}
 /* Títulos dos botões do grid */
 .draggable-btn h2 {
     margin: 0 0 6px 0;
@@ -859,6 +908,201 @@
     .alarm-label {
         font-size: 0.6rem;
         letter-spacing: 0.2px;
+    }
+}
+
+/* ========== Estilos para Data e Hora ========== */
+.datetime-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    gap: 8px;
+}
+
+/* ========== Estilos para Periféricos ========== */
+.peripherals-container {
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    height: 100%;
+    min-height: 120px;
+    margin-top: 40px;
+}
+
+.peripheral-item { display: flex; 
+    flex-direction: column; align-items: 
+    center; gap: 2px; 
+}
+.peripheral-label { font-weight: 700; 
+    font-size: 0.97rem; 
+    color: #222; 
+    text-align: center; 
+    margin-bottom: -10px;
+}
+
+.peripheral-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 8px;
+    border-radius: 8px;
+    border: 2px solid #888;
+    background: #f5f5f5;
+    color: #222;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    user-select: none;
+    transition: all .15s ease-in-out;
+    min-height: 36px;
+}
+
+.btn-icon {
+    width: 150px !important; height: 80px !important;
+    padding: 0 !important;
+    border: none !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    min-width: 170px !important;
+    min-height:100px !important;
+    max-width: 170px !important;
+    max-height:100px !important;
+    transition: none !important;
+}
+
+/* Remove quaisquer efeitos visuais herdados para botões-ícone (apenas para .btn-icon) */
+.peripheral-btn.btn-icon:hover,
+.peripheral-btn.btn-icon:active,
+.peripheral-btn.btn-icon.active,
+.peripheral-btn.btn-icon.alarm-toggle,
+.peripheral-btn.btn-icon.alarm-toggle.active {
+    border: none;
+    background-color: transparent;
+    box-shadow: none;
+}
+
+@media screen and (max-width: 768px) {
+    .btn-icon { 
+        width: 140px !important; height: 75px !important; 
+        min-width: 140px !important; min-height: 75px !important;
+        max-width: 140px !important; max-height: 75px !important;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .btn-icon { 
+        width: 130px !important; height: 70px !important; 
+        min-width: 130px !important; min-height: 70px !important;
+        max-width: 130px !important; max-height: 70px !important;
+    }
+}
+
+.peripheral-btn:hover {
+    filter: brightness(0.98);
+}
+
+.peripheral-btn.active {
+    background: #1e88e5;
+    color: #fff;
+    border-color: #1565c0;
+}
+
+.peripheral-btn.toggled {
+    background: #43a047;
+    color: #fff;
+    border-color: #2e7d32;
+}
+
+@media screen and (max-width: 768px) {
+    .peripherals-container { grid-template-columns: repeat(2, max-content); gap: 10px; }
+    .peripheral-btn {
+        padding: 8px 6px;
+        font-size: 0.9rem;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .peripherals-container { grid-template-columns: repeat(2, max-content); gap: 8px; }
+    .peripheral-btn {
+        padding: 6px 4px;
+        font-size: 0.85rem;
+    }
+}
+
+.date-display {
+    font-size: 1.8em;
+    font-weight: 800;
+    color: #fff;
+    text-align: center;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin-top: 36px;
+}
+
+.time-display {
+    font-size: 2.4em;
+    font-weight: 1000;
+    color: #00ff00;
+    text-align: center;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 8px rgba(0, 255, 0, 0.4);
+    font-family: 'Courier New', monospace;
+    animation: time-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes time-glow {
+    0% {
+        text-shadow: 0 2px 8px rgba(0, 255, 0, 0.4);
+    }
+    100% {
+        text-shadow: 0 2px 12px rgba(0, 255, 0, 0.6), 0 0 20px rgba(0, 255, 0, 0.3);
+    }
+}
+
+/* Responsividade para Data e Hora */
+@media screen and (max-width: 768px) {
+    .date-display {
+        font-size: 1.5em;
+        letter-spacing: 0.8px;
+    }
+    
+    .time-display {
+        font-size: 1.8em;
+        letter-spacing: 1.5px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .date-display {
+        font-size: 1.3em;
+        letter-spacing: 0.6px;
+    }
+    
+    .time-display {
+        font-size: 1.6em;
+        letter-spacing: 1.2px;
+    }
+}
+
+@media screen and (max-width: 320px) {
+    .date-display {
+        font-size: 1.1em;
+        letter-spacing: 0.4px;
+    }
+    
+    .time-display {
+        font-size: 1.4em;
+        letter-spacing: 1px;
     }
 }
 

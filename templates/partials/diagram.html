@@ -1,54 +1,56 @@
 <!-- partials/diagram.html -->
-<div class="diagram-layout">
-    <!-- Sidebar com botões -->
-    <div class="diagram-sidebar">
-        <div class="sidebar-header">
-            <h3>Diagramas Elétricos</h3>
+<div class="diagram-wrapper">
+    <div class="diagram-container">
+        <!-- Sidebar com botões -->
+        <div class="diagram-sidebar">
+            <div class="sidebar-header">
+                <h3>Diagramas Elétricos</h3>
+            </div>
+            <div class="diagram-buttons">
+                <button class="diagram-btn" data-pdf="Painel_Classificadora.pdf">🔌 Painel - Classificadora</button>
+                <button class="diagram-btn" data-pdf="Diagrama Elétrico - Remoto Ovoscopia.pdf">👁️ Painel - OptoClase</button>
+                <button class="diagram-btn" data-pdf="B3124552 - Painel Pesagem 12LI-LP 400CX Trif. 220V REV3.pdf">⚖️ Painel - Pesagem</button>
+                <button class="diagram-btn" data-pdf="B3124522 - Embaladora E1 400CX Trif. 220V.Rev.02.pdf">📦 Painel - Embaladora 01</button>
+                <button class="diagram-btn" data-pdf="B3124523 - Embaladora E2 400CX Trif. 220V.Rev.02.pdf">📦 Painel - Embaladora 02</button>
+                <button class="diagram-btn" data-pdf="B3124990 - CONJ. PAINEL AUT. REMOTA 12SI 220V.pdf">🎛️ Painel - Seletor de Início</button>
+                <button class="diagram-btn" data-pdf="Diagrama Elétrico - Caixa de Passagem - Potência.pdf">⚡ Caixa de Passagem - Energia</button>
+                <button class="diagram-btn" data-pdf="Diagrama Elétrico - Caixa de Passagem - Controle.pdf">🎮 Caixa de Passagem - Controle</button>
+                <button class="diagram-btn" data-pdf="Diagrama Elétrico - Casinha de Solenoide.pdf">🔧 Caixa de Solenoide</button>
+                <button class="diagram-btn" data-pdf="Diagrama Elétrico - Denester Magna.pdf">🔄 Denester Magna</button>
+                <button class="diagram-btn" data-pdf="Diagrama Elétrico - Remotas Embaladora.pdf">📦 Remotas Embaladora</button>
+                <button class="diagram-btn" data-pdf="Diagrama Elétrico - Remotos Esteiras Inteligentes.pdf">🚛 Esteiras Inteligentes</button>
+                <button class="diagram-btn" data-pdf="Diagrama Elétrico - Tomadas Embaladora.pdf">🔌 Tomadas Embaladora</button>
+                <button class="diagram-btn" data-pdf="Diagrama Elétrico - Tomadas Pesagem.pdf">⚖️ Tomadas Pesagem</button>
+            </div>
         </div>
-        <div class="diagram-buttons">
-            <button class="diagram-btn" data-pdf="Painel_Classificadora.pdf">🔌 Painel - Classificadora</button>
-            <button class="diagram-btn" data-pdf="Diagrama Elétrico - Remoto Ovoscopia.pdf">👁️ Painel - OptoClase</button>
-            <button class="diagram-btn" data-pdf="B3124552 - Painel Pesagem 12LI-LP 400CX Trif. 220V REV3.pdf">⚖️ Painel - Pesagem</button>
-            <button class="diagram-btn" data-pdf="B3124522 - Embaladora E1 400CX Trif. 220V.Rev.02.pdf">📦 Painel - Embaladora 01</button>
-            <button class="diagram-btn" data-pdf="B3124523 - Embaladora E2 400CX Trif. 220V.Rev.02.pdf">📦 Painel - Embaladora 02</button>
-            <button class="diagram-btn" data-pdf="B3124990 - CONJ. PAINEL AUT. REMOTA 12SI 220V.pdf">🎛️ Painel - Seletor de Início</button>
-            <button class="diagram-btn" data-pdf="Diagrama Elétrico - Caixa de Passagem - Potência.pdf">⚡ Caixa de Passagem - Energia</button>
-            <button class="diagram-btn" data-pdf="Diagrama Elétrico - Caixa de Passagem - Controle.pdf">🎮 Caixa de Passagem - Controle</button>
-            <button class="diagram-btn" data-pdf="Diagrama Elétrico - Casinha de Solenoide.pdf">🔧 Caixa de Solenoide</button>
-            <button class="diagram-btn" data-pdf="Diagrama Elétrico - Denester Magna.pdf">🔄 Denester Magna</button>
-            <button class="diagram-btn" data-pdf="Diagrama Elétrico - Remotas Embaladora.pdf">📦 Remotas Embaladora</button>
-            <button class="diagram-btn" data-pdf="Diagrama Elétrico - Remotos Esteiras Inteligentes.pdf">🚛 Esteiras Inteligentes</button>
-            <button class="diagram-btn" data-pdf="Diagrama Elétrico - Tomadas Embaladora.pdf">🔌 Tomadas Embaladora</button>
-            <button class="diagram-btn" data-pdf="Diagrama Elétrico - Tomadas Pesagem.pdf">⚖️ Tomadas Pesagem</button>
-        </div>
-    </div>
 
-    <!-- Área de visualização do PDF -->
-    <div class="diagram-viewer">
-        <div class="viewer-header">
-            <div class="viewer-title" id="current-pdf-title">Selecione um diagrama para visualizar</div>
-        </div>
-        
-        <!-- Container para o PDF e seus estados -->
-        <div id="pdf-container">
-            <!-- Estado Inicial -->
-            <div id="initial-state" class="pdf-state-card">
-                <div class="icon">📋</div>
-                <div class="title">Visualizador de Diagramas</div>
-                <div class="message">Selecione um diagrama na barra lateral para começar.</div>
+        <!-- Área de visualização do PDF -->
+        <div class="diagram-viewer">
+            <div class="viewer-header">
+                <div class="viewer-title" id="current-pdf-title">Selecione um diagrama para visualizar</div>
             </div>
-            <!-- Estado de Carregamento -->
-            <div id="loading-state" class="pdf-state-card" style="display: none;">
-                <div class="spinner"></div>
-                <div class="message">Carregando PDF...</div>
+            
+            <!-- Container para o PDF e seus estados -->
+            <div id="pdf-container">
+                <!-- Estado Inicial -->
+                <div id="initial-state" class="pdf-state-card">
+                    <div class="icon">📋</div>
+                    <div class="title">Visualizador de Diagramas</div>
+                    <div class="message">Selecione um diagrama na barra lateral para começar.</div>
+                </div>
+                <!-- Estado de Carregamento -->
+                <div id="loading-state" class="pdf-state-card" style="display: none;">
+                    <div class="spinner"></div>
+                    <div class="message">Carregando PDF...</div>
+                </div>
+                <!-- Estado de Erro -->
+                <div id="error-state" class="pdf-state-card" style="display: none;">
+                    <div class="icon">⚠️</div>
+                    <div class="title">Erro ao Carregar PDF</div>
+                    <div class="message" id="error-message-content">Não foi possível encontrar o arquivo.</div>
+                </div>
+                <!-- O Iframe do PDF será inserido aqui pelo JavaScript -->
             </div>
-            <!-- Estado de Erro -->
-            <div id="error-state" class="pdf-state-card" style="display: none;">
-                <div class="icon">⚠️</div>
-                <div class="title">Erro ao Carregar PDF</div>
-                <div class="message" id="error-message-content">Não foi possível encontrar o arquivo.</div>
-            </div>
-            <!-- O Iframe do PDF será inserido aqui pelo JavaScript -->
         </div>
     </div>
 </div>

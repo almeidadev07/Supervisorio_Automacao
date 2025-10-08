@@ -124,10 +124,65 @@
              </div>
          </div>
     </button>
-    <button class="draggable-btn" draggable="true" data-station="botao-7">7</button>
-    <button class="draggable-btn" draggable="true" data-station="botao-8">8</button>
-    <button class="draggable-btn" draggable="true" data-station="botao-9">9</button>
-    <button class="draggable-btn" draggable="true" data-station="botao-10">10</button>
+    
+    <button class="draggable-btn" draggable="true" data-station="escova">
+        <!-- Escova -->
+         <div class="unit">
+             <h2>Escova</h2>
+             <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
+                 <div class="pie-gauge" id="gauge3">
+                     <span class="pie-gauge-value" id="gaugeVal3">0%</span>
+                 </div>
+                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 8px;">
+                     <div class="jog-switch" style="flex:1; text-align:left;">
+                         <input type="checkbox" id="jog3" class="toggle"/>
+                         <label for="jog3">Jog</label>
+                     </div>
+                     <div class="slider-wrapper" style="flex:2; text-align:right;">
+                        <input type="range" min="0" max="100" value="0" class="slider" id="slider3" style="width: 160px; display:inline-block; vertical-align:middle;"/>
+                     </div>
+                 </div>
+             </div>
+         </div>
+    </button>
+    <button class="draggable-btn" draggable="true" data-station="data-hora">
+        <!-- Data e Hora -->
+        <div class="unit">
+            <h2>Data e Hora</h2>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
+                <div class="datetime-container">
+                    <div class="date-display" id="current-date">--/--/----</div>
+                    <div class="time-display" id="current-time">--:--:--</div>
+                </div>
+            </div>
+        </div>
+    </button>
+    <button class="draggable-btn" draggable="true" data-station="botao-9">
+        <!-- Periféricos pequenos (Grid 9) -->
+        <div class="unit">
+            <h2>Periféricos</h2>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
+                <div class="peripherals-container" style="grid-template-columns: repeat(2, 1fr);">
+                    <div class="peripheral-item">
+                        <div class="peripheral-label" id="label-ovoscopia">Ovoscopia</div>
+                        <div class="peripheral-btn btn-icon" id="btn-ovoscopia-toggle" data-role="ovoscopia" role="button" tabindex="0"></div>
+                    </div>
+                    <div class="peripheral-item">
+                        <div class="peripheral-label" id="label-crack">Crack</div>
+                        <div class="peripheral-btn btn-icon" id="btn-crack-toggle" data-role="crack" role="button" tabindex="0"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </button>
+    <button class="draggable-btn" draggable="true" data-station="botao-10">
+        <div class="unit">
+            <h2 class="graphics-summary-title">Resumo Gráfico (Classes)</h2>
+            <div class="mini-classes-chart-container">
+                <canvas id="mini-classes-chart"></canvas>
+            </div>
+        </div>
+    </button>
     <button class="draggable-btn" draggable="true" data-station="botao-11">11</button>
     <button class="draggable-btn" draggable="true" data-station="botao-12">12</button>
 </section>

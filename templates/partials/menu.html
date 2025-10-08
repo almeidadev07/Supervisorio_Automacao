@@ -40,7 +40,7 @@
     
     <!-- Botões da direita - Menu Operador (5 botões) -->
     <div class="menu-right" id="menu-operador">
-        <button class="menu-btn" onclick="zoomButton(this)">
+        <button class="menu-btn" onclick="showGraphics(event);zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Grafico.png') }}" alt="Ícone Gráfico" class="menu-icon">
             <span class="menu-text">Gráficos</span>
         </button>

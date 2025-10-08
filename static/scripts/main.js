@@ -56,7 +56,8 @@ function hideAllContainers() {
         'washer-container',
         'dryer-container',
         'windows-container', // Adicionar windows-container
-        'diagram-container'
+        'diagram-container',
+        'graphics-container' // Adicionar graphics-container
     ];
     containers.forEach(id => {
         const el = document.getElementById(id);
@@ -78,6 +79,47 @@ function showGrid(event) {
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
     if (event && event.currentTarget) {
         event.currentTarget.classList.add('active');
+    }
+    
+    // Iniciar atualização de data/hora quando mostrar o grid
+    if (window.startDateTimeUpdate) {
+        window.startDateTimeUpdate();
+    }
+}
+
+// Função para exibir gráficos
+function showGraphics(event) {
+    hideAllContainers();
+    const graphics = document.getElementById('graphics-container');
+    if (graphics) graphics.style.display = 'block';
+
+    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+
+    // Inicializa gráficos se necessário
+    if (typeof window.initGraphics === 'function') {
+        const chart = window.classesChart;
+        // Evita re-inicializar se já existe um gráfico válido
+        if (!chart || (chart && chart._destroyed)) {
+            window.initGraphics();
+        } else {
+            // Tenta atualizar de forma segura após ficar visível
+            try {
+                if (typeof chart.update === 'function') {
+                    chart.update('none');
+                } else {
+                    // Se não houver update, re-inicializa
+                    window.initGraphics();
+                }
+            } catch (e) {
+                console.warn('Falha ao atualizar o gráfico. Reinicializando...', e);
+                window.initGraphics();
+            }
+        }
+    } else {
+        console.error('Função initGraphics não encontrada!');
     }
 }
 
@@ -300,7 +342,8 @@ Promise.all([
     loadScript('/static/scripts/partials/washer.js'), // ✅ Script da lavadora
     loadScript('/static/scripts/partials/dryer.js'), // ✅ Script da secadora
     loadScript('/static/scripts/partials/diagram.js'), 
-    loadScript('/static/scripts/partials/windows.js') 
+    loadScript('/static/scripts/partials/windows.js'),
+    loadScript('/static/scripts/partials/graphics.js')
 
 ])
 .then(() => {

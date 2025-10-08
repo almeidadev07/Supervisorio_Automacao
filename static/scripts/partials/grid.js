@@ -431,6 +431,13 @@ function configurarDragAndDrop() {
 // Handlers separados para os eventos
 function handleMouseDown(e) {
     const button = e.currentTarget;
+    // Se o alvo estiver dentro de um controle interno que não deve iniciar drag, ignore
+    if (e.target && e.target.closest && (e.target.closest('.peripheral-btn') || e.target.closest('.jog-switch') || e.target.closest('label[for="jog1"]') || (e.target.id === 'jog1'))) {
+        // Cancela qualquer unlock pendente e garante que não inicia drag
+        clearTimeout(dragTimeout);
+        allowDrag = false;
+        return;
+    }
         allowDrag = false;
     currentWaitingButton = button;
     
@@ -480,7 +487,8 @@ function handleMouseLeave(e) {
 }
 
 function handleDragStart(e) {
-        if (!allowDrag) {
+        // Bloqueia drag se a origem for um controle interno
+        if ((e.target && e.target.closest && (e.target.closest('.peripheral-btn') || e.target.closest('.jog-switch') || e.target.closest('label[for="jog1"]') || (e.target.id === 'jog1'))) || !allowDrag) {
             e.preventDefault();
             return;
         }
@@ -2158,3 +2166,638 @@ document.querySelectorAll('.slider').forEach(slider => {
 document.addEventListener('DOMContentLoaded', () => {
     atualizarPieGauges();
 });
+
+// ========== Função para atualizar Data e Hora ==========
+let dateTimeInterval = null;
+let serverTimeSyncInterval = null;
+let TIME_OFFSET_MS = 0; // server_now - client_now
+
+function updateDateTime() {
+    console.log('🕒 Executando updateDateTime...');
+    
+    // Usar a data/hora do servidor Windows (via offset) com fallback local
+    const now = new Date(Date.now() + (Number.isFinite(TIME_OFFSET_MS) ? TIME_OFFSET_MS : 0));
+    
+    // Verificar se a data é válida (proteção contra erros de sistema)
+    if (isNaN(now.getTime())) {
+        console.error('❌ Data inválida detectada, usando data padrão');
+        return;
+    }
+    
+    // Formatar data (DD/MM/AAAA) - formato brasileiro
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const dateString = `${day}/${month}/${year}`;
+    
+    // Formatar hora (HH:MM:SS) - formato 24h
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const timeString = `${hours}:${minutes}:${seconds}`;
+    
+    // Atualizar elementos no DOM
+    const dateElement = document.getElementById('current-date');
+    const timeElement = document.getElementById('current-time');
+    
+    console.log('🔍 Procurando elementos:', {
+        dateElement: dateElement,
+        timeElement: timeElement,
+        dateString: dateString,
+        timeString: timeString
+    });
+    
+    if (dateElement) {
+        dateElement.textContent = dateString;
+        console.log('✅ Data atualizada:', dateString);
+    } else {
+        console.error('❌ Elemento current-date não encontrado!');
+    }
+    
+    if (timeElement) {
+        timeElement.textContent = timeString;
+        console.log('✅ Hora atualizada:', timeString);
+    } else {
+        console.error('❌ Elemento current-time não encontrado!');
+    }
+    
+    // Debug log com timestamp formatado
+    const systemTime = now.toLocaleString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+    console.log(`🕒 Data/Hora renderizada: ${systemTime}`);
+}
+
+// Função de teste para verificar se os elementos existem
+function testDateTimeElements() {
+    console.log('🧪 Testando elementos de data/hora...');
+    
+    const dateElement = document.getElementById('current-date');
+    const timeElement = document.getElementById('current-time');
+    
+    if (dateElement) {
+        console.log('✅ Elemento current-date encontrado:', dateElement);
+        dateElement.textContent = 'TESTE DATA';
+    } else {
+        console.error('❌ Elemento current-date NÃO encontrado!');
+    }
+    
+    if (timeElement) {
+        console.log('✅ Elemento current-time encontrado:', timeElement);
+        timeElement.textContent = 'TESTE HORA';
+    } else {
+        console.error('❌ Elemento current-time NÃO encontrado!');
+    }
+}
+
+// Função para sincronizar com o servidor (opcional)
+async function syncWithServerTime() {
+    try {
+        const response = await fetch('/api/time', { 
+            method: 'GET',
+            cache: 'no-cache',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            }
+        });
+        
+        if (response.ok) {
+            const serverTime = await response.text();
+            const serverDate = new Date(serverTime);
+            
+            if (!isNaN(serverDate.getTime())) {
+                const clientNow = Date.now();
+                TIME_OFFSET_MS = serverDate.getTime() - clientNow;
+                console.log('🔄 Sincronizado com servidor. OFFSET(ms)=', TIME_OFFSET_MS);
+                return serverDate;
+            }
+        }
+    } catch (error) {
+        console.log('⚠️ Servidor não disponível, usando data local do navegador');
+    }
+    
+    TIME_OFFSET_MS = 0;
+    return new Date(); // Fallback para data local
+}
+
+function startDateTimeUpdate() {
+    console.log('🚀 Iniciando atualização de data/hora...');
+    
+    // Limpar intervalo anterior se existir
+    if (dateTimeInterval) {
+        clearInterval(dateTimeInterval);
+    }
+    if (serverTimeSyncInterval) {
+        clearInterval(serverTimeSyncInterval);
+    }
+    
+    // Testar se os elementos existem primeiro
+    testDateTimeElements();
+    
+    // Aguardar um pouco para garantir que o DOM esteja pronto
+    setTimeout(() => {
+        console.log('⏰ Executando primeira atualização...');
+        // Sincroniza imediatamente com o servidor antes do primeiro render
+        syncWithServerTime().finally(() => updateDateTime());
+        
+        // Atualizar a cada segundo com alta precisão
+        dateTimeInterval = setInterval(updateDateTime, 1000);
+        console.log('✅ Intervalo de atualização configurado');
+    }, 100);
+    
+    // Sincronizar com servidor a cada 30 segundos (opcional)
+    serverTimeSyncInterval = setInterval(async () => {
+        await syncWithServerTime();
+    }, 30000);
+    
+    console.log('🕒 Iniciado atualização de data/hora sincronizada com Windows');
+}
+
+function stopDateTimeUpdate() {
+    if (dateTimeInterval) {
+        clearInterval(dateTimeInterval);
+        dateTimeInterval = null;
+        console.log('🕒 Parado atualização de data/hora');
+    }
+    if (serverTimeSyncInterval) {
+        clearInterval(serverTimeSyncInterval);
+        serverTimeSyncInterval = null;
+    }
+}
+
+// Inicializar data/hora mesmo se o script carregar após DOMContentLoaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        startDateTimeUpdate();
+    });
+} else {
+    // DOM já pronto
+    startDateTimeUpdate();
+}
+
+// Exportar funções para uso global
+window.startDateTimeUpdate = startDateTimeUpdate;
+window.stopDateTimeUpdate = stopDateTimeUpdate;
+window.testDateTimeElements = testDateTimeElements;
+window.updateDateTime = updateDateTime;
+
+// Função para testar manualmente no console
+window.testDateTime = function() {
+    console.log('🧪 Teste manual de data/hora iniciado...');
+    testDateTimeElements();
+    setTimeout(() => {
+        updateDateTime();
+    }, 1000);
+};
+
+// ================== Jog Acumuladora (bit 13 de XLCLASS_DB901_ESTEIRA_INLINE_COMANDOS) ==================
+const TAG_JOG_INLINE = 'XLCLASS_DB901_ESTEIRA_INLINE_COMANDOS';
+const JOG_BIT_INDEX = 13;
+let jogAcPollInterval = null;
+
+function bitIsSet(word, bit) {
+    return ((Number(word) >>> bit) & 1) === 1;
+}
+
+async function readJogWord() {
+    try {
+        const res = await fetch('/api/read_tags?names=' + encodeURIComponent(TAG_JOG_INLINE), { cache: 'no-store' });
+        const data = await res.json();
+        if (data && data.ok && data.values && typeof data.values[TAG_JOG_INLINE] !== 'undefined') {
+            return Number(data.values[TAG_JOG_INLINE]);
+        }
+    } catch(_) {}
+    return null;
+}
+
+async function writeJogBitOne() {
+    try {
+        // Usa endpoint dedicado para garantir read-modify-write no backend
+        let res = await fetch('/api/write_word_bit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: TAG_JOG_INLINE, bit: JOG_BIT_INDEX, mode: 'set', pure: true })
+        });
+        let text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = null; }
+        console.log('[JOG] write_word_bit resp (set pure):', data || text, 'status=', res.status);
+        if (data && data.ok) return true;
+
+        // Fallback: pulso puro
+        res = await fetch('/api/write_word_bit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: TAG_JOG_INLINE, bit: JOG_BIT_INDEX, mode: 'pulse', pulse_ms: 600, pure: true })
+        });
+        text = await res.text();
+        try { data = JSON.parse(text); } catch { data = null; }
+        console.log('[JOG] write_word_bit resp (pulse pure fallback):', data || text, 'status=', res.status);
+        return !!(data && data.ok);
+    } catch(e) { console.error('[JOG] erro na escrita:', e); return false; }
+}
+
+// Alterna o bit: se está 1 -> clear, se 0 -> set (ambos modo 'pure' para não depender do word atual)
+async function writeJogBitToggle() {
+    try {
+        // Lê estado atual para decidir fallback se necessário
+        const before = await readJogWord();
+        const wasOn = before != null ? bitIsSet(before, JOG_BIT_INDEX) : null;
+        // Define explicitamente o estado alvo (0/1) no backend
+        let res = await fetch('/api/write_word_bit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: TAG_JOG_INLINE, bit: JOG_BIT_INDEX, mode: 'state', value: wasOn ? 0 : 1, pure: false })
+        });
+        let text = await res.text();
+        let data; try { data = JSON.parse(text); } catch { data = null; }
+        console.log('[JOG] state resp:', data || text, 'status=', res.status);
+        if (data && data.ok && typeof data.value !== 'undefined') {
+            // Se a intenção era limpar, insista com bursts curtos de clear puro para vencer o scan do PLC
+            if (wasOn === true && Number(data.value) === 1) {
+                try {
+                    for (let i=0;i<5;i++){
+                        const res2 = await fetch('/api/write_word_bit', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: TAG_JOG_INLINE, bit: JOG_BIT_INDEX, mode: 'clear', pure: true })
+                        });
+                        console.log('[JOG] burst clear pure try', i+1, 'status=', res2.status);
+                        await new Promise(r => setTimeout(r, 40));
+                    }
+                } catch(_) {}
+                setTimeout(syncJogFromPLC, 120);
+                return true;
+            }
+            setJogUIActive(!!data.value);
+            setTimeout(syncJogFromPLC, 120);
+            return true;
+        }
+        return false;
+    } catch(e) { console.error('[JOG] erro na escrita (toggle):', e); return false; }
+}
+
+function setJogUIActive(active) {
+    const jog = document.getElementById('jog1');
+    if (!jog) return;
+    try { jog.checked = !!active; } catch(_) {}
+    const wrapper = jog.closest('.jog-switch');
+    if (wrapper) wrapper.classList.toggle('active', !!active);
+}
+
+async function syncJogFromPLC() {
+    const word = await readJogWord();
+    if (word === null) return;
+    const on = bitIsSet(word, JOG_BIT_INDEX);
+    setJogUIActive(on);
+}
+
+function setupJogAcumuladora() {
+    const jog = document.getElementById('jog1');
+    if (!jog) { setTimeout(setupJogAcumuladora, 200); return; }
+    const jogLabel = document.querySelector('label[for="jog1"]');
+    const jogWrap = jog.closest('.jog-switch');
+
+    // Evita iniciar drag ao interagir com o toggle
+    ['pointerdown','mousedown','click','pointerup','mouseup','touchstart','touchend'].forEach(evt => {
+        [jog, jogLabel, jogWrap].forEach(el => {
+            if (!el) return;
+            el.addEventListener(evt, (e) => {
+                try { e.stopPropagation(); e.stopImmediatePropagation(); } catch(_) {}
+                const parent = el.closest && el.closest('.draggable-btn');
+                if (evt === 'pointerdown' || evt === 'mousedown' || evt === 'touchstart') {
+                    if (parent) parent.removeAttribute('draggable');
+                } else if (evt === 'pointerup' || evt === 'mouseup' || evt === 'touchend') {
+                    if (parent) setTimeout(() => parent.setAttribute('draggable','true'), 120);
+                }
+            }, { passive: false });
+        });
+    });
+
+    // Clique envia comando (escreve 1) e depois sincroniza via leitura
+    if (!jog.dataset.bound) {
+        jog.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            try { jog.disabled = true; } catch(_) {}
+            const ok = await writeJogBitToggle();
+            if (!ok) {
+                // feedback simples de erro
+                try { const w = jog.closest('.jog-switch'); if (w) { const prev = w.style.outline; w.style.outline = '2px solid #dc3545'; setTimeout(()=>{ w.style.outline = prev; }, 600); } } catch(_) {}
+            }
+            try { jog.disabled = false; } catch(_) {}
+        });
+        if (jogLabel) {
+            jogLabel.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                try { jog.disabled = true; } catch(_) {}
+                const ok = await writeJogBitToggle();
+                if (!ok) {
+                    try { const w = jog.closest('.jog-switch'); if (w) { const prev = w.style.outline; w.style.outline = '2px solid #dc3545'; setTimeout(()=>{ w.style.outline = prev; }, 600); } } catch(_) {}
+                }
+                try { jog.disabled = false; } catch(_) {}
+            });
+        }
+        jog.dataset.bound = '1';
+    }
+
+    // Sincroniza estado inicial e inicia polling leve
+    syncJogFromPLC();
+    if (jogAcPollInterval) clearInterval(jogAcPollInterval);
+    jogAcPollInterval = setInterval(syncJogFromPLC, 400);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupJogAcumuladora);
+} else {
+    setTimeout(setupJogAcumuladora, 0);
+}
+
+// ================== Periféricos (9 botões) ==================
+const PERIPHERALS_STATE_KEY = 'grid_peripherals_state';
+
+function loadPeripheralsState() {
+    try {
+        const raw = localStorage.getItem(PERIPHERALS_STATE_KEY);
+        if (!raw) return {};
+        const obj = JSON.parse(raw);
+        return (obj && typeof obj === 'object') ? obj : {};
+    } catch (_) { return {}; }
+}
+
+function savePeripheralsState(state) {
+    try {
+        localStorage.setItem(PERIPHERALS_STATE_KEY, JSON.stringify(state || {}));
+    } catch (_) {}
+}
+
+function applyPeripheralVisual(button, enabled) {
+    if (!button) return;
+    const on = !!enabled;
+    // Evita estados visuais em botões-ícone para não sobrescrever imagem/tamanho
+    if (button.classList.contains('btn-icon')) return;
+    // classe antiga
+    button.classList.toggle('toggled', on);
+    // classe com design de histórico
+    button.classList.toggle('active', on);
+}
+
+function initPeripherals() {
+    const container = document.querySelector('.draggable-btn[data-station="botao-9"]');
+    if (!container) return;
+
+    const state = loadPeripheralsState();
+    // Espera os elementos internos existirem se ainda não montaram
+    let buttons = container.querySelectorAll('.peripheral-btn');
+    if (!buttons || buttons.length === 0) {
+        // tenta novamente após curto atraso
+        setTimeout(initPeripherals, 100);
+        return;
+    }
+    if (!buttons || buttons.length === 0) return;
+
+    buttons.forEach(btn => {
+        let role = btn.getAttribute('data-role') || btn.id || '';
+        // normaliza ids novos
+        if (role === 'btn-ovoscopia-toggle') role = 'ovoscopia';
+        if (role === 'btn-crack-toggle') role = 'crack';
+
+        // Evita que o clique/mousedown nos botões internos inicie drag do grid
+        btn.addEventListener('mousedown', (ev) => {
+            ev.stopPropagation();
+            const parent = btn.closest('.draggable-btn');
+            if (parent) parent.removeAttribute('draggable');
+        });
+        btn.addEventListener('pointerdown', (ev) => {
+            ev.stopPropagation();
+            const parent = btn.closest('.draggable-btn');
+            if (parent) parent.removeAttribute('draggable');
+        });
+        btn.addEventListener('mouseup', (ev) => {
+            ev.stopPropagation();
+            const parent = btn.closest('.draggable-btn');
+            if (parent) setTimeout(() => parent.setAttribute('draggable', 'true'), 120);
+        });
+        btn.addEventListener('pointerup', (ev) => {
+            ev.stopPropagation();
+            const parent = btn.closest('.draggable-btn');
+            if (parent) setTimeout(() => parent.setAttribute('draggable', 'true'), 120);
+        });
+        // Acessibilidade: tecla Enter/Space também alterna
+        btn.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                btn.click();
+            }
+        });
+        const enabled = !!state[role];
+        applyPeripheralVisual(btn, enabled);
+        // aplica design semelhante ao botão de histórico (tema azul ativo) somente quando não for ícone
+        // não aplicar alarm-toggle aos ícones (sem borda/sombra)
+
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (role === 'ovoscopia') {
+                // Toggle visual e alterna texto/ícone Ovoscopia <-> Magna Visio
+                const wasEnabled = !!state[role];
+                const nowEnabled = !wasEnabled;
+                state[role] = nowEnabled;
+                // Não aplicar visual states para botões-ícone
+                const label = document.getElementById('label-ovoscopia');
+                if (label) label.textContent = nowEnabled ? 'Magna Visio' : 'Ovoscopia';
+                // Aplica nova imagem diretamente
+                btn.style.setProperty('background', (nowEnabled
+                    ? 'url(/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png)'
+                    : 'url(/static/images/pages/icons/comandos/icone_habilita_azul.png)') + ' center/contain no-repeat', 'important');
+                savePeripheralsState(state);
+                // micro-efeito de clique (sem delay na troca de imagem)
+                btn.style.transform = 'scale(0.98)';
+                setTimeout(() => { btn.style.transform = ''; }, 50);
+            } else if (role === 'crack') {
+                // Toggle habilitado/desabilitado com persistência
+                const wasEnabled = !!state[role];
+                const nowEnabled = !wasEnabled;
+                state[role] = nowEnabled;
+                // Não aplicar visual states para botões-ícone
+                const label = document.getElementById('label-crack');
+                if (label) label.textContent = 'Crack';
+                // Aplica nova imagem diretamente
+                btn.style.setProperty('background', (nowEnabled
+                    ? 'url(/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png)'
+                    : 'url(/static/images/pages/icons/comandos/icone_habilita_desabilitado.png)') + ' center/contain no-repeat', 'important');
+                savePeripheralsState(state);
+                // micro-efeito de clique (sem delay na troca de imagem)
+                btn.style.transform = 'scale(0.98)';
+                setTimeout(() => { btn.style.transform = ''; }, 50);
+            } else {
+                // Demais botões: apenas alterna visual/persistência genérica
+                const wasEnabled = !!state[role];
+                const nowEnabled = !wasEnabled;
+                state[role] = nowEnabled;
+                applyPeripheralVisual(btn, nowEnabled);
+                savePeripheralsState(state);
+                btn.style.transform = 'scale(0.98)';
+                setTimeout(() => { btn.style.transform = ''; }, 80);
+            }
+        });
+
+        // Ajusta labels/ícones iniciais
+        if (role === 'ovoscopia') {
+            const label = document.getElementById('label-ovoscopia');
+            if (label) label.textContent = enabled ? 'Magna Visio' : 'Ovoscopia';
+            // Aplica imagem inicial diretamente
+            btn.style.setProperty('background', (enabled
+                ? 'url(/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png)'
+                : 'url(/static/images/pages/icons/comandos/icone_habilita_azul.png)') + ' center/contain no-repeat', 'important');
+        } else if (role === 'crack') {
+            const label = document.getElementById('label-crack');
+            if (label) label.textContent = 'Crack';
+            // Aplica imagem inicial diretamente
+            btn.style.setProperty('background', (enabled
+                ? 'url(/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png)'
+                : 'url(/static/images/pages/icons/comandos/icone_habilita_desabilitado.png)') + ' center/contain no-repeat', 'important');
+        }
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPeripherals);
+} else {
+    // DOM já disponível
+    setTimeout(initPeripherals, 0);
+}
+
+// ========== Delegation de segurança para Jog (garante captura mesmo se bindings falharem) ==========
+document.addEventListener('click', async function(e){
+    try{
+        const t = e.target;
+        if(!t) return;
+        const isJogEl = (t.id === 'jog1') || (t.closest && (t.closest('label[for="jog1"]') || t.closest('.jog-switch')));
+        if(!isJogEl) return;
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[JOG] delegation click capturado');
+        const ok = await writeJogBitOne();
+        if(!ok){ console.warn('[JOG] delegation: escrita falhou'); }
+        await syncJogFromPLC();
+    }catch(_){ /* noop */ }
+}, true);
+
+// Helpers para teste manual no console
+window.writeJogBitOne = writeJogBitOne;
+window.syncJogFromPLC = syncJogFromPLC;
+window.setupJogAcumuladora = setupJogAcumuladora;
+
+// ========== Resumo do Gráfico no Grid 10 ==========
+(function setupMiniClassesChart() {
+    let miniChart = null;
+
+    function ensureChartJs() {
+        return new Promise((resolve, reject) => {
+            if (typeof window.Chart !== 'undefined') return resolve();
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+            script.onload = () => (typeof window.Chart !== 'undefined') ? resolve() : reject(new Error('Chart não disponível'));
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    function getDataFromSummary(summary) {
+        const labels = (summary || []).map(s => s.className);
+        const real = (summary || []).map(s => s.real || 0);
+        const prog = (summary || []).map(s => s.programmed || 0);
+        const colors = (summary || []).map(s => s.color || '#888');
+        return { labels, real, prog, colors };
+    }
+
+    function createMiniChart(summary) {
+        const canvas = document.getElementById('mini-classes-chart');
+        if (!canvas) return;
+        const ctx = canvas.getContext && canvas.getContext('2d');
+        if (!ctx) return;
+
+        const { labels, real, prog, colors } = getDataFromSummary(summary);
+
+        if (miniChart) { miniChart.destroy(); miniChart = null; }
+        miniChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Real', data: real, backgroundColor: '#6c757d', borderColor: '#495057', borderWidth: 1, borderRadius: 6, barPercentage: 0.9, categoryPercentage: 0.9 },
+                    { label: 'Prog.', data: prog, backgroundColor: colors, borderColor: colors, borderWidth: 1, borderRadius: 6, barPercentage: 0.9, categoryPercentage: 0.9 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                layout: {
+                    padding: { top: 4, bottom: 4, left: 4, right: 4 }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#2c3e50', font: { size: 10, weight: 'bold' } } },
+                    y: {
+                        beginAtZero: true,
+                        min: 0,
+                        max: 700,
+                        title: { display: false },
+                        grid: { display: true, color: 'rgba(0,0,0,0.08)' },
+                        ticks: { stepSize: 100, color: '#2c3e50', font: { size: 9 } }
+                    }
+                },
+                animation: { duration: 400 }
+            }
+        });
+    }
+
+    function updateMiniChart(summary) {
+        if (!miniChart) return createMiniChart(summary);
+        const { labels, real, prog, colors } = getDataFromSummary(summary);
+        miniChart.data.labels = labels;
+        miniChart.data.datasets[0].data = real;
+        miniChart.data.datasets[1].data = prog;
+        miniChart.data.datasets[1].backgroundColor = colors;
+        miniChart.data.datasets[1].borderColor = colors;
+        miniChart.update('none');
+    }
+
+    function initOnce() {
+        const canvas = document.getElementById('mini-classes-chart');
+        if (!canvas) return;
+        ensureChartJs().then(() => {
+            const summary = (typeof window.getGraphicsSummary === 'function') ? window.getGraphicsSummary() : [];
+            createMiniChart(summary);
+            window.addEventListener('graphics-data-updated', (e) => updateMiniChart(e && e.detail));
+            // Clique no mini-gráfico abre a tela completa de gráficos
+            try {
+                const container = document.querySelector('.mini-classes-chart-container');
+                if (container && !container.dataset.openBind) {
+                    container.style.cursor = 'pointer';
+                    container.addEventListener('click', function() {
+                        if (typeof window.showGraphics === 'function') {
+                            window.showGraphics();
+                        }
+                    });
+                    container.dataset.openBind = '1';
+                }
+            } catch(_) { /* noop */ }
+        }).catch((e) => console.warn('Mini chart: falha ao carregar Chart.js', e));
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initOnce);
+    } else {
+        setTimeout(initOnce, 0);
+    }
+})();

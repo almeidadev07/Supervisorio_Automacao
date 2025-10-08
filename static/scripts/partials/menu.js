@@ -9,6 +9,16 @@ document.addEventListener('mousedown', function(event) {
     }
 });
 
+// Bloqueia cliques nos botões do menu quando o menu está recolhido
+// Usa captura para impedir execução dos handlers inline (onclick)
+document.addEventListener('click', function(event) {
+    const clickedMenuButton = event.target && event.target.closest && event.target.closest('.menu-btn');
+    if (clickedMenuButton && !isMenuOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+}, true);
+
 
 function toggleMenu() {
     const buttons = document.querySelectorAll('.menu-btn');
