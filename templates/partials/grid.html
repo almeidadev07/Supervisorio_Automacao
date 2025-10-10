@@ -9,10 +9,10 @@
                 <div class="velocimetro-container">
                     <img src="{{ url_for('static', filename='images/grid/status/00_Medida_Velocimentro_Verde.png') }}" class="velocimetro-imagem" id="imgVelocimetroReal">
                     <img src="{{ url_for('static', filename='images/grid/status/00_Ponteiro_Velocimentro_Verde.png') }}"class="ponteiro" id="ponteiroReal" data-tipo="real">
-                    <div id="valorReal" class="velocimetro-texto">
-                        <span class="valor">0</span>
-                        <span class="unidade">Cx/h</span>
-                    </div>
+                </div>
+                <div class="velocimetro-value-container">
+                    <span id="valorReal" class="velocimetro-valor">0</span>
+                    <span class="unidade-real">Cx/h</span>
                 </div>
             </div>
         </div>
@@ -25,6 +25,8 @@
                 <div class="velocimetro-container">
                     <img src="{{ url_for('static', filename='images/grid/status/00_Medida_Velocimentro_Amarelo.png') }}" class="velocimetro-imagem" id="imgVelocimetroProg">
                     <img src="{{ url_for('static', filename='images/grid/status/00_Ponteiro_Velocimentro_Amarelo.png') }}" class="ponteiro" id="ponteiroProg">
+                </div>
+                <div class="velocimetro-value-container">
                     <input type="text" id="velocidadeInput" class="velocimetro-input" value="50" readonly onclick="abrirTeclado(event)">
                     <span class="unidade-programada">Cx/h</span>
                 </div>

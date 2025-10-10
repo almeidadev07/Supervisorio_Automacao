@@ -5,6 +5,16 @@ let ALARM_LAST_OK_TS = 0; // timestamp do último resumo de alarmes válido
 let SPEED_WAS_OFFLINE = false;
 let PLC_CONNECTED = true; // estado global de conexão com o PLC
 let ENSURE_MACHINE_LAST_TS = 0;
+let SPEED_NULL_STREAK = 0; // leituras nulas consecutivas da velocidade real
+let LAST_FORCE_RECONNECT_TS = 0; // throttle para /api/force_reconnect
+// Intervalos globais para Data/Hora (usados em start/stop antes de definições)
+var dateTimeInterval = null;
+var serverTimeSyncInterval = null;
+var TIME_OFFSET_MS = 0; // server_now - client_now
+let POLL_BACKOFF_UNTIL_TS = 0; // backoff dinâmico para polling HTTP
+
+// Identidade do cliente/tela para o sistema de subscrições do backend
+const GRID_CLIENT_ID = 'grid-' + Math.random().toString(36).slice(2, 10);
 
 // Controle de estado para evitar condição de corrida na velocidade programada
 let USER_TYPING_VELOCITY = false;
@@ -13,7 +23,14 @@ let VELOCITY_WRITE_TIMESTAMP = 0;
 // Nome da tag de velocidade
 const SPEED_TAG_PRIMARY = 'XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_REAL';
 const SPEED_TAG_PROGRAMMED = 'XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_PROG';
+// Tags usadas nas leituras
 const SPEED_TAGS = [SPEED_TAG_PRIMARY, SPEED_TAG_PROGRAMMED];
+const SPEED_TAGS_REAL_ONLY = [SPEED_TAG_PRIMARY];
+// Chaves alternativas que podem vir do backend/telemetria
+const SPEED_FALLBACK_KEYS = [
+    'VEL_REAL', 'VELOC_REAL', 'VELOCIDADE_REAL', 'vel_real', 'veloc_real', 'velocidade_real',
+    'SPEED_REAL', 'speed_real', 'speed', 'SPEED'
+];
 
 // Limite de velocidade por máquina (padrão 400)
 let SPEED_MAX = 400;
@@ -48,8 +65,8 @@ async function ensureMachineSelected(){
 
 // Funções de arrastar e soltar
 
-// Sistema de persistência de posições do grid
-const GRID_POSITIONS_KEY = 'supervisor_grid_positions';
+// Sistema de persistência de posições do grid (var para evitar TDZ em handlers iniciais)
+var GRID_POSITIONS_KEY = 'supervisor_grid_positions';
 
 // Função para salvar posições atuais do grid
 function saveGridPositions() {
@@ -388,10 +405,10 @@ function applyDefaultLayout() {
     }
 }
 
-// Trava para só permitir drag após segurar por 1 segundo
-let dragTimeout = null;
-let allowDrag = false;
-let currentWaitingButton = null;
+// Trava para só permitir drag após segurar por 1 segundo (var para evitar TDZ quando handlers disparam cedo)
+var dragTimeout = null;
+var allowDrag = false;
+var currentWaitingButton = null;
 
 // Função para configurar eventos de drag and drop
 function configurarDragAndDrop() {
@@ -574,13 +591,11 @@ function atualizarPonteiro(ponteiroElement, valor) {
 // Atualiza a UI da velocidade real a partir de um valor numérico (cx/h)
 function atualizarVelocidadeRealUI(valor){
     const valorNum = Math.max(0, Math.min(SPEED_MAX, Number(valor) || 0));
+    // Atualiza tanto estrutura antiga (#valorReal) quanto a nova (#valorReal .valor)
     const valorEl = document.querySelector('#valorReal .valor');
-    if (valorEl) {
-        valorEl.textContent = Math.round(valorNum);
-    } else {
         const root = document.getElementById('valorReal');
+    if (valorEl) valorEl.textContent = Math.round(valorNum);
         if (root) root.textContent = String(Math.round(valorNum));
-    }
     const ponteiro = document.getElementById('ponteiroReal');
     if (ponteiro) atualizarPonteiro(ponteiro, valorNum);
     // debug
@@ -612,8 +627,14 @@ function mostrarVelocidadeIndisponivel(){
 
 function pickSpeedValue(obj){
     if (!obj) return null;
-    for (const key of SPEED_TAGS){
-        if (obj[key] != null) return obj[key];
+    // Retorna estritamente a velocidade real do PLC
+    if (obj.hasOwnProperty(SPEED_TAG_PRIMARY)) return obj[SPEED_TAG_PRIMARY];
+    // Fallback para chaves alternativas (variações comuns)
+    for (const k of SPEED_FALLBACK_KEYS){
+        if (obj[k] != null) return obj[k];
+        // tenta também em minúsculas
+        const kl = k.toLowerCase();
+        if (obj[kl] != null) return obj[kl];
     }
     return null;
 }
@@ -621,6 +642,30 @@ function pickSpeedValue(obj){
 function pickSpeedProgrammedValue(obj){
     if (!obj) return null;
     return obj[SPEED_TAG_PROGRAMMED] || null;
+}
+
+// Lê tags com fallback: tenta /api/read_tags (GET) e depois /api/enhanced/read_tags (POST)
+async function fetchTagsWithFallback(tagNames){
+    try {
+        const qs = encodeURIComponent((tagNames||[]).join(','));
+        const r = await fetch('/api/read_tags?names=' + qs, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } });
+        if (r.ok) {
+            const res = await r.json();
+            if (res && res.ok && res.values) return res.values;
+        }
+    } catch(_) {}
+    try {
+        const r2 = await fetch('/api/enhanced/read_tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ names: tagNames })
+        });
+        if (r2.ok) {
+            const res2 = await r2.json();
+            if (res2 && res2.ok && res2.values) return res2.values;
+        }
+    } catch(_) {}
+    return null;
 }
 
 function atualizarVelocidadeProgramadaUI(valor){
@@ -699,6 +744,19 @@ function escreverVelocidadeProgramada(valor) {
     });
 }
 
+function tryForceReconnect(reason){
+    const now = Date.now();
+    if (now - LAST_FORCE_RECONNECT_TS < 10000) return; // 10s throttle
+    LAST_FORCE_RECONNECT_TS = now;
+    try {
+        console.warn('[GRID] Forçando reconexão do PLC:', reason || 'sem motivo');
+        fetch('/api/force_reconnect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+            .then(r => r.json())
+            .then(res => console.log('[GRID] force_reconnect ->', res))
+            .catch(()=>{});
+    } catch(_) {}
+}
+
 // Vincula Socket.IO para receber a tag de velocidade (com fallback)
 function bindTelemetryVelocidadeReal(){
     try {
@@ -708,10 +766,13 @@ function bindTelemetryVelocidadeReal(){
                 window.supervisorSocket = window.io({
                     reconnection: true,
                     reconnectionAttempts: Infinity,
-                    reconnectionDelay: 500,
-                    reconnectionDelayMax: 3000,
+                    reconnectionDelay: 1000,
+                    reconnectionDelayMax: 5000,
                     timeout: 20000,
-                    transports: ['polling', 'websocket']
+                    forceNew: true,
+                    transports: ['polling', 'websocket'],
+                    upgrade: true,
+                    rememberUpgrade: false
                 })
             )
         ) : null;
@@ -719,15 +780,34 @@ function bindTelemetryVelocidadeReal(){
         console.log('[GRID] Socket.IO conectado para velocidade real');
         // usar timestamp global
         SPEED_LAST_OK_TS = Date.now();
+        
+        // Tratamento de erros de conexão
+        socket.on('connect_error', (error) => {
+            console.log('[GRID] ❌ Erro de conexão Socket.IO:', error);
+            PLC_CONNECTED = false;
+            mostrarVelocidadeIndisponivel();
+        });
+        
+        socket.on('disconnect', (reason) => {
+            console.log('[GRID] 📡 Socket.IO desconectado:', reason);
+            PLC_CONNECTED = false;
+            mostrarVelocidadeIndisponivel();
+        });
+        
         socket.on('connect', () => {
+            console.log('[GRID] ✅ Socket.IO conectado');
+            PLC_CONNECTED = true;
             // Ao conectar/reconectar, força uma leitura imediata
             fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')), { cache: 'no-store' })
                 .then(r => r.json())
                 .then(res => {
                     if (res && res.ok && res.values) {
+                        PLC_CONNECTED = true;
+                        try { console.log('[GRID][init HTTP] values=', res.values); } catch(_) {}
                         // Processa velocidade real
                         const valReal = pickSpeedValue(res.values);
                         if (valReal != null) {
+                            try { console.log('[GRID][init HTTP] real=', valReal); } catch(_) {}
                             atualizarVelocidadeRealUI(valReal);
                             SPEED_LAST_OK_TS = Date.now();
                         }
@@ -748,29 +828,56 @@ function bindTelemetryVelocidadeReal(){
                 PLC_CONNECTED = false;
                 mostrarVelocidadeIndisponivel();
                 setAlarmCountsOffline();
+                console.log('[GRID] 📡 PLC desconectado via telemetria');
+                valueStabilityCount = 0; // Reset estabilidade
                 return;
             }
             PLC_CONNECTED = true;
+            try { console.log('[GRID][telemetry] keys=', Object.keys(data)); } catch(_) {}
             const val = pickSpeedValue(data);
-            if (val == null) return;
+            if (val == null) {
+                valueStabilityCount = 0; // Reset estabilidade em caso de null
+                return;
+            }
+            try { console.log('[GRID][telemetry] real=', val); } catch(_) {}
+            
+            // Sistema de estabilidade para Socket.IO também
+            if (lastStableValue === val) {
+                valueStabilityCount++;
+            } else {
+                valueStabilityCount = 1;
+                lastStableValue = val;
+            }
+            
+            // Só atualiza UI se valor for estável
+            if (valueStabilityCount >= minStabilityCount || lastStableValue === val) {
             atualizarVelocidadeRealUI(val);
             SPEED_LAST_OK_TS = Date.now();
+                SPEED_NULL_STREAK = 0; // Reset contador de nulls
+            }
         });
         // Quando reconectar, faça uma leitura imediata por HTTP para repopular
         socket.on('plc_connection_changed', (s) => {
+            console.log('[GRID] 🔔 Estado do PLC mudou:', s);
             if (s && s.connected){
                 PLC_CONNECTED = true;
+                console.log('[GRID] ✅ PLC reconectado - fazendo leitura imediata');
                 fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')), { cache: 'no-store' })
                     .then(r => r.json())
                     .then(res => {
                         if (res && res.ok && res.values) {
+                            PLC_CONNECTED = true;
+                            try { console.log('[GRID][reconnect HTTP] values=', res.values); } catch(_) {}
                             // Processa velocidade real
                             const valReal = pickSpeedValue(res.values);
                             if (valReal != null) {
+                                try { console.log('[GRID][reconnect HTTP] real=', valReal); } catch(_) {}
                                 atualizarVelocidadeRealUI(valReal);
+                                SPEED_NULL_STREAK = 0;
                                 if (SPEED_WAS_OFFLINE) {
                                     SPEED_WAS_OFFLINE = false;
-                                    setTimeout(() => window.location.reload(), 50);
+                                    console.log('[GRID] 🔄 Reconectado via notificação - recarregando página');
+                                    setTimeout(() => window.location.reload(), 100);
                                 }
                             }
                             
@@ -784,9 +891,15 @@ function bindTelemetryVelocidadeReal(){
                     .catch(() => {});
                 ensureMachineSelected();
             }
-            else {
+            else if (s && s.connected === false) {
                 PLC_CONNECTED = false;
+                mostrarVelocidadeIndisponivel();
                 setAlarmCountsOffline();
+                if (s.reason === 'Address out of range errors') {
+                    console.log(`[GRID] ⏳ PLC em cooldown por ${s.cooldown}s devido a erros de Address out of range`);
+                } else {
+                    console.log('[GRID] 📡 PLC desconectado via notificação');
+                }
             }
         });
         // Comando remoto para recarregar a página
@@ -830,10 +943,12 @@ function bindTelemetryVelocidadeReal(){
         // watchdog: se passar >2.5s sem dado válido, mostrar ???
         if (window.supervisorSpeedWatchdog) clearInterval(window.supervisorSpeedWatchdog);
         window.supervisorSpeedWatchdog = setInterval(() => {
-            if (Date.now() - SPEED_LAST_OK_TS > 2500) {
+            // Só mostra "###" se passou muito tempo sem dados E não há valor persistente
+            if (Date.now() - SPEED_LAST_OK_TS > 30000 && 
+                (!lastStableValue || (Date.now() - valuePersistenceTime > maxPersistenceTime))) {
                 mostrarVelocidadeIndisponivel();
             }
-        }, 1000);
+        }, 5000); // Verifica a cada 5 segundos
         return true;
     } catch(e){
         console.warn('Socket.IO indisponível para velocidade real:', e);
@@ -1005,6 +1120,7 @@ async function atualizarContadoresAlarme() {
         // Se o backend indicar desconexão, mantém '##' e sai
         if (res.connected === false || res.plc_connected === false || res.offline === true) {
             setAlarmCountsOffline();
+            tryForceReconnect('alarms indicou desconexão');
             return;
         }
         if (!res.ok) throw new Error(res && res.error ? res.error : 'API error');
@@ -1039,7 +1155,8 @@ async function atualizarContadoresAlarme() {
             }
         });
 
-        // Marca momento de atualização bem-sucedida
+        // Marca momento de atualização bem-sucedida e conexão ativa
+        PLC_CONNECTED = true;
         ALARM_LAST_OK_TS = Date.now();
 
         // Clique no botão Alarmes abre a tela de alarmes
@@ -1115,7 +1232,12 @@ function inicializarVelocimetro() {
     document.querySelectorAll('.draggable-btn').forEach(btn => {
         const ponteiro = btn.querySelector('.ponteiro[data-tipo="real"]');
         if (ponteiro) {
-            const valorInicial = parseInt(btn.querySelector('.valor').textContent) || 0;
+            let valorInicial = 0;
+            const valorEl = btn.querySelector('#valorReal') || btn.querySelector('.valor');
+            if (valorEl && typeof valorEl.textContent === 'string') {
+                const parsed = parseInt(valorEl.textContent, 10);
+                valorInicial = isNaN(parsed) ? 0 : parsed;
+            }
             atualizarPonteiro(ponteiro, valorInicial);
         }
     });
@@ -1123,86 +1245,192 @@ function inicializarVelocimetro() {
     // Tenta receber por Socket.IO; se não houver, faz fallback por HTTP
     // Liga Socket.IO (se disponível) 
     bindTelemetryVelocidadeReal();
+    // Subscreve tags necessárias para este grid e mantém heartbeat
+    try {
+        fetch('/api/subscribe_tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ client_id: GRID_CLIENT_ID, tags: [SPEED_TAG_PRIMARY, SPEED_TAG_PROGRAMMED] })
+        }).then(()=>{
+            if (window.__gridHeartbeat) clearInterval(window.__gridHeartbeat);
+            window.__gridHeartbeat = setInterval(() => {
+                fetch('/api/heartbeat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ client_id: GRID_CLIENT_ID })
+                }).catch(()=>{});
+            }, 10000);
+        }).catch(()=>{});
+    } catch(_) {}
     
-    // Polling HTTP reduzido: usa Socket.IO primário e HTTP como fallback lento
+    // Polling HTTP ultra-otimizado: trabalha com cache do backend e reduz carga no PLC
     let consecutiveFailures = 0;
-    setInterval(() => {
-        // se recebemos dado válido via socket há <= 1500ms, não faz HTTP agora
-        if (Date.now() - SPEED_LAST_OK_TS <= 1500) return;
-        fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')), { 
-            cache: 'no-store',
-            headers: { 'Cache-Control': 'no-cache' }
-        })
-            .then(r => {
-                if (!r.ok) throw new Error('HTTP ' + r.status);
-                return r.json();
-            })
-            .then(res => {
-                if (res && res.ok && res.values) {
-                    // Processa velocidade real
-                    const valReal = pickSpeedValue(res.values);
-                    if (valReal != null) {
-                        atualizarVelocidadeRealUI(valReal);
-                        consecutiveFailures = 0;
-                        SPEED_LAST_OK_TS = Date.now();
-                        if (SPEED_WAS_OFFLINE) {
-                            SPEED_WAS_OFFLINE = false;
-                            setTimeout(() => window.location.reload(), 50);
-                        }
-                    }
-                    
-                    // Processa velocidade programada
-                    const valProg = pickSpeedProgrammedValue(res.values);
-                    if (valProg != null) {
-                        atualizarVelocidadeProgramadaUI(valProg);
-                    }
+    let lastSuccessfulRead = 0;
+    let adaptiveInterval = 2000; // Intervalo adaptativo base
+    let lastStableValue = null; // Último valor estável conhecido
+    let valueStabilityCount = 0; // Contador de estabilidade do valor
+    let minStabilityCount = 1; // Reduzido para 1 - máximo responsivo
+    let connectionStableCount = 0; // Contador de estabilidade da conexão
+    let lastConnectionState = null; // Último estado de conexão conhecido
+    let valuePersistenceTime = 0; // Timestamp do último valor válido
+    let maxPersistenceTime = 30000; // 30 segundos de persistência de valores
+    
+    function isGridVisible(){
+        try {
+            const el = document.getElementById('grid-container');
+            return !!(el && el.offsetParent !== null && getComputedStyle(el).display !== 'none');
+        } catch(_) { return true; }
+    }
+    
+    async function pollSpeedLoop(){
+        const now = Date.now();
+        
+        // Ajusta intervalo baseado na estabilidade
+        if (consecutiveFailures === 0 && now - lastSuccessfulRead < 5000) {
+            adaptiveInterval = Math.max(1000, adaptiveInterval - 100); // Acelera se estável
+        } else if (consecutiveFailures > 0) {
+            adaptiveInterval = Math.min(5000, adaptiveInterval + 500); // Desacelera se instável
+        }
+        
+        // Jitter para evitar sincronização
+        const jitter = Math.floor(Math.random() * 300) - 150;
+        const nextDelay = Math.max(800, adaptiveInterval + jitter);
+
+        try {
+            if (!isGridVisible()) {
+                setTimeout(pollSpeedLoop, Math.max(2000, nextDelay));
+                return;
+            }
+            
+            // Se recebeu dados recentes via socket, pula esta rodada
+            if (now - SPEED_LAST_OK_TS <= 3000) {
+                setTimeout(pollSpeedLoop, nextDelay);
+                return;
+            }
+            
+            const values = await fetchTagsWithFallback(SPEED_TAGS_REAL_ONLY);
+            if (values && Object.keys(values).length > 0) {
+                // Sistema de estabilidade de conexão
+                if (lastConnectionState === true) {
+                    connectionStableCount++;
                 } else {
-                    consecutiveFailures++;
-                    if (consecutiveFailures >= 3) {
-                        mostrarVelocidadeIndisponivel();
-                        SPEED_WAS_OFFLINE = true;
-                    }
-                }
-            })
-            .catch(() => {
-                consecutiveFailures++;
-                if (consecutiveFailures >= 3) {
-                    mostrarVelocidadeIndisponivel();
-                    SPEED_WAS_OFFLINE = true;
-                }
-            });
-    }, 700);
-    // Sincroniza SPEED_MAX e dispara uma leitura imediata para preencher a UI rapidamente
-    syncSpeedMaxFromServer().catch(()=>{});
-    fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')))
-        .then(r => r.json())
-        .then(res => {
-            if (res && res.ok && res.values) {
-                // Processa velocidade real
-                const valReal = pickSpeedValue(res.values);
-                if (valReal != null) {
-                    atualizarVelocidadeRealUI(valReal);
+                    connectionStableCount = 1;
+                    lastConnectionState = true;
                 }
                 
-                // Processa velocidade programada
-                const valProg = pickSpeedProgrammedValue(res.values);
-                if (valProg != null) {
-                    atualizarVelocidadeProgramadaUI(valProg);
+                // Só marca como conectado após 2 leituras consecutivas bem-sucedidas
+                if (connectionStableCount >= 2) {
+                    PLC_CONNECTED = true;
+                    consecutiveFailures = 0;
+                    lastSuccessfulRead = now;
                 }
+                
+                try { console.log('[GRID][poll] values=', values); } catch(_) {}
+                
+                const valReal = pickSpeedValue(values);
+                    if (valReal != null) {
+                    try { console.log('[GRID][poll] real=', valReal); } catch(_) {}
+                    
+                    // Sistema de estabilidade: só atualiza UI se valor for estável
+                    if (lastStableValue === valReal) {
+                        valueStabilityCount++;
+                    } else {
+                        valueStabilityCount = 1;
+                        lastStableValue = valReal;
+                    }
+                    
+                    // Atualiza UI imediatamente e mantém persistência
+                        atualizarVelocidadeRealUI(valReal);
+                    valuePersistenceTime = now; // Atualiza timestamp de persistência
+                    SPEED_NULL_STREAK = 0;
+                    SPEED_LAST_OK_TS = now;
+                    
+                        if (SPEED_WAS_OFFLINE) {
+                            SPEED_WAS_OFFLINE = false;
+                        console.log('[GRID] 🔄 Reconectado - recarregando página');
+                        setTimeout(() => window.location.reload(), 100);
+                    }
+                } else {
+                    SPEED_NULL_STREAK++;
+                    valueStabilityCount = 0; // Reset estabilidade em caso de null
+                    connectionStableCount = 0; // Reset estabilidade de conexão
+                    lastConnectionState = false;
+                    
+                    if (SPEED_NULL_STREAK >= 8) { // Aumentado para 8 - muito mais tolerante
+                        PLC_CONNECTED = false;
+                        mostrarVelocidadeIndisponivel();
+                        tryForceReconnect('velocidade real null repetido');
+                        SPEED_NULL_STREAK = 0;
+                    }
+                }
+                
+                const valProg = pickSpeedProgrammedValue(values);
+                if (valProg != null) atualizarVelocidadeProgramadaUI(valProg);
+                
+                } else {
+                    consecutiveFailures++;
+                connectionStableCount = 0; // Reset estabilidade de conexão
+                lastConnectionState = false;
+                console.log(`[GRID] ⚠️ Falha de leitura #${consecutiveFailures}`);
+                
+                // Sistema de fallback: mantém último valor conhecido por muito mais tempo
+                if (consecutiveFailures >= 10) { // Aumentado para 10 - extremamente tolerante
+                    // Só mostra "###" se não há valor estável conhecido E passou do tempo de persistência
+                    if (!lastStableValue || (now - valuePersistenceTime > maxPersistenceTime)) {
+                        mostrarVelocidadeIndisponivel();
+                        PLC_CONNECTED = false;
+                        SPEED_WAS_OFFLINE = true;
+                    }
+                    tryForceReconnect('falha de leitura repetida');
+                }
+            }
+        } catch(error) {
+                consecutiveFailures++;
+            connectionStableCount = 0; // Reset estabilidade de conexão
+            lastConnectionState = false;
+            console.log(`[GRID] ❌ Erro de rede #${consecutiveFailures}:`, error);
+            
+            // Sistema de fallback: mantém último valor conhecido por muito mais tempo
+            if (consecutiveFailures >= 10) { // Aumentado para 10 - extremamente tolerante
+                // Só mostra "###" se não há valor estável conhecido E passou do tempo de persistência
+                if (!lastStableValue || (now - valuePersistenceTime > maxPersistenceTime)) {
+                    mostrarVelocidadeIndisponivel();
+                    PLC_CONNECTED = false;
+                    SPEED_WAS_OFFLINE = true;
+                }
+                tryForceReconnect('erro de rede nas leituras');
+            }
+        } finally {
+            setTimeout(pollSpeedLoop, nextDelay);
+        }
+    }
+    
+    // Inicia polling após 1 segundo
+    setTimeout(pollSpeedLoop, 1000);
+    // Sincroniza SPEED_MAX e dispara uma leitura imediata para preencher a UI rapidamente
+    syncSpeedMaxFromServer().catch(()=>{});
+    fetchTagsWithFallback(SPEED_TAGS)
+        .then(values => {
+            if (values) {
+                PLC_CONNECTED = true;
+                try { console.log('[GRID][post-sync] values=', values); } catch(_) {}
+                const valReal = pickSpeedValue(values);
+                if (valReal != null) {
+                    try { console.log('[GRID][post-sync] real=', valReal); } catch(_) {}
+                    atualizarVelocidadeRealUI(valReal);
+                }
+                const valProg = pickSpeedProgrammedValue(values);
+                if (valProg != null) atualizarVelocidadeProgramadaUI(valProg);
             }
         })
         .catch(() => {});
 
     // Atualiza contadores de alarme periodicamente
     setInterval(() => {
-        // Se o PLC está marcado como desconectado, não busca API agora e mantém '##'
-        if (!PLC_CONNECTED) {
-            setAlarmCountsOffline();
-            return;
-        }
+        // Busca sempre; a função trata offline e mantém '##' quando necessário
         atualizarContadoresAlarme();
-        // Watchdog: se ficar >3s sem resumo válido, força '##'
-        if (Date.now() - ALARM_LAST_OK_TS > 3000) {
+        // Watchdog: se ficar >30s sem resumo válido, força '##'
+        if (Date.now() - ALARM_LAST_OK_TS > 30000) {
             setAlarmCountsOffline();
         }
         // [DESABILITADO] Efeito visual de alerta no box de alarmes (pulsar vermelho)
@@ -2168,9 +2396,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ========== Função para atualizar Data e Hora ==========
-let dateTimeInterval = null;
-let serverTimeSyncInterval = null;
-let TIME_OFFSET_MS = 0; // server_now - client_now
+// (variáveis globais já declaradas no topo para evitar TDZ)
 
 function updateDateTime() {
     console.log('🕒 Executando updateDateTime...');
@@ -2712,8 +2938,20 @@ window.setupJogAcumuladora = setupJogAcumuladora;
         });
     }
 
+    function getPLCNamesOrNull() {
+        try {
+            const arr = Array.isArray(window.classificationLabels) ? window.classificationLabels : null;
+            if (!arr || arr.length < 7) return null;
+            return arr
+                .filter(l => /^C[1-7]$/.test(l.id))
+                .sort((a,b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))
+                .map(l => (l.name && l.name !== l.id) ? l.name : l.id);
+        } catch(_) { return null; }
+    }
+
     function getDataFromSummary(summary) {
-        const labels = (summary || []).map(s => s.className);
+        const plcNames = getPLCNamesOrNull();
+        const labels = plcNames || (summary || []).map(s => s.className);
         const real = (summary || []).map(s => s.real || 0);
         const prog = (summary || []).map(s => s.programmed || 0);
         const colors = (summary || []).map(s => s.color || '#888');
@@ -2779,6 +3017,10 @@ window.setupJogAcumuladora = setupJogAcumuladora;
             const summary = (typeof window.getGraphicsSummary === 'function') ? window.getGraphicsSummary() : [];
             createMiniChart(summary);
             window.addEventListener('graphics-data-updated', (e) => updateMiniChart(e && e.detail));
+            // Atualiza labels assim que a classificação fornecer nomes
+            window.addEventListener('classification-labels-updated', () => {
+                try { updateMiniChart((typeof window.getGraphicsSummary === 'function') ? window.getGraphicsSummary() : []); } catch(_) {}
+            });
             // Clique no mini-gráfico abre a tela completa de gráficos
             try {
                 const container = document.querySelector('.mini-classes-chart-container');

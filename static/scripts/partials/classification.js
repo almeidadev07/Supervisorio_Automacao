@@ -964,6 +964,20 @@ function inicializarClassification() {
             </button>
         `;
         
+        // Expor nomes/cores atuais das classes para outros módulos (gráficos)
+        try {
+            const ids = ['C1','C2','C3','C4','C5','C6','C7'];
+            const labels = state.classesOvos.map((classe) => {
+                const isRange = ids.includes(classe.id);
+                const idx = isRange ? ids.indexOf(classe.id) : -1;
+                const plcName = isRange ? (state.dynamicLabels[idx] || classe.nome) : classe.nome;
+                return { id: classe.id, name: plcName, color: classe.cor };
+            });
+            window.classificationLabels = labels;
+            // Também emite um evento para que o grid mini chart atualize imediatamente
+            try { window.dispatchEvent(new CustomEvent('classification-labels-updated', { detail: labels })); } catch(_) {}
+        } catch(_) { /* noop */ }
+        
         // Adiciona event listener ao botão de editar após criá-lo
         const editLabelsBtn = document.getElementById('edit-labels-btn');
         if (editLabelsBtn) {

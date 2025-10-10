@@ -47,6 +47,28 @@ class PLCController:
         self._mock_mode_active = False
         self._mock_mode_start_time = 0
         
+        # Sistema de recuperação ULTRA robusta para erros de Address out of range
+        self._address_error_count = 0
+        self._max_address_errors = 1  # Reduzido para 1 - mais agressivo
+        self._last_address_error_time = 0
+        self._address_error_cooldown = 30.0  # Aumentado para 30 segundos
+        self._connection_health_score = 100  # Score de 0-100, 100 = perfeito
+        self._health_check_interval = 5.0
+        self._last_health_check = 0
+        self._stable_connection_duration = 0
+        self._min_stable_duration = 30.0  # 30 segundos de conexão estável antes de confiar
+        
+        # Sistema de filtro de tags problemáticas ULTRA agressivo
+        self._problematic_tags = set()  # Tags que causaram erros de Address out of range
+        self._tag_error_count = {}  # Contador de erros por tag
+        self._max_tag_errors = 1  # Reduzido para 1 - filtra imediatamente
+        self._tag_filter_duration = 120.0  # Aumentado para 120 segundos de filtro
+        
+        # Sistema de persistência de conexão
+        self._connection_persistent = False  # Modo persistente ativo
+        self._last_successful_read = 0
+        self._persistence_duration = 300.0  # 5 minutos de persistência após última leitura bem-sucedida
+        
         # Sistema de subscrições por tela/página
         self._active_subscriptions = {}  # {client_id: {tags: [], last_heartbeat: timestamp}}
         self._subscription_lock = threading.Lock()
@@ -289,13 +311,19 @@ class PLCController:
         self._poll_thread = None
 
     def read_tags(self, names=None):
-        """Leitura de tags pelo comm_map"""
+        """Leitura de tags pelo comm_map com sistema robusto de recuperação"""
         if not self.driver or not self.active_config:
             print(f"[PLC] ❌ Nenhum driver ativo para leitura de tags")
             return {}
         
-        machine = self.active_config.get('name')
+        # Verifica se está em cooldown por muitos erros de Address out of range
+        current_time = time.time()
+        if (self._address_error_count >= self._max_address_errors and 
+            current_time - self._last_address_error_time < self._address_error_cooldown):
+            print(f"[PLC] ⏳ Em cooldown por erros de Address out of range - retornando cache")
+            return self._get_cached_tags(names)
         
+        machine = self.active_config.get('name')
         tag_defs = self.comm_map_by_machine.get(machine, [])
         
         if names:
@@ -305,13 +333,164 @@ class PLCController:
         if not tag_defs:
             return {}
         
+        # Cache-first: usa _last_good_telemetry para responder rapidamente sem acessar PLC
+        cached = self._get_cached_tags(names)
+        
+        # Modo degradado: sempre usa cache se disponível, independente de erros
+        if cached:
+            print(f"[PLC] 📦 Modo degradado - usando cache (score: {self._connection_health_score}%)")
+            return cached
+        
+        # Se todas as tags solicitadas estão no cache e conexão está estável, retorna cache
+        if (names and cached and len(cached) == len(names) and 
+            self._connection_health_score > 80 and 
+            current_time - self._last_good_timestamp < 2.0):
+            return cached
+
+        # Filtra tags problemáticas antes de ler do PLC
+        filtered_defs = self._filter_problematic_tags(tag_defs, current_time)
+        
+        # Lê do PLC apenas o que não está cacheado e não é problemático
         with self._io_lock:
             try:
-                result = self.driver.read_tags(tag_defs)
+                # Se houver names, filtra os defs faltantes; senão lê todos defs
+                missing_defs = filtered_defs
+                if names and cached:
+                    missing_set = set([t.get('name') for t in filtered_defs if t.get('name') not in cached])
+                    missing_defs = [t for t in filtered_defs if t.get('name') in missing_set]
+                
+                if not missing_defs:
+                    return cached
+                
+                result = self.driver.read_tags(missing_defs)
+                
+                # Atualiza cache com novos valores
+                if result:
+                    self._last_good_telemetry.update(result)
+                    self._last_good_timestamp = current_time
+                    self._last_successful_read = current_time  # Atualiza timestamp de sucesso
+                    self._update_connection_health(True)
+                    self._address_error_count = 0  # Reset contador de erros em sucesso
+                    self._connection_persistent = True  # Ativa modo persistente
+                    
+                    # Remove tags do filtro se leitura foi bem-sucedida
+                    for tag_name in result.keys():
+                        if tag_name in self._problematic_tags:
+                            self._problematic_tags.discard(tag_name)
+                            self._tag_error_count.pop(tag_name, None)
+                
+                if cached:
+                    cached.update(result or {})
+                    return cached
                 return result
+                
             except Exception as e:
+                error_msg = str(e)
                 print(f"[PLC] ❌ Erro na leitura de tags: {e}")
-                return {}
+                
+                # Trata especificamente erros de Address out of range
+                if "Address out of range" in error_msg or "Item not available" in error_msg:
+                    self._handle_address_error(current_time)
+                    # Marca tags específicas como problemáticas
+                    self._mark_tags_as_problematic(missing_defs, current_time)
+                
+                self._update_connection_health(False)
+                # Retorna cache parcial se existir para evitar queda total
+                return cached
+    
+    def _get_cached_tags(self, names=None):
+        """Retorna tags do cache"""
+        cached = {}
+        try:
+            if names:
+                for n in names:
+                    if n in self._last_good_telemetry and self._last_good_telemetry[n] is not None:
+                        cached[n] = self._last_good_telemetry[n]
+            else:
+                cached = self._last_good_telemetry.copy()
+        except Exception:
+            cached = {}
+        return cached
+    
+    def _handle_address_error(self, current_time):
+        """Trata erros de Address out of range"""
+        self._address_error_count += 1
+        self._last_address_error_time = current_time
+        
+        print(f"[PLC] ⚠️ Erro de Address out of range #{self._address_error_count}")
+        
+        if self._address_error_count >= self._max_address_errors:
+            print(f"[PLC] 🚫 Muitos erros de Address out of range - ativando cooldown de {self._address_error_cooldown}s")
+            # Força reconexão após cooldown
+            threading.Timer(self._address_error_cooldown, self._force_reconnect_after_cooldown).start()
+            
+            # Notifica frontend sobre problemas de conexão
+            if self.socketio:
+                self.socketio.emit('plc_connection_changed', {
+                    'connected': False, 
+                    'reason': 'Address out of range errors',
+                    'cooldown': self._address_error_cooldown
+                })
+    
+    def _force_reconnect_after_cooldown(self):
+        """Força reconexão após cooldown de erros de Address out of range"""
+        print(f"[PLC] 🔄 Forçando reconexão após cooldown de Address out of range")
+        self._address_error_count = 0
+        self._connection_health_score = 50  # Score baixo para forçar reconexão
+        if self.driver:
+            try:
+                self.driver.disconnect()
+            except:
+                pass
+            self.driver = None
+    
+    def _update_connection_health(self, success):
+        """Atualiza score de saúde da conexão"""
+        if success:
+            self._connection_health_score = min(100, self._connection_health_score + 5)
+            self._stable_connection_duration += 1
+        else:
+            self._connection_health_score = max(0, self._connection_health_score - 10)
+            self._stable_connection_duration = 0
+        
+        # Log periódico do status
+        current_time = time.time()
+        if current_time - self._last_health_check > self._health_check_interval:
+            self._last_health_check = current_time
+            status = "🟢" if self._connection_health_score > 80 else "🟡" if self._connection_health_score > 50 else "🔴"
+            print(f"[PLC] {status} Saúde da conexão: {self._connection_health_score}% | Estável: {self._stable_connection_duration}s")
+    
+    def _filter_problematic_tags(self, tag_defs, current_time):
+        """Filtra tags que causaram erros de Address out of range"""
+        filtered = []
+        for tag_def in tag_defs:
+            tag_name = tag_def.get('name')
+            if tag_name in self._problematic_tags:
+                # Verifica se ainda está no período de filtro
+                if (current_time - self._tag_error_count.get(tag_name, {}).get('last_error', 0)) < self._tag_filter_duration:
+                    print(f"[PLC] 🚫 Filtrando tag problemática: {tag_name}")
+                    continue
+                else:
+                    # Remove do filtro se passou o tempo
+                    self._problematic_tags.discard(tag_name)
+                    self._tag_error_count.pop(tag_name, None)
+            filtered.append(tag_def)
+        return filtered
+    
+    def _mark_tags_as_problematic(self, tag_defs, current_time):
+        """Marca tags como problemáticas após erro de Address out of range"""
+        for tag_def in tag_defs:
+            tag_name = tag_def.get('name')
+            if tag_name:
+                if tag_name not in self._tag_error_count:
+                    self._tag_error_count[tag_name] = {'count': 0, 'last_error': 0}
+                
+                self._tag_error_count[tag_name]['count'] += 1
+                self._tag_error_count[tag_name]['last_error'] = current_time
+                
+                if self._tag_error_count[tag_name]['count'] >= self._max_tag_errors:
+                    self._problematic_tags.add(tag_name)
+                    print(f"[PLC] 🚫 Marcando tag como problemática: {tag_name} (erros: {self._tag_error_count[tag_name]['count']})")
 
     def write_tags(self, tag_values):
         """Escrita de tags no PLC"""

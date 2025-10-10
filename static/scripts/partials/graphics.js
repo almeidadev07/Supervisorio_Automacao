@@ -21,7 +21,7 @@ const CLASS_COLORS = {
     'C7': '#00FF99'
 };
 
-const CLASS_NAMES = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'];
+let CLASS_NAMES = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'];
 
 function initGraphics() {
     const container = document.getElementById('graphics-container');
@@ -97,6 +97,16 @@ function createChart() {
         classesChart.destroy();
     }
 
+    // Atualiza labels das classes com nomes vindos da classificação, se disponíveis
+    try {
+        if (Array.isArray(window.classificationLabels) && window.classificationLabels.length >= 7) {
+            CLASS_NAMES = window.classificationLabels
+                .filter(l => /^C[1-7]$/.test(l.id))
+                .sort((a,b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))
+                .map(l => l.name || l.id);
+        }
+    } catch(_) {}
+
     // Gera dados de exemplo para demonstração
     chartData.realFlow = [120, 180, 95, 210, 150, 175, 130];
     chartData.programmedFlow = [150, 200, 120, 250, 180, 200, 160];
@@ -116,10 +126,16 @@ function createChart() {
                     borderSkipped: false,
                 },
                 {
-                    label: 'Fluxo Programado',
+                    label: 'Fluxo Máximo Permitido',
                     data: chartData.programmedFlow,
-                    backgroundColor: CLASS_NAMES.map(name => CLASS_COLORS[name]),
-                    borderColor: CLASS_NAMES.map(name => CLASS_COLORS[name]),
+                    backgroundColor: CLASS_NAMES.map((name, i) => {
+                        const key = 'C' + (i+1);
+                        return CLASS_COLORS[key] || '#4ecdc4';
+                    }),
+                    borderColor: CLASS_NAMES.map((name, i) => {
+                        const key = 'C' + (i+1);
+                        return CLASS_COLORS[key] || '#4ecdc4';
+                    }),
                     borderWidth: 2,
                     borderRadius: 8,
                     borderSkipped: false,
@@ -133,7 +149,7 @@ function createChart() {
             plugins: {
                 title: {
                     display: true,
-                    text: 'Produção por Classe de Ovos',
+                    text: 'Gráfico de fluxo',
                     font: {
                         size: 20,
                         weight: 'bold'
@@ -227,6 +243,7 @@ function createChart() {
         window.classesChart = classesChart;
     }
     console.log('[graphics] createChart: gráfico criado');
+    try { renderClassesLegend(); } catch(_) {}
 }
 
 function setupEventListeners() {
@@ -236,6 +253,7 @@ function setupEventListeners() {
         refreshBtn.addEventListener('click', () => {
             updateChartData();
             updateLastUpdateTime();
+            renderClassesLegend();
         });
     }
 
@@ -244,6 +262,59 @@ function setupEventListeners() {
     if (exportBtn) {
         exportBtn.addEventListener('click', exportChart);
     }
+
+    // Abas de gráficos
+    const tabFlow = document.getElementById('tab-flow');
+    const tabWeight = document.getElementById('tab-weight');
+    const tabSpeed = document.getElementById('tab-speed');
+    const tabs = [tabFlow, tabWeight, tabSpeed].filter(Boolean);
+    const setActive = (btn) => {
+        tabs.forEach(t => t && t.classList.remove('active'));
+        btn && btn.classList.add('active');
+    };
+    if (tabFlow) tabFlow.addEventListener('click', () => {
+        setActive(tabFlow);
+        try {
+            classesChart.options.plugins.title.text = 'Gráfico de fluxo';
+            classesChart.config.type = 'bar';
+            classesChart.update('none');
+        } catch(_) {}
+    });
+    if (tabWeight) tabWeight.addEventListener('click', () => {
+        setActive(tabWeight);
+        try {
+            classesChart.options.plugins.title.text = 'Gráfico de peso';
+            classesChart.config.type = 'line';
+            classesChart.update('none');
+        } catch(_) {}
+    });
+    if (tabSpeed) tabSpeed.addEventListener('click', () => {
+        setActive(tabSpeed);
+        try {
+            classesChart.options.plugins.title.text = 'Gráfico de velocidade';
+            classesChart.config.type = 'line';
+            classesChart.update('none');
+        } catch(_) {}
+    });
+}
+
+function renderClassesLegend() {
+    const legendRoot = document.getElementById('classes-legend');
+    if (!legendRoot) return;
+    const ids = ['C1','C2','C3','C4','C5','C6','C7'];
+    const labels = (Array.isArray(window.classificationLabels) ? window.classificationLabels : ids.map(id => ({ id, name: id })));
+    const items = labels
+        .filter(l => /^C[1-7]$/.test(l.id))
+        .sort((a,b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))
+        .map((l, i) => {
+            const key = 'C' + (i+1);
+            const color = CLASS_COLORS[key] || '#999';
+            return `<span class="legend-chip">
+                <i class="legend-dot" style="background:${color};"></i>
+                <b class="legend-label">${(l.name && l.name !== l.id) ? l.name : l.id}</b>
+            </span>`;
+        }).join('');
+    legendRoot.innerHTML = items;
 }
 
 function updateChartData() {
@@ -321,12 +392,15 @@ function startDataUpdate() {
 window.initGraphics = initGraphics;
 window.updateChartData = updateChartData;
 window.getGraphicsSummary = function getGraphicsSummary() {
-    return CLASS_NAMES.map((name, idx) => ({
-        className: name,
-        real: chartData.realFlow[idx] ?? 0,
-        programmed: chartData.programmedFlow[idx] ?? 0,
-        color: CLASS_COLORS[name]
-    }));
+    return CLASS_NAMES.map((name, idx) => {
+        const key = 'C' + (idx + 1);
+        return {
+            className: name,
+            real: chartData.realFlow[idx] ?? 0,
+            programmed: chartData.programmedFlow[idx] ?? 0,
+            color: CLASS_COLORS[key]
+        };
+    });
 };
 
 // Inicia um feed de dados em background para alimentar o mini-gráfico do grid
@@ -336,6 +410,15 @@ window.getGraphicsSummary = function getGraphicsSummary() {
     function start() {
         if (started) return;
         started = true;
+        // Se existirem labels da classificação já carregados, sincroniza imediatamente os nomes
+        try {
+            if (Array.isArray(window.classificationLabels) && window.classificationLabels.length >= 7) {
+                CLASS_NAMES = window.classificationLabels
+                    .filter(l => /^C[1-7]$/.test(l.id))
+                    .sort((a,b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))
+                    .map(l => l.name || l.id);
+            }
+        } catch(_) {}
         // Atualização inicial imediata
         try { updateChartData(); } catch (_) {}
         // Atualiza a cada 5 segundos

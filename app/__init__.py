@@ -30,8 +30,13 @@ def create_app():
     # Configurações
     app.config['SECRET_KEY'] = 'supervisorio_enhanced_2024'
     
-    # Inicializa Socket.IO
-    socketio = SocketIO(app, cors_allowed_origins="*")
+    # Inicializa Socket.IO com configurações robustas
+    socketio = SocketIO(app, 
+                       cors_allowed_origins="*",
+                       logger=False,
+                       engineio_logger=False,
+                       ping_timeout=60,
+                       ping_interval=25)
     
     # Carrega configuração de máquinas
     machines_config_path = os.path.join(os.path.dirname(__file__), 'data', 'machines_config.json')

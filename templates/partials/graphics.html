@@ -1,7 +1,14 @@
 <!-- Tela de Gráficos -->
 <div class="graphics-container">
     <div class="graphics-header">
-        <h1>Gráficos de Produção</h1>
+        <div style="display:flex; align-items:center; gap:16px;">
+            <h1>Gráficos de Produção</h1>
+            <div class="graphics-tabs">
+                <button id="tab-flow" class="tab-btn active" title="Gráfico de fluxo">Fluxo</button>
+                <button id="tab-weight" class="tab-btn" title="Gráfico de peso">Peso</button>
+                <button id="tab-speed" class="tab-btn" title="Gráfico de velocidade">Velocidade</button>
+            </div>
+        </div>
         <div class="graphics-controls">
             <button id="btn-refresh-graphics" class="control-btn">
                 <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Relatorio.png') }}" alt="Atualizar">
@@ -26,7 +33,7 @@
             </div>
             <div class="legend-item">
                 <div class="legend-color programmed-flow"></div>
-                <span>Fluxo Programado</span>
+                <span>Fluxo Máximo Permitido</span>
             </div>
         </div>
     </div>
@@ -40,5 +47,6 @@
             <span class="info-label">Total de ovos:</span>
             <span class="info-value" id="total-eggs">0</span>
         </div>
+        <div class="info-item classes-legend" id="classes-legend"></div>
     </div>
 </div>
