@@ -1,35 +1,53 @@
-# app/services/plc_controller_final.py
-# Controlador PLC Final - Solução Definitiva
-# Baseado na arquitetura AVEVA Edge para máxima estabilidade
+# app/services/plc_controller_optimized.py
+# Controlador PLC Otimizado - Baseado na arquitetura AVEVA Edge
+# Solução definitiva para problemas de comunicação e perda de conexão
 
 import threading
 import time
 import json
 import os
 import queue
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
+from enum import Enum
 from collections import defaultdict
 import socket
 import struct
 
 from ..plc_drivers import create_driver_for_config
 from .alarm_processor import alarm_processor
-from .priority_manager import PriorityManager, TagPriority
-from .write_verifier import WriteVerifier
 
-class FinalPLCController:
-    """
-    Controlador PLC Final - Solução Definitiva
+class Priority(Enum):
+    CRITICAL = 1  # Velocidade, alarmes, comandos críticos
+    HIGH = 2      # Estados importantes, parâmetros
+    NORMAL = 3    # Dados de telemetria
+    LOW = 4       # Dados históricos, estatísticas
+
+@dataclass
+class PLCRequest:
+    request_id: str
+    operation: str  # 'read' ou 'write'
+    tags: List[str] = None
+    values: Dict[str, Any] = None
+    priority: Priority = Priority.NORMAL
+    created_at: float = None
+    retry_count: int = 0
+    max_retries: int = 3
     
-    Características:
-    - Comunicação estável sem oscilações
+    def __post_init__(self):
+        if self.created_at is None:
+            self.created_at = time.time()
+
+class OptimizedPLCController:
+    """
+    Controlador PLC Otimizado - Solução Definitiva
+    
+    Baseado na arquitetura AVEVA Edge:
+    - Comunicação eficiente sem sobrecarga
+    - Pool de conexões gerenciado
     - Priorização inteligente de operações
     - Verificação de escrita garantida
-    - Pool de conexões otimizado
-    - Cache inteligente com TTL
-    - Throttling para evitar sobrecarga
-    - Baseado na arquitetura AVEVA Edge
+    - Zero oscilações de conexão
     """
     
     def __init__(self, socketio, machines_config):
@@ -42,10 +60,6 @@ class FinalPLCController:
         self._comm_map_by_machine = {}
         self._tags_by_plc_ip = {}
         
-        # Componentes especializados
-        self.priority_manager = PriorityManager()
-        self.write_verifier = WriteVerifier(self._read_from_plc)
-        
         # Pool de conexões por IP
         self._connection_pool = {}  # {ip: {'driver': driver, 'last_used': timestamp, 'in_use': bool}}
         self._pool_lock = threading.Lock()
@@ -55,25 +69,19 @@ class FinalPLCController:
         # Sistema de filas com prioridade
         self._request_queue = queue.PriorityQueue(maxsize=1000)
         self._worker_threads = []
-        self._max_workers = 2  # Máximo 2 workers simultâneos
+        self._max_workers = 3  # Máximo 3 workers simultâneos
         self._stop_workers = threading.Event()
         
         # Cache inteligente
         self._cache = {}  # {tag_name: {'value': value, 'timestamp': time, 'ttl': ttl}}
         self._cache_lock = threading.Lock()
-        self._cache_ttl = 1.0  # 1 segundo de TTL para cache
+        self._cache_ttl = 2.0  # 2 segundos de TTL para cache
         
         # Configurações de otimização
-        self._batch_size = 10  # Lotes menores para reduzir carga
-        self._critical_interval = 0.05  # 50ms para operações críticas
-        self._normal_interval = 0.2  # 200ms para operações normais
+        self._batch_size = 15  # Lotes menores para reduzir carga
+        self._write_priority_interval = 0.1  # 100ms para escrita de prioridade
+        self._read_interval = 0.5  # 500ms para leitura normal
         self._health_check_interval = 10.0  # 10s para verificação de saúde
-        
-        # Sistema de polling inteligente
-        self._polling_thread = None
-        self._stop_polling = threading.Event()
-        self._last_poll_time = 0
-        self._polling_interval = 0.1  # 100ms para polling
         
         # Estatísticas
         self._stats = {
@@ -83,23 +91,20 @@ class FinalPLCController:
             'cache_hits': 0,
             'cache_misses': 0,
             'connection_errors': 0,
-            'write_verifications': 0,
-            'critical_operations': 0,
-            'throttled_operations': 0
+            'write_verifications': 0
         }
         
-        # Sistema de subscrições
-        self._subscriptions = {}  # {client_id: {'tags': [], 'last_heartbeat': timestamp}}
-        self._subscription_lock = threading.Lock()
-        self._heartbeat_timeout = 30.0  # 30s sem heartbeat = remove subscrição
+        # Sistema de verificação de escrita
+        self._pending_writes = {}  # {request_id: {'tags': [], 'timestamp': time}}
+        self._write_verification_timeout = 5.0  # 5s para verificar escrita
         
         # Carrega configurações
         self._load_comm_maps()
         
-        # Inicia componentes
-        self._start_components()
+        # Inicia workers
+        self._start_workers()
         
-        print("[FINAL] 🚀 Controlador PLC final inicializado")
+        print("[OPTIMIZED] 🚀 Controlador PLC otimizado inicializado")
     
     def _load_comm_maps(self):
         """Carrega maps de comunicação de todas as máquinas"""
@@ -116,35 +121,13 @@ class FinalPLCController:
                     with open(comm_map_file, 'r', encoding='utf-8') as f:
                         comm_map = json.load(f)
                     self._comm_map_by_machine[machine_name] = comm_map
-                    
-                    # Registra tags no gerenciador de prioridades
-                    for tag_def in comm_map:
-                        if 'name' in tag_def:
-                            tag_name = tag_def['name']
-                            is_writable = tag_def.get('type', 'REAL') in ['REAL', 'WORD', 'BOOL']
-                            self.priority_manager.register_tag(tag_name, is_writable)
-                    
-                    print(f"[FINAL] 📋 Comm map carregado para {machine_name}: {len(comm_map)} tags")
+                    print(f"[OPTIMIZED] 📋 Comm map carregado para {machine_name}: {len(comm_map)} tags")
                 except Exception as e:
-                    print(f"[FINAL] ❌ Erro ao carregar comm_map para {machine_name}: {e}")
+                    print(f"[OPTIMIZED] ❌ Erro ao carregar comm_map para {machine_name}: {e}")
                     self._comm_map_by_machine[machine_name] = []
             else:
-                print(f"[FINAL] ⚠️ Comm map não encontrado para {machine_name}")
+                print(f"[OPTIMIZED] ⚠️ Comm map não encontrado para {machine_name}")
                 self._comm_map_by_machine[machine_name] = []
-    
-    def _start_components(self):
-        """Inicia todos os componentes"""
-        try:
-            # Inicia workers
-            self._start_workers()
-            
-            # Inicia polling
-            self._start_polling()
-            
-            print("[FINAL] 🚀 Todos os componentes iniciados")
-            
-        except Exception as e:
-            print(f"[FINAL] ❌ Erro ao iniciar componentes: {e}")
     
     def _start_workers(self):
         """Inicia workers para processar requisições"""
@@ -152,26 +135,12 @@ class FinalPLCController:
             worker = threading.Thread(
                 target=self._worker_loop,
                 daemon=True,
-                name=f"FinalPLCWorker-{i}"
+                name=f"PLCWorker-{i}"
             )
             worker.start()
             self._worker_threads.append(worker)
         
-        print(f"[FINAL] 👷 {self._max_workers} workers iniciados")
-    
-    def _start_polling(self):
-        """Inicia polling de dados"""
-        if self._polling_thread and self._polling_thread.is_alive():
-            return
-        
-        self._stop_polling.clear()
-        self._polling_thread = threading.Thread(
-            target=self._polling_loop,
-            daemon=True,
-            name="FinalPLCPolling"
-        )
-        self._polling_thread.start()
-        print("[FINAL] 🔄 Polling iniciado")
+        print(f"[OPTIMIZED] 👷 {self._max_workers} workers iniciados")
     
     def _worker_loop(self):
         """Loop principal dos workers"""
@@ -187,66 +156,15 @@ class FinalPLCController:
                 self._process_request(request)
                 
             except Exception as e:
-                print(f"[FINAL] ❌ Erro no worker: {e}")
+                print(f"[OPTIMIZED] ❌ Erro no worker: {e}")
                 time.sleep(0.1)
     
-    def _polling_loop(self):
-        """Loop de polling inteligente"""
-        while not self._stop_polling.is_set():
-            try:
-                current_time = time.time()
-                
-                # Verifica se é hora de fazer polling
-                if current_time - self._last_poll_time < self._polling_interval:
-                    time.sleep(0.01)
-                    continue
-                
-                # Obtém tags subscritas
-                subscribed_tags = self.get_subscribed_tags()
-                if not subscribed_tags:
-                    time.sleep(0.1)
-                    continue
-                
-                # Filtra tags que podem ser lidas (throttling)
-                readable_tags = [tag for tag in subscribed_tags if self.priority_manager.can_read(tag)]
-                
-                if not readable_tags:
-                    time.sleep(0.01)
-                    continue
-                
-                # Lê dados do PLC
-                data = self._read_from_plc(readable_tags)
-                
-                if data:
-                    # Atualiza cache
-                    self._update_cache(data)
-                    
-                    # Processa alarmes
-                    if self._active_machine:
-                        try:
-                            active_alarms = alarm_processor.process_alarm_data(data, self._active_machine['name'])
-                            alarm_summary = alarm_processor.get_alarm_summary(active_alarms)
-                            data['active_alarms'] = active_alarms
-                            data['alarm_summary'] = alarm_summary
-                        except Exception as e:
-                            print(f"[FINAL] ❌ Erro no processamento de alarmes: {e}")
-                    
-                    # Envia para frontend
-                    if self.socketio:
-                        self.socketio.emit('telemetry', data)
-                
-                self._last_poll_time = current_time
-                
-            except Exception as e:
-                print(f"[FINAL] ❌ Erro no polling: {e}")
-                time.sleep(0.1)
-    
-    def _process_request(self, request):
+    def _process_request(self, request: PLCRequest):
         """Processa uma requisição individual"""
         try:
-            if request['operation'] == 'read':
+            if request.operation == 'read':
                 self._process_read_request(request)
-            elif request['operation'] == 'write':
+            elif request.operation == 'write':
                 self._process_write_request(request)
             
             with self._lock:
@@ -254,22 +172,25 @@ class FinalPLCController:
                 self._stats['successful_requests'] += 1
                 
         except Exception as e:
-            print(f"[FINAL] ❌ Erro ao processar requisição: {e}")
+            print(f"[OPTIMIZED] ❌ Erro ao processar requisição {request.request_id}: {e}")
             with self._lock:
                 self._stats['failed_requests'] += 1
+            
+            # Retry se necessário
+            if request.retry_count < request.max_retries:
+                request.retry_count += 1
+                self._request_queue.put((request.priority.value, request))
     
-    def _process_read_request(self, request):
+    def _process_read_request(self, request: PLCRequest):
         """Processa requisição de leitura"""
-        tags = request.get('tags', [])
-        
         # Verifica cache primeiro
-        cached_data = self._get_cached_data(tags)
-        uncached_tags = [tag for tag in tags if tag not in cached_data]
+        cached_data = self._get_cached_data(request.tags)
+        uncached_tags = [tag for tag in request.tags if tag not in cached_data]
         
         if not uncached_tags:
             # Todos os dados estão no cache
             with self._lock:
-                self._stats['cache_hits'] += len(tags)
+                self._stats['cache_hits'] += len(request.tags)
             return cached_data
         
         # Lê dados não cacheados do PLC
@@ -287,47 +208,83 @@ class FinalPLCController:
         
         return result
     
-    def _process_write_request(self, request):
+    def _process_write_request(self, request: PLCRequest):
         """Processa requisição de escrita com verificação"""
-        tag_values = request.get('values', {})
-        
-        # Filtra tags que podem ser escritas (throttling)
-        writable_values = {tag: value for tag, value in tag_values.items() 
-                          if self.priority_manager.can_write(tag)}
-        
-        if not writable_values:
-            print("[FINAL] ⚠️ Nenhuma tag pode ser escrita no momento (throttling)")
-            return False
-        
         # Escreve no PLC
-        success = self._write_to_plc(writable_values)
+        success = self._write_to_plc(request.values)
         
         if success:
             # Agenda verificação de escrita
-            request_id = request.get('request_id', f"write_{int(time.time() * 1000)}")
-            self.write_verifier.schedule_verification(
-                request_id, 
-                writable_values,
-                callback=self._on_write_verification
-            )
+            self._schedule_write_verification(request)
             
             # Invalida cache para as tags escritas
-            self._invalidate_cache(list(writable_values.keys()))
+            self._invalidate_cache(list(request.values.keys()))
             
-            print(f"[FINAL] ✅ Escrita confirmada: {list(writable_values.keys())}")
+            print(f"[OPTIMIZED] ✅ Escrita confirmada: {list(request.values.keys())}")
         else:
-            print(f"[FINAL] ❌ Falha na escrita: {list(writable_values.keys())}")
+            print(f"[OPTIMIZED] ❌ Falha na escrita: {list(request.values.keys())}")
         
         return success
     
-    def _on_write_verification(self, request_id: str, success: bool, tag_values: Dict[str, Any]):
-        """Callback para verificação de escrita"""
-        if success:
-            print(f"[FINAL] ✅ Verificação de escrita bem-sucedida: {request_id}")
-            with self._lock:
-                self._stats['write_verifications'] += 1
-        else:
-            print(f"[FINAL] ❌ Verificação de escrita falhou: {request_id}")
+    def _schedule_write_verification(self, request: PLCRequest):
+        """Agenda verificação de escrita"""
+        with self._lock:
+            self._pending_writes[request.request_id] = {
+                'tags': list(request.values.keys()),
+                'timestamp': time.time(),
+                'values': request.values
+            }
+    
+    def _verify_pending_writes(self):
+        """Verifica escritas pendentes"""
+        current_time = time.time()
+        expired_writes = []
+        
+        with self._lock:
+            for request_id, write_info in self._pending_writes.items():
+                if current_time - write_info['timestamp'] > self._write_verification_timeout:
+                    expired_writes.append(request_id)
+                else:
+                    # Verifica se a escrita foi bem-sucedida
+                    self._verify_write_success(request_id, write_info)
+        
+        # Remove escritas expiradas
+        for request_id in expired_writes:
+            del self._pending_writes[request_id]
+    
+    def _verify_write_success(self, request_id: str, write_info: dict):
+        """Verifica se uma escrita foi bem-sucedida"""
+        try:
+            # Lê valores atuais do PLC
+            current_values = self._read_from_plc(write_info['tags'])
+            
+            # Compara com valores esperados
+            success = True
+            for tag, expected_value in write_info['values'].items():
+                if tag in current_values:
+                    current_value = current_values[tag]
+                    # Tolerância para valores numéricos
+                    if isinstance(expected_value, (int, float)) and isinstance(current_value, (int, float)):
+                        if abs(current_value - expected_value) > 0.01:
+                            success = False
+                            break
+                    elif current_value != expected_value:
+                        success = False
+                        break
+                else:
+                    success = False
+                    break
+            
+            if success:
+                with self._lock:
+                    self._stats['write_verifications'] += 1
+                del self._pending_writes[request_id]
+                print(f"[OPTIMIZED] ✅ Verificação de escrita bem-sucedida: {write_info['tags']}")
+            else:
+                print(f"[OPTIMIZED] ⚠️ Verificação de escrita falhou: {write_info['tags']}")
+                
+        except Exception as e:
+            print(f"[OPTIMIZED] ❌ Erro na verificação de escrita: {e}")
     
     def _get_connection(self, ip: str):
         """Obtém conexão do pool ou cria nova"""
@@ -356,10 +313,10 @@ class FinalPLCController:
                             'last_used': time.time(),
                             'in_use': True
                         }
-                        print(f"[FINAL] 🔌 Nova conexão criada para {ip}")
+                        print(f"[OPTIMIZED] 🔌 Nova conexão criada para {ip}")
                         return driver
                 except Exception as e:
-                    print(f"[FINAL] ❌ Erro ao criar conexão para {ip}: {e}")
+                    print(f"[OPTIMIZED] ❌ Erro ao criar conexão para {ip}: {e}")
                     with self._lock:
                         self._stats['connection_errors'] += 1
         
@@ -409,7 +366,7 @@ class FinalPLCController:
                 self._release_connection(ip)
                 
             except Exception as e:
-                print(f"[FINAL] ❌ Erro ao ler do {ip}: {e}")
+                print(f"[OPTIMIZED] ❌ Erro ao ler do {ip}: {e}")
                 with self._lock:
                     self._stats['connection_errors'] += 1
         
@@ -447,7 +404,7 @@ class FinalPLCController:
                 self._release_connection(ip)
                 
             except Exception as e:
-                print(f"[FINAL] ❌ Erro ao escrever no {ip}: {e}")
+                print(f"[OPTIMIZED] ❌ Erro ao escrever no {ip}: {e}")
                 with self._lock:
                     self._stats['connection_errors'] += 1
                 success = False
@@ -541,7 +498,7 @@ class FinalPLCController:
         """Define máquina ativa"""
         with self._lock:
             self._active_machine = cfg
-            print(f"[FINAL] 🏭 Máquina ativa: {cfg.get('name')}")
+            print(f"[OPTIMIZED] 🏭 Máquina ativa: {cfg.get('name')}")
     
     def read_tags(self, tag_names: List[str]) -> Dict[str, Any]:
         """Lê tags específicas"""
@@ -549,15 +506,15 @@ class FinalPLCController:
             return {}
         
         # Cria requisição de leitura
-        request = {
-            'request_id': f"read_{int(time.time() * 1000)}",
-            'operation': 'read',
-            'tags': tag_names,
-            'priority': 3  # NORMAL
-        }
+        request = PLCRequest(
+            request_id=f"read_{int(time.time() * 1000)}",
+            operation='read',
+            tags=tag_names,
+            priority=Priority.NORMAL
+        )
         
         # Adiciona à fila
-        self._request_queue.put((request['priority'], request))
+        self._request_queue.put((request.priority.value, request))
         
         # Retorna dados do cache imediatamente (se disponível)
         return self._get_cached_data(tag_names)
@@ -568,66 +525,17 @@ class FinalPLCController:
             return True
         
         # Cria requisição de escrita com prioridade crítica
-        request = {
-            'request_id': f"write_{int(time.time() * 1000)}",
-            'operation': 'write',
-            'values': tag_values,
-            'priority': 1  # CRITICAL
-        }
+        request = PLCRequest(
+            request_id=f"write_{int(time.time() * 1000)}",
+            operation='write',
+            values=tag_values,
+            priority=Priority.CRITICAL
+        )
         
         # Adiciona à fila com prioridade máxima
-        self._request_queue.put((request['priority'], request))
+        self._request_queue.put((request.priority.value, request))
         
         return True
-    
-    def subscribe_tags(self, client_id: str, tag_names: List[str]) -> bool:
-        """Registra subscrição de tags para um cliente"""
-        with self._subscription_lock:
-            current_time = time.time()
-            self._subscriptions[client_id] = {
-                'tags': tag_names,
-                'last_heartbeat': current_time
-            }
-            print(f"[FINAL] 📋 Cliente {client_id} subscrito a {len(tag_names)} tags")
-            return True
-    
-    def unsubscribe_client(self, client_id: str) -> bool:
-        """Remove subscrição de um cliente"""
-        with self._subscription_lock:
-            if client_id in self._subscriptions:
-                del self._subscriptions[client_id]
-                print(f"[FINAL] 🗑️ Cliente {client_id} removido das subscrições")
-                return True
-            return False
-    
-    def heartbeat_client(self, client_id: str) -> bool:
-        """Atualiza heartbeat de um cliente"""
-        with self._subscription_lock:
-            if client_id in self._subscriptions:
-                self._subscriptions[client_id]['last_heartbeat'] = time.time()
-                return True
-            return False
-    
-    def get_subscribed_tags(self) -> List[str]:
-        """Retorna todas as tags que estão sendo subscritas"""
-        with self._subscription_lock:
-            current_time = time.time()
-            active_tags = set()
-            
-            # Remove clientes inativos (sem heartbeat)
-            expired_clients = []
-            for client_id, sub_info in self._subscriptions.items():
-                if current_time - sub_info['last_heartbeat'] > self._heartbeat_timeout:
-                    expired_clients.append(client_id)
-                else:
-                    active_tags.update(sub_info['tags'])
-            
-            # Remove clientes expirados
-            for client_id in expired_clients:
-                del self._subscriptions[client_id]
-                print(f"[FINAL] ⏰ Cliente {client_id} expirado por timeout")
-            
-            return list(active_tags)
     
     def get_statistics(self) -> Dict:
         """Retorna estatísticas do controlador"""
@@ -636,12 +544,9 @@ class FinalPLCController:
         
         stats.update({
             'active_connections': len(self._connection_pool),
-            'pending_verifications': len(self.write_verifier.get_pending_verifications()),
+            'pending_writes': len(self._pending_writes),
             'cache_size': len(self._cache),
-            'queue_size': self._request_queue.qsize(),
-            'subscriptions': len(self._subscriptions),
-            'priority_stats': self.priority_manager.get_statistics(),
-            'verifier_stats': self.write_verifier.get_statistics()
+            'queue_size': self._request_queue.qsize()
         })
         
         return stats
@@ -649,11 +554,6 @@ class FinalPLCController:
     def cleanup(self):
         """Limpeza completa"""
         self._stop_workers.set()
-        self._stop_polling.set()
-        
-        # Limpa componentes
-        self.priority_manager.cleanup()
-        self.write_verifier.cleanup()
         
         # Fecha todas as conexões
         with self._pool_lock:
@@ -664,4 +564,4 @@ class FinalPLCController:
                     pass
             self._connection_pool.clear()
         
-        print("[FINAL] 🧹 Cleanup completo realizado")
+        print("[OPTIMIZED] 🧹 Cleanup completo realizado")

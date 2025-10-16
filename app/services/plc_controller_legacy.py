@@ -1,6 +1,6 @@
 # app/services/plc_controller_legacy.py
 # ARQUIVO LEGADO - NÃO USADO MAIS
-# Use enhanced_plc_controller.py em vez deste arquivo
+# Use plc_controller_final.py em vez deste arquivo
 import threading
 import time
 import json
@@ -73,6 +73,13 @@ class PLCController:
         self._active_subscriptions = {}  # {client_id: {tags: [], last_heartbeat: timestamp}}
         self._subscription_lock = threading.Lock()
         self._heartbeat_timeout = 30.0  # 30s sem heartbeat = remove subscrição
+
+        # Loop crítico (scan class) para alarmes/velocidade com baixa latência
+        self._critical_thread = None
+        self._critical_stop_event = threading.Event()
+        self._critical_interval_sec = 0.15  # ~150ms
+        self._critical_enabled = False  # desabilitado por padrão até ajuste fino
+        self._last_emit_ts = 0.0  # throttle para emissões de socket
 
     def _load_comm_maps(self):
         """Carrega os maps de comunicação de todas as máquinas e agrupa tags por IP"""
@@ -303,12 +310,131 @@ class PLCController:
         self._stop_event.clear()
         self._poll_thread = threading.Thread(target=self._poll_loop, daemon=True)
         self._poll_thread.start()
+        # Inicia também o loop crítico de baixa latência (apenas se habilitado)
+        if self._critical_enabled:
+            self._critical_stop_event.clear()
+            if not self._critical_thread or not self._critical_thread.is_alive():
+                self._critical_thread = threading.Thread(target=self._critical_loop, daemon=True)
+                self._critical_thread.start()
 
     def _stop_polling(self):
         self._stop_event.set()
         if self._poll_thread and self._poll_thread.is_alive():
             self._poll_thread.join(timeout=1)
         self._poll_thread = None
+        # Para loop crítico
+        self._critical_stop_event.set()
+        if self._critical_thread and self._critical_thread.is_alive():
+            self._critical_thread.join(timeout=1)
+        self._critical_thread = None
+
+    def _is_critical_tag_name(self, name: str) -> bool:
+        try:
+            n = (name or '').upper()
+            if not n:
+                return False
+            # Palavras-chave de alarme/estado
+            critical_kw = (
+                'ALARME', 'ALARM', 'EMERG', 'EMERGENCY', 'ERRO', 'ERROR',
+                'ESTADO', 'STATE', 'STATUS', 'FALHA', 'FAULT',
+                'DB10', 'DB104'
+            )
+            # Velocidade em tempo real
+            speed_kw = ('VEL', 'VELOC', 'SPEED')
+            return any(k in n for k in critical_kw) or any(k in n for k in speed_kw)
+        except Exception:
+            return False
+
+    def _select_critical_defs(self, all_defs, subscribed_names):
+        # Filtra por nomes subscritos (quando fornecido) e por heurística de críticos
+        try:
+            names_set = set(subscribed_names or [])
+            selected = []
+            for tag in (all_defs or []):
+                name = tag.get('name')
+                if names_set and name not in names_set:
+                    continue
+                if self._is_critical_tag_name(name):
+                    selected.append(tag)
+                # Limite de segurança para evitar sobrecarga
+                if len(selected) >= 120:
+                    break
+            # Se nada bateu, pega pequenos subconjuntos úteis
+            if not selected:
+                # tenta velocidade e alguns estados
+                fallback = []
+                for tag in (all_defs or []):
+                    name = tag.get('name', '')
+                    if any(k in name.upper() for k in ('VEL', 'VELOC', 'SPEED', 'DB10', 'DB104')):
+                        fallback.append(tag)
+                        if len(fallback) >= 40:
+                            break
+                selected = fallback
+            return selected
+        except Exception:
+            return []
+
+    def _critical_loop(self):
+        """Loop de varredura crítica com baixa latência para alarmes e velocidade.
+        Não substitui o loop principal; apenas entrega respostas rápidas.
+        """
+        print("[PLC] ⚡ Iniciando loop crítico (baixa latência)")
+        while not self._critical_stop_event.is_set() and self._critical_enabled:
+            start = time.time()
+            try:
+                # Requisitos mínimos: cliente ativo e driver conectado
+                subscribed = self.get_subscribed_tags()
+                if not subscribed or not self.driver or not self.driver.is_connected():
+                    time.sleep(self._critical_interval_sec)
+                    continue
+
+                # Seleciona defs críticos da máquina ativa
+                machine = self.active_config.get('name') if self.active_config else None
+                if not machine:
+                    time.sleep(self._critical_interval_sec)
+                    continue
+                all_defs = self.comm_map_by_machine.get(machine, [])
+                critical_defs = self._select_critical_defs(all_defs, subscribed)
+                if not critical_defs:
+                    time.sleep(self._critical_interval_sec)
+                    continue
+
+                # Leitura serializada (Snap7)
+                # Hard cap: evita leituras muito grandes em alta frequência
+                max_batch = 50
+                subset = critical_defs[:max_batch]
+
+                with self._io_lock:
+                    values = self.driver.read_tags(subset)
+
+                if values:
+                    telemetry = {'plc_connected': True, 'timestamp': time.time()}
+                    telemetry.update(values)
+                    # Processa alarmes rapidamente
+                    try:
+                        active_alarms = alarm_processor.process_alarm_data(telemetry, machine)
+                        alarm_summary = alarm_processor.get_alarm_summary(active_alarms)
+                        telemetry['active_alarms'] = active_alarms
+                        telemetry['alarm_summary'] = alarm_summary
+                    except Exception:
+                        pass
+                    # Emite atualização crítica (throttle ~300ms)
+                    try:
+                        if self.socketio:
+                            now_emit = time.time()
+                            if (now_emit - self._last_emit_ts) >= 0.3:
+                                self._last_emit_ts = now_emit
+                                self.socketio.emit('telemetry', telemetry)
+                    except Exception:
+                        pass
+            except Exception as e:
+                print(f"[PLC] ⚠️ Erro no loop crítico: {e}")
+            finally:
+                # Mantém o período alvo
+                elapsed = time.time() - start
+                delay = max(0.0, self._critical_interval_sec - elapsed)
+                if delay > 0:
+                    time.sleep(delay)
 
     def read_tags(self, names=None):
         """Leitura de tags pelo comm_map com sistema robusto de recuperação"""
@@ -333,12 +459,19 @@ class PLCController:
         if not tag_defs:
             return {}
         
-        # Cache-first: usa _last_good_telemetry para responder rapidamente sem acessar PLC
+        # Cache disponível
         cached = self._get_cached_tags(names)
         
-        # Modo degradado: sempre usa cache se disponível, independente de erros
-        if cached:
-            print(f"[PLC] 📦 Modo degradado - usando cache (score: {self._connection_health_score}%)")
+        # Usa cache somente em condições específicas (cooldown ou saúde muito baixa)
+        in_cooldown = (
+            self._address_error_count >= self._max_address_errors and
+            (current_time - self._last_address_error_time) < self._address_error_cooldown
+        )
+        if in_cooldown and cached:
+            print(f"[PLC] 📦 Cache por cooldown de Address out of range ({self._connection_health_score}%)")
+            return cached
+        if self._connection_health_score < 40 and cached and (current_time - self._last_good_timestamp) < 10.0:
+            print(f"[PLC] 📦 Cache por baixa saúde de conexão ({self._connection_health_score}%)")
             return cached
         
         # Se todas as tags solicitadas estão no cache e conexão está estável, retorna cache
@@ -552,8 +685,8 @@ class PLCController:
                 # Verifica se deve sair do modo mock
                 self._check_mock_mode_timeout()
                 
-                # Intervalo muito mais longo para reduzir carga no PLC (especialmente com muitas tags)
-                time.sleep(15.0)
+                # Intervalo de polling balanceado
+                time.sleep(3.0)
                 
             except Exception as e:
                 print(f"[PLC] ❌ Erro no loop de polling: {e}")
@@ -984,8 +1117,8 @@ class PLCController:
                 batch_data = driver.read_tags(batch)
                 if batch_data:
                     all_data.update(batch_data)
-                # Pausa maior entre lotes para dar tempo ao PLC
-                time.sleep(0.5)
+                # Pausa entre lotes para reduzir carga na CPU/PLC
+                time.sleep(0.2)
             except Exception as e:
                 error_msg = str(e)
                 if "CLI : Job pending" in error_msg:

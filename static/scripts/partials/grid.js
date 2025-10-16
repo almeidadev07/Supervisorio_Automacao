@@ -1266,7 +1266,7 @@ function inicializarVelocimetro() {
     // Polling HTTP ultra-otimizado: trabalha com cache do backend e reduz carga no PLC
     let consecutiveFailures = 0;
     let lastSuccessfulRead = 0;
-    let adaptiveInterval = 2000; // Intervalo adaptativo base
+    let adaptiveInterval = 5000; // Intervalo adaptativo base - aumentado para reduzir carga
     let lastStableValue = null; // Último valor estável conhecido
     let valueStabilityCount = 0; // Contador de estabilidade do valor
     let minStabilityCount = 1; // Reduzido para 1 - máximo responsivo
@@ -1287,14 +1287,14 @@ function inicializarVelocimetro() {
         
         // Ajusta intervalo baseado na estabilidade
         if (consecutiveFailures === 0 && now - lastSuccessfulRead < 5000) {
-            adaptiveInterval = Math.max(1000, adaptiveInterval - 100); // Acelera se estável
+            adaptiveInterval = Math.max(3000, adaptiveInterval - 100); // Acelera se estável (mínimo 3s)
         } else if (consecutiveFailures > 0) {
-            adaptiveInterval = Math.min(5000, adaptiveInterval + 500); // Desacelera se instável
+            adaptiveInterval = Math.min(8000, adaptiveInterval + 500); // Desacelera se instável (máximo 8s)
         }
         
         // Jitter para evitar sincronização
         const jitter = Math.floor(Math.random() * 300) - 150;
-        const nextDelay = Math.max(800, adaptiveInterval + jitter);
+        const nextDelay = Math.max(2000, adaptiveInterval + jitter); // Mínimo 2 segundos
 
         try {
             if (!isGridVisible()) {

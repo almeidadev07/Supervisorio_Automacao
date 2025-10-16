@@ -47,11 +47,11 @@ def create_app():
     # enhanced_plc_controller = init_enhanced_controller(socketio, machines_config)
     enhanced_plc_controller = None
     
-    # Inicializa controlador legado que suporta comm_map e alarmes
-    from .services.plc_controller_legacy import PLCController as LegacyPLCController
-    legacy_plc_controller = LegacyPLCController(socketio, machines_config)
-    app.plc_controller = legacy_plc_controller  # Anexa ao app para uso em blueprints antigos
-    
+    # Inicializa controlador standalone que resolve problemas de comunicação
+    from .services.plc_controller_standalone import StandalonePLCController
+    robust_plc_controller = StandalonePLCController(socketio, machines_config)
+    app.plc_controller = robust_plc_controller  # Anexa ao app para uso em blueprints antigos
+
     # Anexa lista de máquinas ao app para rotas /api/machines e afins
     app.machines = machines_config
     
@@ -87,14 +87,9 @@ def create_app():
         config_700cx = next((m for m in machines_config if m['name'] == '700CX'), None)
         if config_700cx:
             print(f"[INIT] Configurando automaticamente máquina 700CX (IP: {config_700cx.get('default_plc_ip')})")
-            # Passa a configuração completa (dict) para o controlador legado
-            success, msg = legacy_plc_controller.set_active_machine(config_700cx)
+            # Passa a configuração completa (dict) para o controlador robusto
+            success, msg = robust_plc_controller.set_active_machine(config_700cx)
             if success:
-                # Garante que o comm_map ativo seja recarregado do arquivo 700CX.json
-                try:
-                    legacy_plc_controller.reload_comm_map_for_active()
-                except Exception:
-                    pass
                 print(f"[INIT] ✅ Máquina 700CX configurada com sucesso")
             else:
                 print(f"[INIT] ⚠️ Falha ao configurar 700CX: {msg}")
@@ -102,18 +97,14 @@ def create_app():
             print(f"[INIT] ⚠️ Configuração 700CX não encontrada")
     except Exception as e:
         print(f"[INIT] ❌ Erro ao configurar 700CX: {e}")
-    
-    # O controlador legado já inicia o polling em set_active_machine; como fallback:
-    try:
-        legacy_plc_controller.start_polling_if_needed()
-    except Exception:
-        pass
-    
+        
+    # O controlador robusto já inicia o polling automaticamente
+
     # Registra blueprints
     app.register_blueprint(enhanced_api_bp, url_prefix='/api/enhanced')
     app.register_blueprint(machines_bp, url_prefix='/api')
     # app.register_blueprint(setups_bp)
-    
+
     # Rota principal
     @app.route('/')
     def index():

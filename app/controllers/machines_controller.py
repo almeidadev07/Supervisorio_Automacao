@@ -465,13 +465,10 @@ def get_alarms():
         # Lê dados atuais do PLC
         try:
             machine = cfg.get('name')
-            tag_defs = current_app.plc_controller.comm_map_by_machine.get(machine, [])
-            
-            if not tag_defs:
-                return jsonify({'ok': False, 'error': 'no communication map loaded'}), 400
             
             # Lê tags do PLC usando o controlador (com lock e políticas internas)
-            plc_data = current_app.plc_controller.read_tags()
+            # Para alarmes, lê todas as tags disponíveis
+            plc_data = current_app.plc_controller.read_tags([])
             
             # Processa alarmes
             from ..services.alarm_processor import alarm_processor
