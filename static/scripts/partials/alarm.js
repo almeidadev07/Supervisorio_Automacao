@@ -48,22 +48,32 @@ function inicializarAlarmes() {
 }
 
 function toggleAlarmView(button) {
-    const currentState = button.getAttribute('data-state');
+    if (!button) {
+        console.error('[ALARM] toggleAlarmView: botão não fornecido');
+        return;
+    }
+    
+    const currentState = button.getAttribute('data-state') || 'instantaneos';
     const toggleText = button.querySelector('.toggle-text');
+    
+    console.log(`[ALARM] Alternando modo: ${currentState} -> ${currentState === 'instantaneos' ? 'historicos' : 'instantaneos'}`);
     
     if (currentState === 'instantaneos') {
         button.setAttribute('data-state', 'historicos');
-        toggleText.textContent = 'Histórico';
+        if (toggleText) toggleText.textContent = 'Histórico';
         currentViewMode = 'historicos';
         // Para o polling automático quando em histórico
         stopAlarmAutoRefresh();
+        // Para atualizações via SocketIO no modo histórico
+        console.log('[ALARM] Modo histórico ativado - carregando histórico...');
         // Força recarregamento do histórico
         carregarAlarmesHistoricos();
     } else {
         button.setAttribute('data-state', 'instantaneos');
-        toggleText.textContent = 'Instantâneo';
+        if (toggleText) toggleText.textContent = 'Instantâneo';
         currentViewMode = 'instantaneos';
         // Reinicia o polling quando volta para instantâneo
+        console.log('[ALARM] Modo instantâneo ativado - carregando alarmes ativos...');
         startAlarmAutoRefresh();
         carregarAlarmes('instantaneos');
     }
@@ -160,29 +170,54 @@ function carregarAlarmesHistoricos() {
     
     // Carrega histórico real via API
     fetch('/api/alarms/history?limit=200')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            if (data.ok && data.history) {
+            if (data.ok && data.history && Array.isArray(data.history)) {
                 console.log(`[ALARM] ${data.history.length} eventos de histórico carregados`);
                 
                 // Converte eventos do histórico para o mesmo formato da lista ativa
-                const alarmes = data.history.map(event => ({
-                    id: event.id,
-                    var_name: event.var_name || '',
-                    bit_index: event.bit_index || 0,
-                    description: `${event.action === 'activated' ? 'ATIVADO' : 'LIMPO'}: ${event.description}`,
-                    priority: event.priority,
-                    type: event.type,
-                    machine: event.machine,
-                    date: event.date || (event.full_timestamp ? new Date(event.full_timestamp).toLocaleDateString('pt-BR') : ''),
-                    timestamp: event.timestamp,
-                    active: event.action === 'activated'
-                }));
+                const alarmes = data.history.map(event => {
+                    // Formata data e hora a partir do full_timestamp
+                    let dateStr = '';
+                    let timeStr = '--:--';
+                    
+                    if (event.full_timestamp) {
+                        try {
+                            const date = new Date(event.full_timestamp);
+                            dateStr = date.toLocaleDateString('pt-BR');
+                            timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        } catch (e) {
+                            console.warn('[ALARM] Erro ao formatar timestamp:', e);
+                        }
+                    } else if (event.date) {
+                        dateStr = event.date;
+                        timeStr = event.timestamp || '--:--';
+                    }
+                    
+                    return {
+                        id: event.id || `${event.var_name}_${event.bit_index}_${event.full_timestamp}`,
+                        var_name: event.var_name || '',
+                        bit_index: event.bit_index || 0,
+                        description: `${event.action === 'activated' ? 'ATIVADO' : 'LIMPO'}: ${event.description || 'Sem descrição'}`,
+                        priority: event.priority || 'hardware',
+                        type: event.type || event.priority || 'hardware',
+                        machine: event.machine || '',
+                        date: dateStr,
+                        timestamp: timeStr,
+                        full_timestamp: event.full_timestamp || '', // ✅ PRESERVA full_timestamp para ordenação
+                        active: event.action === 'activated'
+                    };
+                });
                 
                 currentAlarms = alarmes;
                 atualizarInterfaceAlarmes();
             } else {
-                console.log('[ALARM] Nenhum histórico disponível ou erro na API:', data.error);
+                console.log('[ALARM] Nenhum histórico disponível ou erro na API:', data.error || 'Dados inválidos');
                 currentAlarms = [];
                 atualizarInterfaceAlarmes();
             }
@@ -196,15 +231,34 @@ function carregarAlarmesHistoricos() {
 
 function atualizarInterfaceAlarmes() {
     const alarmList = document.getElementById('alarmList');
-    if (!alarmList) return;
+    if (!alarmList) {
+        console.warn('[ALARM] Elemento alarmList não encontrado');
+        return;
+    }
+    
     try {
         // Ordena do mais recente para o mais antigo usando full_timestamp (ISO) quando disponível
-        if (Array.isArray(currentAlarms)) {
+        if (Array.isArray(currentAlarms) && currentAlarms.length > 0) {
             currentAlarms.sort((a, b) => {
+                // Prioriza full_timestamp (ISO format)
                 const ta = (a && a.full_timestamp) ? a.full_timestamp : '';
                 const tb = (b && b.full_timestamp) ? b.full_timestamp : '';
-                if (ta && tb) return tb.localeCompare(ta);
-                // Fallback: mantém ordem atual se não houver timestamps ISO
+                
+                if (ta && tb) {
+                    // Compara timestamps ISO diretamente
+                    return new Date(tb).getTime() - new Date(ta).getTime();
+                }
+                
+                // Fallback: tenta usar date + timestamp
+                if (a && b && a.date && b.date) {
+                    const dateA = new Date(a.date + ' ' + (a.timestamp || '00:00'));
+                    const dateB = new Date(b.date + ' ' + (b.timestamp || '00:00'));
+                    if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
+                        return dateB.getTime() - dateA.getTime();
+                    }
+                }
+                
+                // Mantém ordem atual se não houver timestamps válidos
                 return 0;
             });
         }
@@ -212,7 +266,12 @@ function atualizarInterfaceAlarmes() {
         console.warn('[ALARM] Falha ao ordenar alarmes no frontend:', e);
     }
     
-    if (currentAlarms.length === 0) {
+    // Determina mensagem baseada no modo atual
+    const mensagemVazio = currentViewMode === 'historicos' 
+        ? 'Nenhum evento no histórico' 
+        : 'Nenhum alarme ativo';
+    
+    if (!currentAlarms || currentAlarms.length === 0) {
         alarmList.innerHTML = `
             <div class="alarm-header">
                 <span></span>
@@ -221,19 +280,23 @@ function atualizarInterfaceAlarmes() {
                 <span>Descrição do Alarme</span>
             </div>
             <div class="no-alarms">
-                <span>Nenhum alarme ativo</span>
+                <span>${mensagemVazio}</span>
             </div>
         `;
     } else {
         // Gera o HTML dos alarmes
         const alarmeItems = currentAlarms.map(alarme => {
             const prioridade = normalizarPrioridade(alarme);
+            const descricao = alarme.description || 'Sem descrição';
+            const data = alarme.date || '';
+            const hora = alarme.timestamp || '--:--';
+            
             return `
             <div class="alarme-item ${prioridade}">
                 <div class="alarm-type-dot ${prioridade}"></div>
-                <span class="alarm-date">${alarme.date || ''}</span>
-                <span class="alarm-time">${alarme.timestamp || '--:--'}</span>
-                <span class="alarm-description">${alarme.description}</span>
+                <span class="alarm-date">${data}</span>
+                <span class="alarm-time">${hora}</span>
+                <span class="alarm-description">${descricao}</span>
             </div>`;
         }).join('');
 
@@ -255,8 +318,10 @@ function atualizarInterfaceAlarmes() {
         aplicarFiltro(filtroAtivo.dataset.prioridade);
     }
 
-    // Atualiza indicadores nas abas
-    atualizarIndicadoresAbas();
+    // Atualiza indicadores nas abas (apenas no modo instantâneo)
+    if (currentViewMode === 'instantaneos') {
+        atualizarIndicadoresAbas();
+    }
 }
 
 // Normaliza prioridade separando NR12 de Emergência
@@ -311,6 +376,10 @@ function mostrarMensagemErroAlarmes() {
     const alarmList = document.getElementById('alarmList');
     if (!alarmList) return;
     
+    const mensagemErro = currentViewMode === 'historicos'
+        ? 'Erro ao carregar histórico de alarmes'
+        : 'Erro ao carregar alarmes do PLC';
+    
     alarmList.innerHTML = `
         <div class="alarm-header">
             <span></span>
@@ -319,7 +388,7 @@ function mostrarMensagemErroAlarmes() {
             <span>Descrição do Alarme</span>
         </div>
         <div class="alarm-error">
-            <span>Erro ao carregar alarmes do PLC</span>
+            <span>${mensagemErro}</span>
         </div>
     `;
 }
@@ -658,8 +727,9 @@ function inicializarBotoesRapidos() {
     console.log('[QUICK_BUTTONS] ✅ Botões rápidos inicializados com sucesso');
 }
 
-// Exporta a função para o escopo global
+// Exporta as funções para o escopo global
 window.inicializarAlarmes = inicializarAlarmes;
+window.toggleAlarmView = toggleAlarmView;
 window.carregarAlarmesDoCommMap = carregarAlarmesDoCommMap;
 window.startAlarmAutoRefresh = startAlarmAutoRefresh;
 window.stopAlarmAutoRefresh = stopAlarmAutoRefresh;
