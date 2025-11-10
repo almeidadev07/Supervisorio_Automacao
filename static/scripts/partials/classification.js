@@ -310,22 +310,8 @@ function inicializarClassification() {
 				console.log('write_tags padrão OK');
 				return true;
 			}
-			// Fallback: API aprimorada
-			console.warn('write_tags padrão falhou, tentando /api/enhanced/write_tags');
-			const resEnhanced = await fetch('/api/enhanced/write_tags', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ tag_values: payload })
-			});
-			console.log('Enhanced status:', resEnhanced.status);
-			let enhancedData;
-			try { enhancedData = await resEnhanced.json(); } catch (_) { enhancedData = null; }
-			console.log('Enhanced data:', enhancedData);
-			if (enhancedData && enhancedData.ok) {
-				return true;
-			}
-			// Fallback final: escrever em pequenos lotes (ou 1 a 1)
-			console.warn('Enhanced também falhou; tentando escrita fracionada por partes...');
+			// Fallback: escrever em pequenos lotes (ou 1 a 1)
+			console.warn('write_tags padrão falhou; tentando escrita fracionada por partes...');
 			const entries = Object.entries(payload);
 			const chunkSize = 6;
 			let allOk = true;

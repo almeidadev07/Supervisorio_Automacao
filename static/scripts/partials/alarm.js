@@ -45,6 +45,27 @@ function inicializarAlarmes() {
     
     // Carrega os alarmes iniciais
     carregarAlarmes('instantaneos');
+
+    // Se o grid solicitou uma aba específica, aplica após renderizar
+    try {
+        const desired = (window.__desiredAlarmTab || '').toLowerCase();
+        if (desired) {
+            let attempts = 0;
+            const maxAttempts = 10;
+            const trySelect = () => {
+                attempts++;
+                if (window.selectAlarmTab) {
+                    const ok = window.selectAlarmTab(desired);
+                    if (ok || attempts >= maxAttempts) {
+                        window.__desiredAlarmTab = '';
+                        return;
+                    }
+                }
+                if (attempts < maxAttempts) setTimeout(trySelect, 100);
+            };
+            setTimeout(trySelect, 50);
+        }
+    } catch(_) {}
 }
 
 function toggleAlarmView(button) {
@@ -141,6 +162,14 @@ function stopAlarmAutoRefresh() {
 }
 
 function carregarAlarmesReais() {
+    // ✅ PROTEÇÃO: Não carrega se está offline confirmado
+    const isOffline = window.PLC_OFFLINE_CONFIRMED === true;
+    if (isOffline) {
+        console.log('[ALARM] ⚠️ PLC offline confirmado - não carregando alarmes via API');
+        mostrarMensagemDesconexaoAlarmes();
+        return;
+    }
+    
     console.log('Carregando alarmes reais do PLC...');
     
     // Tenta carregar via API
@@ -164,6 +193,9 @@ function carregarAlarmesReais() {
             mostrarMensagemErroAlarmes();
         });
 }
+
+// ✅ Torna função acessível globalmente para grid.js poder chamar na reconexão
+window.carregarAlarmesReais = carregarAlarmesReais;
 
 function carregarAlarmesHistoricos() {
     console.log('Carregando histórico de alarmes...');
@@ -233,6 +265,13 @@ function atualizarInterfaceAlarmes() {
     const alarmList = document.getElementById('alarmList');
     if (!alarmList) {
         console.warn('[ALARM] Elemento alarmList não encontrado');
+        return;
+    }
+    
+    // ✅ PROTEÇÃO: Se está offline confirmado, mostra mensagem de desconexão
+    const isOffline = window.PLC_OFFLINE_CONFIRMED === true;
+    if (isOffline && currentViewMode === 'instantaneos') {
+        mostrarMensagemDesconexaoAlarmes();
         return;
     }
     
@@ -393,6 +432,24 @@ function mostrarMensagemErroAlarmes() {
     `;
 }
 
+// ✅ NOVA FUNÇÃO: Mostra mensagem de desconexão no grid de alarmes
+function mostrarMensagemDesconexaoAlarmes() {
+    const alarmList = document.getElementById('alarmList');
+    if (!alarmList) return;
+    
+    alarmList.innerHTML = `
+        <div class="alarm-header">
+            <span></span>
+            <span>Data</span>
+            <span>Hora</span>
+            <span>Descrição do Alarme</span>
+        </div>
+        <div class="no-alarms">
+            <span style="color: #ff6b6b; font-weight: bold;">### PLC Desconectado ###</span>
+        </div>
+    `;
+}
+
 // Inicializa SocketIO para receber alarmes em tempo real
 function inicializarSocketAlarmes() {
     if (alarmSocket) return; // Já inicializado
@@ -401,6 +458,13 @@ function inicializarSocketAlarmes() {
         alarmSocket = io();
         
         alarmSocket.on('telemetry', (data) => {
+            // ✅ PROTEÇÃO: Não atualiza alarmes se está offline confirmado
+            const isOffline = window.PLC_OFFLINE_CONFIRMED === true;
+            if (isOffline) {
+                console.log('[ALARM] ⚠️ PLC offline confirmado - bloqueando atualização de alarmes');
+                return;
+            }
+            
             if (data && data.active_alarms) {
                 console.log('[ALARM] Alarmes recebidos via SocketIO:', data.active_alarms.length);
                 // Só atualiza se estiver no modo instantâneo
@@ -415,16 +479,17 @@ function inicializarSocketAlarmes() {
         
         alarmSocket.on('plc_connection_changed', (data) => {
             if (data && data.connected) {
-                console.log('[ALARM] PLC conectado, recarregando alarmes...');
-                if (currentViewMode === 'instantaneos') {
-                    carregarAlarmesReais();
-                }
+                console.log('[ALARM] PLC conectado, aguardando confirmação estável...');
+                // ✅ Não atualiza imediatamente - aguarda confirmação estável via telemetry
+                // O sistema de confirmação vai atualizar quando reconexão for confirmada
             } else {
-                console.log('[ALARM] PLC desconectado, limpando alarmes...');
+                console.log('[ALARM] PLC desconectado, mostrando mensagem de desconexão...');
                 if (currentViewMode === 'instantaneos') {
-                    currentAlarms = [];
-                    atualizarInterfaceAlarmes();
+                    // ✅ Mostra mensagem de desconexão em vez de limpar completamente
+                    mostrarMensagemDesconexaoAlarmes();
                 }
+                // Marca os contadores do grid como offline (##)
+                try { if (window.setAlarmCountsOffline) window.setAlarmCountsOffline(); } catch(_) {}
             }
         });
         
@@ -481,29 +546,47 @@ document.addEventListener('DOMContentLoaded', () => {
 window.selectAlarmTab = function(prioridade) {
     try {
         const desired = (prioridade || 'todas').toLowerCase();
+        console.log(`[ALARM] Tentando selecionar aba: "${desired}"`);
+        
         const buttons = document.querySelectorAll('.filtro-btn');
         if (!buttons || buttons.length === 0) {
-            // Tenta novamente após a UI estar pronta
-            setTimeout(() => window.selectAlarmTab(prioridade), 100);
-            return;
+            console.log('[ALARM] Botões de filtro não encontrados ainda, aguardando...');
+            return false; // Retorna false para indicar que precisa retry
         }
+        
+        console.log(`[ALARM] ${buttons.length} botões de filtro encontrados`);
+        
         // Remove seleção atual
         buttons.forEach(b => b.classList.remove('active'));
+        
         // Encontra o botão correspondente
-        const btn = Array.from(buttons).find(b => (b.getAttribute('data-prioridade') || '').toLowerCase() === desired);
+        const btn = Array.from(buttons).find(b => {
+            const btnPrioridade = (b.getAttribute('data-prioridade') || '').toLowerCase();
+            return btnPrioridade === desired;
+        });
+        
         if (btn) {
             btn.classList.add('active');
             aplicarFiltro(desired);
+            console.log(`[ALARM] ✅ Aba "${desired}" selecionada com sucesso`);
+            return true;
         } else {
+            console.log(`[ALARM] ⚠️ Aba "${desired}" não encontrada, usando fallback "todas"`);
             // Fallback para 'todas'
             const allBtn = Array.from(buttons).find(b => (b.getAttribute('data-prioridade') || '').toLowerCase() === 'todas');
             if (allBtn) {
                 allBtn.classList.add('active');
                 aplicarFiltro('todas');
+                console.log('[ALARM] ✅ Fallback para aba "todas" aplicado');
+                return true;
+            } else {
+                console.error('[ALARM] ❌ Nenhuma aba encontrada, nem mesmo "todas"');
+                return false;
             }
         }
-    } catch (_) {
-        // silencioso
+    } catch (err) {
+        console.error('[ALARM] Erro ao selecionar aba:', err);
+        return false;
     }
 };
 

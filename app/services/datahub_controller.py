@@ -143,11 +143,42 @@ class DataHubController:
                     success_rate = (self._stats['successful_requests'] / self._stats['total_requests']) * 100
                     print(f"[DATAHUB_CONTROLLER] 📊 Stats: {self._stats['successful_requests']}/{self._stats['total_requests']} OK ({success_rate:.1f}%), cache: {len(self._cache)} tags")
                 
-                # Busca dados do DataHub
+                # Busca dados do DataHub (sempre tenta buscar para atualizar status)
+                # O método _fetch_from_datahub() atualiza o status internamente
                 data = self._fetch_from_datahub()
                 
+                # ✅ VERIFICA STATUS APÓS BUSCAR (status foi atualizado em _fetch_from_datahub)
+                datahub_connected = self._stats.get('datahub_connected', False)
+                
+                # Se DataHub está desconectado, emite status offline e pula processamento
+                if not datahub_connected:
+                    print(f"[DATAHUB_CONTROLLER] ⚠️ DataHub desconectado após verificação - emitindo status offline")
+                    machine_name = self._active_machine.get('name') if self._active_machine else 'Unknown'
+                    if self.socketio:
+                        self.socketio.emit('telemetry', {
+                            'machine': machine_name,
+                            'timestamp': time.time(),
+                            'plc_connected': False,
+                            'active_alarms': [],
+                            'alarm_summary': {
+                                'emergency': 0,
+                                'nr12': 0,
+                                'drives': 0,
+                                'thermal': 0,
+                                'hardware': 0,
+                                'process': 0,
+                                'total': 0
+                            }
+                        })
+                    consecutive_failures += 1
+                    self._stats['failed_requests'] += 1
+                    self._stats['total_requests'] += 1
+                    time.sleep(self._polling_interval)
+                    continue  # Pula para próximo ciclo
+                
                 if data:
-                    # Atualiza cache
+                    # Se chegou aqui, datahub_connected já foi verificado como True acima
+                    # DataHub conectado - atualiza cache e emite dados
                     with self._cache_lock:
                         self._cache = data
                         self._stats['last_update'] = time.time()
@@ -159,18 +190,56 @@ class DataHubController:
                     # Envia via SocketIO
                     self._emit_data(data)
                 else:
-                    # ✅ CORREÇÃO CRÍTICA: Mesmo se dados forem rejeitados,
-                    # emite cache anterior para manter frontend ativo
+                    # ✅ CORREÇÃO: Quando não consegue ler dados, SEMPRE emite status de desconexão
                     self._stats['failed_requests'] += 1
                     consecutive_failures += 1
                     
-                    # Se há cache válido, re-emite para manter conexão viva
-                    with self._cache_lock:
-                        if self._cache:
-                            print(f"[DATAHUB_CONTROLLER] ⚠️ Dados rejeitados ({consecutive_failures}/{max_consecutive_failures}), emitindo cache anterior ({len(self._cache)} tags)")
-                            self._emit_data(self._cache.copy())
-                        else:
-                            print(f"[DATAHUB_CONTROLLER] ❌ Sem dados E sem cache - frontend ficará offline")
+                    # Verifica se DataHub está conectado
+                    datahub_connected = self._stats.get('datahub_connected', False)
+                    
+                    # ✅ CORREÇÃO CRÍTICA: Se DataHub está desconectado, SEMPRE emite offline
+                    # Não importa se há cache - se está desconectado, não deve emitir dados antigos
+                    if not datahub_connected:
+                        # DataHub desconectado - SEMPRE emite status offline (ignora cache)
+                        print(f"[DATAHUB_CONTROLLER] ⚠️ DataHub desconectado - emitindo status offline (ignorando cache)")
+                        machine_name = self._active_machine.get('name') if self._active_machine else 'Unknown'
+                        if self.socketio:
+                            self.socketio.emit('telemetry', {
+                                'machine': machine_name,
+                                'timestamp': time.time(),
+                                'plc_connected': False,
+                                'active_alarms': [],
+                                'alarm_summary': {
+                                    'emergency': 0,
+                                    'nr12': 0,
+                                    'drives': 0,
+                                    'thermal': 0,
+                                    'hardware': 0,
+                                    'process': 0,
+                                    'total': 0
+                                }
+                            })
+                    else:
+                        # ✅ CORREÇÃO: Quando desconectado, NUNCA emite cache - sempre emite status offline
+                        # Isso evita que valores antigos apareçam quando o cabo está desconectado
+                        print(f"[DATAHUB_CONTROLLER] ⚠️ DataHub desconectado - emitindo status offline (NÃO emitindo cache)")
+                        machine_name = self._active_machine.get('name') if self._active_machine else 'Unknown'
+                        if self.socketio:
+                            self.socketio.emit('telemetry', {
+                                'machine': machine_name,
+                                'timestamp': time.time(),
+                                'plc_connected': False,
+                                'active_alarms': [],
+                                'alarm_summary': {
+                                    'emergency': 0,
+                                    'nr12': 0,
+                                    'drives': 0,
+                                    'thermal': 0,
+                                    'hardware': 0,
+                                    'process': 0,
+                                    'total': 0
+                                }
+                            })
                     
                     # Se muitas falhas consecutivas, aguarda mais antes de tentar novamente
                     if consecutive_failures >= max_consecutive_failures:
@@ -206,20 +275,33 @@ class DataHubController:
             status_response = requests.get(f'{DATAHUB_URL}/api/status', timeout=10)
             status = status_response.json()
             
-            self._stats['datahub_connected'] = status.get('connected', False)
+            # ✅ ATUALIZA STATUS IMEDIATAMENTE
+            datahub_connected = status.get('connected', False)
+            self._stats['datahub_connected'] = datahub_connected
             
-            if not status.get('connected'):
-                print("[DATAHUB_CONTROLLER] ⚠️ DataHub reporta PLC desconectado")
+            if not datahub_connected:
+                print(f"[DATAHUB_CONTROLLER] ⚠️ DataHub reporta PLC desconectado (status.connected={datahub_connected}) - NÃO buscando dados")
+                # ✅ IMPORTANTE: Garante que status está atualizado e retorna None imediatamente
+                # NÃO tenta buscar dados quando desconectado
                 return None
             
             # ✅ CORREÇÃO: Timeout aumentado (5s → 10s)
+            # Só busca dados se DataHub está conectado
             data_response = requests.get(f'{DATAHUB_URL}/api/data', timeout=10)
             
             if data_response.status_code != 200:
                 print(f"[DATAHUB_CONTROLLER] ❌ HTTP {data_response.status_code}: {data_response.text[:100]}")
+                # Atualiza status como desconectado se falhou
+                self._stats['datahub_connected'] = False
                 return None
             
             datahub_data = data_response.json()
+            
+            # ✅ VERIFICAÇÃO ADICIONAL: Se dados vieram vazios ou None, considera desconectado
+            if not datahub_data or not datahub_data.get('data'):
+                print(f"[DATAHUB_CONTROLLER] ⚠️ DataHub retornou dados vazios - considerando desconectado")
+                self._stats['datahub_connected'] = False
+                return None
             
             # Converte dados do DataHub para formato esperado
             converted_data = self._convert_datahub_to_plc_format(datahub_data)
@@ -411,6 +493,30 @@ class DataHubController:
         machine_name = self._active_machine.get('name')
         
         try:
+            # ✅ VERIFICA STATUS REAL DO DATAHUB COM PLC
+            datahub_connected = self._stats.get('datahub_connected', False)
+            
+            # Se DataHub não está conectado ao PLC, emite status de desconexão
+            if not datahub_connected:
+                print(f"[DATAHUB_CONTROLLER] ⚠️ DataHub desconectado do PLC - emitindo status offline")
+                if self.socketio:
+                    self.socketio.emit('telemetry', {
+                        'machine': machine_name,
+                        'timestamp': time.time(),
+                        'plc_connected': False,
+                        'active_alarms': [],
+                        'alarm_summary': {
+                            'emergency': 0,
+                            'nr12': 0,
+                            'drives': 0,
+                            'thermal': 0,
+                            'hardware': 0,
+                            'process': 0,
+                            'total': 0
+                        }
+                    })
+                return
+            
             # Processa alarmes usando o alarm_processor
             from ..services.alarm_processor import alarm_processor
             active_alarms = []
@@ -443,7 +549,7 @@ class DataHubController:
                 'timestamp': time.time(),
                 'active_alarms': active_alarms,
                 'alarm_summary': alarm_summary,
-                'plc_connected': True
+                'plc_connected': True  # ✅ Só emite True se DataHub está conectado
             }
             
             # Adiciona todas as tags ao objeto principal

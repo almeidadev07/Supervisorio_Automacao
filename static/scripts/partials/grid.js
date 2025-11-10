@@ -7,6 +7,13 @@ let PLC_CONNECTED = true; // estado global de conexão com o PLC
 let ENSURE_MACHINE_LAST_TS = 0;
 let SPEED_NULL_STREAK = 0; // leituras nulas consecutivas da velocidade real
 let LAST_FORCE_RECONNECT_TS = 0; // throttle para /api/force_reconnect
+let PLC_OFFLINE_CONFIRMED = false; // flag para confirmar que PLC está realmente offline
+// ✅ Torna acessível globalmente para outros scripts (ex: alarm.js)
+window.PLC_OFFLINE_CONFIRMED = false;
+let PLC_RECONNECT_STABLE_COUNT = 0; // contador de leituras estáveis para confirmar reconexão
+let PLC_OFFLINE_TIMESTAMP = 0; // timestamp quando foi marcado como offline
+const PLC_RECONNECT_STABLE_THRESHOLD = 3; // precisa de 3 leituras estáveis para considerar reconectado (reduzido de 10 para resposta mais rápida)
+const PLC_RECONNECT_MIN_TIME_MS = 5000; // mínimo de 5 segundos offline antes de aceitar reconexão
 // Intervalos globais para Data/Hora (usados em start/stop antes de definições)
 var dateTimeInterval = null;
 var serverTimeSyncInterval = null;
@@ -815,14 +822,141 @@ function bindTelemetryVelocidadeReal(){
         });
         socket.on('telemetry', data => {
             if (!data) return;
-            if (data.plc_connected === false){
+            
+            // ✅ PRIORIDADE ABSOLUTA: Se recebeu status offline, SEMPRE bloqueia (mesmo se dados vierem depois)
+            if (data.plc_connected === false || data.plc_connected === 'false' || data.plc_connected === 0){
                 PLC_CONNECTED = false;
+                PLC_OFFLINE_CONFIRMED = true; // ✅ Confirma que está offline
+                window.PLC_OFFLINE_CONFIRMED = true; // ✅ Sincroniza com variável global
+                PLC_OFFLINE_TIMESTAMP = Date.now(); // ✅ Marca timestamp do momento offline
+                PLC_RECONNECT_STABLE_COUNT = 0; // Reset contador de reconexão
                 mostrarVelocidadeIndisponivel();
                 setAlarmCountsOffline();
-                console.log('[GRID] 📡 PLC desconectado via telemetria');
+                console.log('[GRID] 📡 PLC desconectado via telemetria - valores bloqueados até reconexão estável');
                 valueStabilityCount = 0; // Reset estabilidade
+                // ✅ IMPORTANTE: Retorna ANTES de processar qualquer dado
                 return;
             }
+            
+            // ✅ PROTEÇÃO CRÍTICA: Se está offline confirmado, IGNORA TODOS OS DADOS
+            // Mesmo que venha com plc_connected: true, não processa até confirmar reconexão estável
+            if (PLC_OFFLINE_CONFIRMED) {
+                const timeSinceOffline = Date.now() - PLC_OFFLINE_TIMESTAMP;
+                
+                // ✅ VERIFICAÇÃO DE TEMPO MÍNIMO: Só aceita reconexão após tempo mínimo
+                if (timeSinceOffline < PLC_RECONNECT_MIN_TIME_MS) {
+                    console.log(`[GRID] ⏳ Aguardando tempo mínimo de ${PLC_RECONNECT_MIN_TIME_MS/1000}s offline (${(timeSinceOffline/1000).toFixed(1)}s decorridos) - ignorando dados`);
+                    return; // Ignora dados se ainda não passou tempo mínimo
+                }
+                
+                // Só processa se recebeu explicitamente plc_connected: true E dados são válidos
+                if (data.plc_connected === true || data.plc_connected === 'true' || data.plc_connected === 1) {
+                    // Verifica se os dados são válidos (não null/undefined)
+                    const val = pickSpeedValue(data);
+                    if (val != null && val !== undefined) {
+                        PLC_RECONNECT_STABLE_COUNT++;
+                        console.log(`[GRID] 🔄 Tentativa de reconexão: ${PLC_RECONNECT_STABLE_COUNT}/${PLC_RECONNECT_STABLE_THRESHOLD} leituras estáveis (${(timeSinceOffline/1000).toFixed(1)}s offline)`);
+                        
+                        // Só considera reconectado após múltiplas leituras estáveis
+                        if (PLC_RECONNECT_STABLE_COUNT >= PLC_RECONNECT_STABLE_THRESHOLD) {
+                            PLC_OFFLINE_CONFIRMED = false;
+                            window.PLC_OFFLINE_CONFIRMED = false; // ✅ Sincroniza com variável global
+                            PLC_RECONNECT_STABLE_COUNT = 0;
+                            PLC_OFFLINE_TIMESTAMP = 0;
+                            PLC_CONNECTED = true;
+                            console.log('[GRID] ✅ PLC reconectado e estável - valores serão restaurados');
+                            // ✅ FORÇA ATUALIZAÇÃO IMEDIATA: Limpa histórico e atualiza valores assim que reconecta
+                            speedRealHistory = []; // Limpa histórico para forçar atualização imediata
+                            speedProgHistory = []; // Limpa histórico de velocidade programada também
+                            SPEED_LAST_OK_TS = Date.now(); // Reset timestamp para permitir polling
+                            // ✅ ATUALIZAÇÃO IMEDIATA: Força atualização com o valor atual
+                            atualizarVelocidadeRealUI(val);
+                            lastStableValue = val;
+                            // Atualiza velocidade programada também se disponível
+                            const valProg = pickSpeedProgrammedValue(data);
+                            if (valProg != null) {
+                                atualizarVelocidadeProgramadaUI(valProg);
+                            }
+                            // ✅ ATUALIZAÇÃO IMEDIATA DE ALARMES: Atualiza alarmes assim que reconecta
+                            if (data.alarm_summary) {
+                                try {
+                                    const summary = data.alarm_summary;
+                                    const contadores = {
+                                        emergency: Number(summary.emergency || 0),
+                                        nr12: Number(summary.nr12 || 0),
+                                        drives: Number(summary.drives || 0),
+                                        thermal: Number(summary.thermal || 0),
+                                        hardware: Number(summary.hardware || 0),
+                                        process: Number(summary.process || 0),
+                                        total: Number(summary.total || 0)
+                                    };
+                                    
+                                    // Atualiza os valores na interface
+                                    Object.keys(contadores).forEach(tipo => {
+                                        const elemento = document.querySelector(`.alarm-count-circle.${tipo} .count-value`);
+                                        const circle = document.querySelector(`.alarm-count-circle.${tipo}`);
+                                        
+                                        if (elemento) {
+                                            const valor = contadores[tipo];
+                                            if (typeof valor === 'number' && !isNaN(valor)) {
+                                                elemento.textContent = valor.toString().padStart(2, '0');
+                                            } else {
+                                                elemento.textContent = '00';
+                                            }
+                                        }
+                                        
+                                        if (circle) {
+                                            if (contadores[tipo] > 0) {
+                                                circle.classList.add('has-alarms');
+                                            } else {
+                                                circle.classList.remove('has-alarms');
+                                            }
+                                        }
+                                    });
+                                    
+                                    ALARM_LAST_OK_TS = Date.now();
+                                    console.log('[GRID] ✅ Alarmes atualizados imediatamente após reconexão');
+                                } catch (e) {
+                                    console.error('[GRID] ❌ Erro ao atualizar alarmes na reconexão:', e);
+                                }
+                            }
+                            // ✅ FORÇA RECARGA DE ALARMES: Atualiza grid de alarmes quando reconecta
+                            try {
+                                if (window.carregarAlarmesReais && typeof window.carregarAlarmesReais === 'function') {
+                                    console.log('[GRID] ✅ Forçando recarga de alarmes após reconexão');
+                                    window.carregarAlarmesReais();
+                                } else if (window.currentViewMode === 'instantaneos') {
+                                    // Tenta acessar via escopo global se disponível
+                                    setTimeout(() => {
+                                        try {
+                                            if (window.carregarAlarmesReais) window.carregarAlarmesReais();
+                                        } catch(_) {}
+                                    }, 500);
+                                }
+                            } catch (e) {
+                                console.warn('[GRID] Não foi possível recarregar alarmes automaticamente:', e);
+                            }
+                            console.log('[GRID] ✅ Valores atualizados imediatamente após reconexão');
+                            // Continua processamento abaixo para manter atualização contínua
+                        } else {
+                            // Ainda não está estável o suficiente - mantém offline
+                            console.log(`[GRID] ⏳ Aguardando estabilidade (${PLC_RECONNECT_STABLE_COUNT}/${PLC_RECONNECT_STABLE_THRESHOLD}) - mantendo valores offline`);
+                            return; // Não processa dados ainda
+                        }
+                    } else {
+                        // Dados inválidos - reset contador e mantém offline
+                        PLC_RECONNECT_STABLE_COUNT = 0;
+                        console.log('[GRID] ⚠️ Dados inválidos recebidos durante reconexão - resetando contador');
+                        return;
+                    }
+                } else {
+                    // Recebeu dados mas sem confirmação explícita de conexão - ignora
+                    console.log('[GRID] ⚠️ Dados recebidos mas PLC ainda está offline confirmado e sem plc_connected:true - ignorando');
+                    return;
+                }
+            }
+            
+            // Se chegou aqui, ou não estava offline confirmado, ou já confirmou reconexão estável
             PLC_CONNECTED = true;
             try { console.log('[GRID][telemetry] keys=', Object.keys(data)); } catch(_) {}
             
@@ -833,7 +967,10 @@ function bindTelemetryVelocidadeReal(){
                 
                 // ✅ IMPORTANTE: Atualiza timestamp SEMPRE que dados chegam
                 // Isso evita que watchdog marque como offline
-                SPEED_LAST_OK_TS = Date.now();
+                // Mas só atualiza se não estiver em modo offline confirmado
+                if (!PLC_OFFLINE_CONFIRMED) {
+                    SPEED_LAST_OK_TS = Date.now();
+                }
                 SPEED_NULL_STREAK = 0;
                 
                 // Adiciona ao histórico
@@ -918,7 +1055,8 @@ function bindTelemetryVelocidadeReal(){
             
             // ✅ PROCESSA ALARMES EM TEMPO REAL (SEM FILTRO DE ESTABILIDADE)
             // Alarmes NÃO passam pelo sistema de estabilidade pois precisam atualizar instantaneamente
-            if (data.alarm_summary) {
+            // ✅ PROTEÇÃO: Não processa alarmes se está offline confirmado
+            if (data.alarm_summary && !PLC_OFFLINE_CONFIRMED) {
                 try {
                     const summary = data.alarm_summary;
                     
@@ -973,40 +1111,60 @@ function bindTelemetryVelocidadeReal(){
         socket.on('plc_connection_changed', (s) => {
             console.log('[GRID] 🔔 Estado do PLC mudou:', s);
             if (s && s.connected){
-                PLC_CONNECTED = true;
-                console.log('[GRID] ✅ PLC reconectado - fazendo leitura imediata');
-                fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')), { cache: 'no-store' })
-                    .then(r => r.json())
-                    .then(res => {
-                        if (res && res.ok && res.values) {
-                            PLC_CONNECTED = true;
-                            try { console.log('[GRID][reconnect HTTP] values=', res.values); } catch(_) {}
-                            // Processa velocidade real
-                            const valReal = pickSpeedValue(res.values);
-                            if (valReal != null) {
-                                try { console.log('[GRID][reconnect HTTP] real=', valReal); } catch(_) {}
-                                atualizarVelocidadeRealUI(valReal);
-                                SPEED_NULL_STREAK = 0;
-                                if (SPEED_WAS_OFFLINE) {
-                                    SPEED_WAS_OFFLINE = false;
-                                    console.log('[GRID] ✅ Reconectado (sem reload automático)');
-                                    // ✅ DESABILITADO: Reload automático causava oscilação
-                                    // setTimeout(() => window.location.reload(), 100);
+                // ✅ Não marca como conectado imediatamente - aguarda confirmação estável
+                console.log('[GRID] 🔄 PLC reporta conexão - aguardando confirmação estável...');
+                PLC_RECONNECT_STABLE_COUNT = 0; // Reset contador
+                // ✅ IMPORTANTE: NÃO reseta PLC_OFFLINE_CONFIRMED aqui - deixa o sistema de confirmação fazer isso
+                // PLC_OFFLINE_CONFIRMED será resetado apenas após 10 leituras estáveis no evento telemetry
+                // Não marca PLC_CONNECTED = true ainda - aguarda telemetry confirmar
+                // ✅ IMPORTANTE: Só faz leitura HTTP se não está offline confirmado
+                // O sistema de confirmação via telemetry vai fazer a reconexão
+                if (!PLC_OFFLINE_CONFIRMED) {
+                    fetch('/api/read_tags?names=' + encodeURIComponent(SPEED_TAGS.join(',')), { cache: 'no-store' })
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res && res.ok && res.values) {
+                                // ✅ VERIFICAÇÃO: Não atualiza se ficou offline durante o fetch
+                                if (PLC_OFFLINE_CONFIRMED) {
+                                    console.log('[GRID] ⚠️ PLC ficou offline durante leitura HTTP de reconexão - cancelando');
+                                    return;
+                                }
+                                
+                                PLC_CONNECTED = true;
+                                try { console.log('[GRID][reconnect HTTP] values=', res.values); } catch(_) {}
+                                // Processa velocidade real
+                                const valReal = pickSpeedValue(res.values);
+                                if (valReal != null) {
+                                    try { console.log('[GRID][reconnect HTTP] real=', valReal); } catch(_) {}
+                                    atualizarVelocidadeRealUI(valReal);
+                                    SPEED_NULL_STREAK = 0;
+                                    if (SPEED_WAS_OFFLINE) {
+                                        SPEED_WAS_OFFLINE = false;
+                                        console.log('[GRID] ✅ Reconectado (sem reload automático)');
+                                        // ✅ DESABILITADO: Reload automático causava oscilação
+                                        // setTimeout(() => window.location.reload(), 100);
+                                    }
+                                }
+                                
+                                // Processa velocidade programada
+                                const valProg = pickSpeedProgrammedValue(res.values);
+                                if (valProg != null) {
+                                    atualizarVelocidadeProgramadaUI(valProg);
                                 }
                             }
-                            
-                            // Processa velocidade programada
-                            const valProg = pickSpeedProgrammedValue(res.values);
-                            if (valProg != null) {
-                                atualizarVelocidadeProgramadaUI(valProg);
-                            }
-                        }
-                    })
-                    .catch(() => {});
+                        })
+                        .catch(() => {});
+                } else {
+                    console.log('[GRID] ⚠️ PLC ainda está offline confirmado - não fazendo leitura HTTP de reconexão');
+                }
                 ensureMachineSelected();
             }
             else if (s && s.connected === false) {
                 PLC_CONNECTED = false;
+                PLC_OFFLINE_CONFIRMED = true; // ✅ Confirma offline
+                window.PLC_OFFLINE_CONFIRMED = true; // ✅ Sincroniza com variável global
+                PLC_OFFLINE_TIMESTAMP = Date.now(); // ✅ Marca timestamp do momento offline
+                PLC_RECONNECT_STABLE_COUNT = 0; // Reset contador
                 mostrarVelocidadeIndisponivel();
                 setAlarmCountsOffline();
                 if (s.reason === 'Address out of range errors') {
@@ -1231,6 +1389,12 @@ function pararAjuste() {
 
 // Função para atualizar contadores de alarme
 async function atualizarContadoresAlarme() {
+    // ✅ PROTEÇÃO: Não atualiza alarmes se está offline confirmado
+    if (PLC_OFFLINE_CONFIRMED) {
+        console.log('[GRID ALARM] ⚠️ PLC offline confirmado - bloqueando atualização de alarmes via HTTP');
+        return;
+    }
+    
     try {
         const res = await fetch('/api/alarms', { cache: 'no-store' }).then(r => r.json());
         console.log('[GRID ALARM] Resposta da API /api/alarms:', res);
@@ -1303,19 +1467,65 @@ async function atualizarContadoresAlarme() {
             if (circle.dataset.boundClick) return;
             circle.addEventListener('click', (e) => {
                 e.preventDefault();
-                const tipo = (circle.getAttribute('data-type') || '').toLowerCase();
+                e.stopPropagation();
+                
+                // Extrai o tipo do círculo (prioriza data-type, depois classe CSS)
+                let tipo = (circle.getAttribute('data-type') || '').toLowerCase();
+                if (!tipo) {
+                    // Tenta extrair da classe CSS
+                    const classes = Array.from(circle.classList);
+                    const tipoClass = classes.find(c => 
+                        ['emergency', 'nr12', 'drives', 'thermal', 'hardware', 'process', 'total', 'alimentador'].includes(c)
+                    );
+                    if (tipoClass) tipo = tipoClass.toLowerCase();
+                }
+                
+                // Mapeia tipos especiais para abas válidas
+                const tipoMap = {
+                    'total': 'todas',
+                    'alimentador': 'todas' // Alimentador não tem aba específica, abre todas
+                };
+                const prioridade = tipoMap[tipo] || tipo;
+                
+                console.log(`[GRID] Clicado no círculo de alarme: tipo="${tipo}" -> prioridade="${prioridade}"`);
+                
                 try {
                     if (window.showAlarm) {
+                        // Define a aba desejada para a tela de alarmes
+                        try { window.__desiredAlarmTab = prioridade; } catch(_) {}
+                        // Abre a tela de alarmes
                         window.showAlarm(e);
-                        // Aguarda UI montar e seleciona a aba
-                        setTimeout(() => {
-                            if (window.selectAlarmTab) window.selectAlarmTab(tipo);
-                        }, 50);
+                        
+                        // Aguarda UI montar e seleciona a aba com retry
+                        let attempts = 0;
+                        const maxAttempts = 10;
+                        const selectTab = () => {
+                            attempts++;
+                            if (window.selectAlarmTab) {
+                                const success = window.selectAlarmTab(prioridade);
+                                if (!success && attempts < maxAttempts) {
+                                    setTimeout(selectTab, 100);
+                                } else if (attempts >= maxAttempts) {
+                                    console.warn(`[GRID] Não foi possível selecionar aba após ${maxAttempts} tentativas`);
+                                } else {
+                                    console.log(`[GRID] ✅ Aba "${prioridade}" selecionada com sucesso`);
+                                }
+                            } else if (attempts < maxAttempts) {
+                                setTimeout(selectTab, 100);
+                            }
+                        };
+                        
+                        // Primeira tentativa após 100ms, depois retry a cada 100ms
+                        setTimeout(selectTab, 100);
                         return;
                     }
-                } catch(_) {}
+                } catch(err) {
+                    console.error('[GRID] Erro ao abrir tela de alarmes:', err);
+                }
+                
                 // Fallback com hash e recarregar
-                window.location.hash = `#alarms-${tipo}`;
+                try { window.__desiredAlarmTab = prioridade; } catch(_) {}
+                window.location.hash = `#alarms-${prioridade}`;
                 window.location.reload();
             });
             circle.dataset.boundClick = '1';
@@ -1438,6 +1648,15 @@ function inicializarVelocimetro() {
             console.warn('[GRID] ⚠️ pollSpeedLoop já está ativo. Ignorando chamada duplicada.');
             return;
         }
+        
+        // ✅ PROTEÇÃO CRÍTICA: Se PLC está offline confirmado, NÃO faz polling
+        if (PLC_OFFLINE_CONFIRMED) {
+            console.log('[GRID] ⚠️ PLC offline confirmado - bloqueando polling HTTP');
+            __pollSpeedLoopAtivo = false;
+            setTimeout(pollSpeedLoop, 5000); // Tenta novamente em 5s
+            return;
+        }
+        
         __pollSpeedLoopAtivo = true;
         
         const now = Date.now();
@@ -1467,7 +1686,25 @@ function inicializarVelocimetro() {
                 return;
             }
             
-            const values = await fetchTagsWithFallback(SPEED_TAGS_REAL_ONLY);
+            // ✅ VERIFICAÇÃO ADICIONAL: Se ficou offline durante o fetch, cancela
+            if (PLC_OFFLINE_CONFIRMED) {
+                console.log('[GRID] ⚠️ PLC ficou offline durante fetch - cancelando atualização');
+                __pollSpeedLoopAtivo = false;
+                setTimeout(pollSpeedLoop, 5000);
+                return;
+            }
+            
+            // Lê tanto a velocidade real quanto a programada para manter ambas atualizadas
+            const values = await fetchTagsWithFallback(SPEED_TAGS);
+            
+            // ✅ VERIFICAÇÃO APÓS FETCH: Se ficou offline durante o fetch, cancela
+            if (PLC_OFFLINE_CONFIRMED) {
+                console.log('[GRID] ⚠️ PLC ficou offline após fetch - cancelando atualização');
+                __pollSpeedLoopAtivo = false;
+                setTimeout(pollSpeedLoop, 5000);
+                return;
+            }
+            
             if (values && Object.keys(values).length > 0) {
                 // Sistema de estabilidade de conexão
                 if (lastConnectionState === true) {
@@ -1477,17 +1714,34 @@ function inicializarVelocimetro() {
                     lastConnectionState = true;
                 }
                 
-                // Só marca como conectado após 2 leituras consecutivas bem-sucedidas
-                if (connectionStableCount >= 2) {
-                    PLC_CONNECTED = true;
-                    consecutiveFailures = 0;
-                    lastSuccessfulRead = now;
+                // ✅ VERIFICAÇÃO: Não marca como conectado se está offline confirmado
+                if (!PLC_OFFLINE_CONFIRMED) {
+                    // Só marca como conectado após 2 leituras consecutivas bem-sucedidas
+                    if (connectionStableCount >= 2) {
+                        PLC_CONNECTED = true;
+                        consecutiveFailures = 0;
+                        lastSuccessfulRead = now;
+                    }
+                } else {
+                    // Se está offline confirmado, não atualiza valores mesmo que receba dados
+                    console.log('[GRID] ⚠️ Dados recebidos via HTTP mas PLC está offline confirmado - ignorando');
+                    __pollSpeedLoopAtivo = false;
+                    setTimeout(pollSpeedLoop, 5000);
+                    return;
                 }
                 
                 try { console.log('[GRID][poll] values=', values); } catch(_) {}
                 
                 const valReal = pickSpeedValue(values);
                     if (valReal != null) {
+                    // ✅ VERIFICAÇÃO FINAL: Não atualiza se está offline confirmado
+                    if (PLC_OFFLINE_CONFIRMED) {
+                        console.log('[GRID] ⚠️ Tentativa de atualizar velocidade mas PLC está offline confirmado - bloqueando');
+                        __pollSpeedLoopAtivo = false;
+                        setTimeout(pollSpeedLoop, 5000);
+                        return;
+                    }
+                    
                     try { console.log('[GRID][poll] real=', valReal); } catch(_) {}
                     
                     // Sistema de estabilidade: só atualiza UI se valor for estável
@@ -1526,8 +1780,12 @@ function inicializarVelocimetro() {
                     }
                 }
                 
-                const valProg = pickSpeedProgrammedValue(values);
-                if (valProg != null) atualizarVelocidadeProgramadaUI(valProg);
+                // ✅ VERIFICAÇÃO: Não atualiza velocidade programada se está offline confirmado
+                if (!PLC_OFFLINE_CONFIRMED) {
+                    // Atualiza a velocidade programada quando disponível
+                    const valProg = pickSpeedProgrammedValue(values);
+                    if (valProg != null) atualizarVelocidadeProgramadaUI(valProg);
+                }
                 
                 } else {
                     consecutiveFailures++;
@@ -1605,16 +1863,16 @@ function inicializarVelocimetro() {
     }, 2000);
     */
     
-    // ✅ WATCHDOG DESABILITADO: Confia 100% no Socket.IO e cache do DataHub
-    // Não marca offline automaticamente - apenas loga
+    // Watchdog de alarmes: marca offline se ficar tempo demais sem dados
     // Limpa watchdog anterior se existir
     if (__alarmWatchdogInterval) clearInterval(__alarmWatchdogInterval);
     __alarmWatchdogInterval = setInterval(() => {
-        if (Date.now() - ALARM_LAST_OK_TS > 300000) {  // 5 minutos (era 120s)
-            console.warn('[GRID] ⚠️ Info: >5min sem dados de alarmes via SocketIO');
-            // Não chama setAlarmCountsOffline() - confia no cache
+        const sinceMs = Date.now() - ALARM_LAST_OK_TS;
+        if (sinceMs > 60000) {  // 60s sem dados de alarmes
+            console.warn('[GRID] ⚠️ Sem dados de alarmes há >60s. Marcando grid de alarmes como offline (##).');
+            try { setAlarmCountsOffline(); } catch(_) {}
         }
-    }, 60000); // Checa a cada 60s (era 10s)
+    }, 30000); // Checa a cada 30s
 }
 
 // Inicialização
