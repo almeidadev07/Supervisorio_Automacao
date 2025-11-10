@@ -1,0 +1,293 @@
+================================================================================
+                  CORREÇÃO APLICADA - PROBLEMA 700CX
+================================================================================
+
+📋 PROBLEMA REPORTADO
+────────────────────────────────────────────────────────────────────────────
+"Não está encontrando o PLC conectado 100.70.0.10 700CX"
+
+Logs mostravam:
+  - Sistema detectava 400CX (100.40.0.10) via ping ✓
+  - Mas conexão Snap7 falhava com timeout (21 segundos) ✗
+  - Ficava preso tentando reconectar ao 400CX
+  - Nunca tentava o 700CX (era prioridade 3)
+
+
+✅ SOLUÇÕES APLICADAS
+================================================================================
+
+1️⃣ PRIORIDADE DO 700CX ALTERADA
+────────────────────────────────────────────────────────────────────────────
+
+ANTES:                          DEPOIS:
+┌───────────────────┐          ┌───────────────────┐
+│ 1. 200CX          │          │ 1. 700CX ✓        │  ← VOCÊ ESTÁ AQUI
+│ 2. 400CX ← preso  │          │ 2. 400CX          │
+│ 3. 700CX          │          │ 3. 200CX          │
+└───────────────────┘          └───────────────────┘
+
+Agora o 700CX é testado PRIMEIRO!
+
+
+2️⃣ DETECÇÃO MELHORADA
+────────────────────────────────────────────────────────────────────────────
+
+ANTES:                          DEPOIS:
+┌───────────────────┐          ┌───────────────────────────┐
+│ Faz PING          │          │ 1. Faz PING               │
+│    ↓              │          │    ↓                      │
+│ Se OK → conecta   │          │ 2. Testa Snap7 real       │
+│                   │          │    ↓                      │
+│ Problema: ping OK │          │ 3. Se OK → conecta        │
+│ mas Snap7 falha   │          │                           │
+└───────────────────┘          │ Evita: ping OK mas        │
+                               │ Snap7 inacessível         │
+                               └───────────────────────────┘
+
+
+3️⃣ OPÇÃO DE FORÇAR IP
+────────────────────────────────────────────────────────────────────────────
+
+Nova configuração adicionada:
+
+# Em datahub.py - linha 61
+FORCE_PLC_IP = None              # Auto-detecção (padrão)
+# ou
+FORCE_PLC_IP = "100.70.0.10"     # Força APENAS 700CX
+
+
+================================================================================
+                          COMO USAR AGORA
+================================================================================
+
+OPÇÃO 1: AUTO-DETECÇÃO (Recomendado)
+────────────────────────────────────────────────────────────────────────────
+
+1. Pare o DataHub atual (Ctrl+C)
+
+2. Reinicie:
+   python datahub.py
+
+3. Observe os logs:
+   🔍 Procurando PLC ativo...
+      Testando 700CX (100.70.0.10)...          ← AGORA É O PRIMEIRO!
+         ✓ Ping OK
+         Testando conexão Snap7...
+   ✅ PLC encontrado e acessível: 700CX (100.70.0.10)
+
+
+OPÇÃO 2: FORÇAR 700CX (Mais Rápido)
+────────────────────────────────────────────────────────────────────────────
+
+1. Edite datahub.py - linha 61:
+   FORCE_PLC_IP = "100.70.0.10"
+
+2. Reinicie:
+   python datahub.py
+
+3. Verá:
+   🎯 Forçando conexão com IP: 100.70.0.10
+      Usando 700CX (100.70.0.10)...
+   ✅ Conectado à máquina 700CX (100.70.0.10)
+
+
+OPÇÃO 3: ARQUIVO PRÉ-CONFIGURADO
+────────────────────────────────────────────────────────────────────────────
+
+Use o arquivo datahub_700cx.py (já configurado apenas para 700CX):
+
+   python datahub_700cx.py
+
+
+================================================================================
+                        COMPARAÇÃO ANTES/DEPOIS
+================================================================================
+
+┌──────────────────┬─────────────────────┬─────────────────────────┐
+│ Característica   │ ANTES               │ DEPOIS                  │
+├──────────────────┼─────────────────────┼─────────────────────────┤
+│ Prioridade 700CX │ 3° (último)         │ 1° (primeiro) ✅        │
+│ Detecção         │ Apenas ping         │ Ping + Snap7 ✅         │
+│ Timeout no 400CX │ 21s esperando       │ Pula rápido ✅          │
+│ Forçar IP        │ Não existia         │ Sim ✅                  │
+│ Logs             │ Básicos             │ Detalhados ✅           │
+└──────────────────┴─────────────────────┴─────────────────────────┘
+
+
+================================================================================
+                        FLUXO DE DETECÇÃO NOVO
+================================================================================
+
+    INÍCIO
+      │
+      ▼
+┌─────────────────────────────────────────┐
+│ FORCE_PLC_IP definido?                  │
+├─────────────────────────────────────────┤
+│ Sim → Usa IP forçado                    │
+│ Não → Continua auto-detecção            │
+└─────────────────────────────────────────┘
+      │
+      ▼
+┌─────────────────────────────────────────┐
+│ Teste PLC #1: 700CX (100.70.0.10)      │  ← NOVO: PRIORIDADE 1
+├─────────────────────────────────────────┤
+│ ► Ping? ────→ Testa                     │
+│ ► Snap7? ───→ Testa (se ping OK)        │
+└─────────────────────────────────────────┘
+      │
+      ├─ OK → ✅ CONECTA AO 700CX
+      │
+      └─ FALHOU → Próximo...
+            │
+            ▼
+      ┌─────────────────────────────────────────┐
+      │ Teste PLC #2: 400CX (100.40.0.10)      │
+      ├─────────────────────────────────────────┤
+      │ ► Ping? ────→ Testa                     │
+      │ ► Snap7? ───→ Testa (se ping OK)        │
+      └─────────────────────────────────────────┘
+            │
+            ├─ OK → ✅ CONECTA AO 400CX
+            │
+            └─ FALHOU → Próximo...
+                  │
+                  ▼
+            ┌─────────────────────────────────────────┐
+            │ Teste PLC #3: 200CX (100.20.0.10)      │
+            ├─────────────────────────────────────────┤
+            │ ► Ping? ────→ Testa                     │
+            │ ► Snap7? ───→ Testa (se ping OK)        │
+            └─────────────────────────────────────────┘
+                  │
+                  ├─ OK → ✅ CONECTA AO 200CX
+                  │
+                  └─ FALHOU → ❌ Nenhum PLC disponível
+
+
+================================================================================
+                     ARQUIVOS CRIADOS/MODIFICADOS
+================================================================================
+
+📝 Modificados:
+  ✓ datahub.py
+    - Reordenada lista de PLCs (700CX primeiro)
+    - Adicionada função test_snap7_connection()
+    - Melhorada função detect_active_plc()
+    - Adicionada opção FORCE_PLC_IP
+    
+  ✓ test_datahub.py
+    - Corrigidos testes para funcionar sem PLC
+    - Melhoradas mensagens de erro
+
+📄 Novos arquivos:
+  + CONFIGURAR_700CX.md         - Guia completo de configuração
+  + datahub_700cx.py             - Versão pré-configurada para 700CX
+  + RESUMO_CORRECAO_700CX.txt    - Este arquivo
+
+
+================================================================================
+                          VERIFICAÇÃO RÁPIDA
+================================================================================
+
+Após reiniciar, você deve ver:
+
+✅ CORRETO (conectou ao 700CX):
+──────────────────────────────────────
+🔍 Procurando PLC ativo...
+   Testando 700CX (100.70.0.10)...
+      ✓ Ping OK
+      Testando conexão Snap7...
+✅ PLC encontrado e acessível: 700CX (100.70.0.10)
+✅ Conectado à máquina 700CX (100.70.0.10)
+📡 Iniciando leitura cíclica
+
+
+❌ PROBLEMA (não conecta ao 700CX):
+──────────────────────────────────────
+   Testando 700CX (100.70.0.10)...
+      ❌ Ping falhou
+
+   → Verifique se o PLC está ligado
+   → Teste: ping 100.70.0.10
+   → Verifique rede/firewall
+
+
+⚠️ PROBLEMA (ping OK mas Snap7 falha):
+──────────────────────────────────────
+   Testando 700CX (100.70.0.10)...
+      ✓ Ping OK
+      Testando conexão Snap7...
+      ⚠️  Ping OK mas Snap7 falhou
+
+   → Firewall bloqueando porta 102
+   → PLC não permite GET/PUT
+   → Rack/Slot incorretos
+
+
+================================================================================
+                           TESTE RÁPIDO
+================================================================================
+
+Execute estes comandos para testar:
+
+1. Teste conectividade de rede:
+   ping 100.70.0.10
+
+2. Teste porta 102 (Snap7):
+   telnet 100.70.0.10 102
+   # ou no PowerShell:
+   Test-NetConnection -ComputerName 100.70.0.10 -Port 102
+
+3. Inicie DataHub:
+   python datahub.py
+
+4. Verifique status:
+   Abra: http://localhost:8000/api/status
+   
+   Deve retornar:
+   {
+     "connected": true,
+     "machine_name": "700CX",
+     "machine_ip": "100.70.0.10",
+     ...
+   }
+
+
+================================================================================
+                         SUPORTE ADICIONAL
+================================================================================
+
+📚 Documentação:
+  - CONFIGURAR_700CX.md      → Guia detalhado
+  - MANUAL_DATAHUB.md        → Manual completo
+  - README_DATAHUB.md        → Visão geral
+
+🧪 Testes:
+  - python test_datahub.py   → Suite de testes
+
+📞 Problemas comuns:
+  Ver seção "Troubleshooting" em MANUAL_DATAHUB.md
+
+
+================================================================================
+                          STATUS ATUAL
+================================================================================
+
+✅ Correções aplicadas com sucesso
+✅ Prioridade do 700CX alterada para 1
+✅ Detecção melhorada (ping + Snap7)
+✅ Opção de forçar IP adicionada
+✅ Logs mais detalhados
+✅ Arquivo pré-configurado criado (datahub_700cx.py)
+
+🎯 PRÓXIMO PASSO: Reinicie o DataHub!
+
+   Ctrl+C (para parar o atual)
+   python datahub.py (para reiniciar)
+
+
+================================================================================
+                      Desenvolvido para você ❤️
+================================================================================
+

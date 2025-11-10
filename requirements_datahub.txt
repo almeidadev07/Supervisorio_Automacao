@@ -1,0 +1,14 @@
+# Dependências do DataHub PLC
+# Instale com: pip install -r requirements_datahub.txt
+
+# Comunicação PLC
+python-snap7==1.3
+
+# API REST e WebSocket
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+
+# Utilitários
+python-multipart==0.0.6
+

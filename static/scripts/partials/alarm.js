@@ -279,9 +279,31 @@ function normalizarPrioridade(alarme) {
 function atualizarContadoresAlarmes(summary) {
     // Atualiza os contadores na interface (se existirem)
     if (summary) {
-        console.log('[ALARM] Resumo dos alarmes:', summary);
-        // Aqui você pode atualizar elementos da UI com os contadores
-        // Por exemplo, se houver elementos com classes como .alarm-count-emergency, etc.
+        console.log('[ALARM] Resumo dos alarmes recebido:', summary);
+        
+        // Atualiza os círculos no grid (caso esteja na tela de alarmes)
+        const tipos = ['emergency', 'nr12', 'drives', 'thermal', 'hardware', 'process', 'total'];
+        tipos.forEach(tipo => {
+            const count = Number(summary[tipo] || 0);
+            const elemento = document.querySelector(`.alarm-count-circle.${tipo} .count-value`);
+            const circle = document.querySelector(`.alarm-count-circle.${tipo}`);
+            
+            if (elemento) {
+                elemento.textContent = count.toString().padStart(2, '0');
+                console.log(`[ALARM] ✓ Contador '${tipo}' atualizado: ${count}`);
+            }
+            
+            if (circle) {
+                if (count > 0) {
+                    circle.classList.add('has-alarms');
+                    console.log(`[ALARM] ✓ Círculo '${tipo}' marcado com has-alarms`);
+                } else {
+                    circle.classList.remove('has-alarms');
+                }
+            }
+        });
+    } else {
+        console.log('[ALARM] Nenhum resumo de alarmes fornecido');
     }
 }
 
@@ -356,7 +378,12 @@ function atualizarIndicadoresAbas() {
             if (tipo) tiposAtivos.add(tipo);
         });
 
+        console.log('[ALARM] Tipos ativos detectados:', Array.from(tiposAtivos));
+        console.log('[ALARM] Total de alarmes:', currentAlarms.length);
+
         const tabs = document.querySelectorAll('.filtro-btn');
+        console.log('[ALARM] Total de abas encontradas:', tabs.length);
+        
         tabs.forEach(tab => {
             const prioridade = tab.getAttribute('data-prioridade');
             if (!prioridade || prioridade === 'todas') {
@@ -365,8 +392,10 @@ function atualizarIndicadoresAbas() {
             }
             if (tiposAtivos.has(prioridade)) {
                 tab.classList.add('has-alarms');
+                console.log(`[ALARM] ✓ Aba '${prioridade}' marcada com has-alarms`);
             } else {
                 tab.classList.remove('has-alarms');
+                console.log(`[ALARM] ✗ Aba '${prioridade}' sem alarmes`);
             }
         });
     } catch (e) {

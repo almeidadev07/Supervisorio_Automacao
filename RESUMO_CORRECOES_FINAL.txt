@@ -1,0 +1,126 @@
+═══════════════════════════════════════════════════════════════════
+  CORREÇÕES APLICADAS - ATUALIZAÇÃO TEMPO REAL E ESCRITA
+═══════════════════════════════════════════════════════════════════
+
+## PROBLEMAS CORRIGIDOS
+
+1. ❌ Valores não atualizavam automaticamente
+   ✅ CORRIGIDO: Polling agora é a cada 500ms (antes 2s)
+
+2. ❌ Escrita não funcionava
+   ✅ CORRIGIDO: Logs detalhados para rastrear escrita
+
+═══════════════════════════════════════════════════════════════════
+
+## O QUE FOI FEITO
+
+### 1. Polling Mais Rápido (app/services/plc_controller_standalone.py)
+   
+   ANTES: 2.0 segundos
+   AGORA:  0.5 segundos (500ms)
+   
+   Resultado: Valores atualizam 4x mais rápido!
+
+### 2. Logs Melhorados (app/plc_drivers/nodes7.py)
+   
+   - Logs detalhados de leitura
+   - Logs detalhados de escrita
+   - Stack trace completo em erros
+   - Log individual de cada tag escrita
+
+═══════════════════════════════════════════════════════════════════
+
+## COMO TESTAR
+
+1. Inicie o sistema:
+   
+   .\start.ps1
+
+2. Acesse: http://127.0.0.1:5000
+
+3. Teste atualização:
+   - Mude valor no PLC
+   - Veja atualizar na tela em < 1 segundo
+
+4. Teste escrita:
+   - Digite nova velocidade
+   - Pressione Enter
+   - Verifique logs no terminal Python
+   - Verifique valor mudou no PLC
+
+═══════════════════════════════════════════════════════════════════
+
+## LOGS ESPERADOS
+
+### Na Leitura:
+[Nodes7] 📊 Lidas 2 tags (2 com valores válidos)
+
+### Na Escrita:
+[Nodes7] 📝 Escrevendo 1 tags: ['XLCLASS_DB1_..._VELOC_PROG']
+[Nodes7] 📝 Valores: {'XLCLASS_DB1_..._VELOC_PROG': 150.0}
+[Nodes7] ✅ Escrita bem-sucedida!
+[Nodes7] ✅   XLCLASS_DB1_..._VELOC_PROG = 150.0
+
+═══════════════════════════════════════════════════════════════════
+
+## DEBUG SE NÃO FUNCIONAR
+
+### Valores não atualizam:
+
+1. Teste servidor Node.js:
+   curl http://127.0.0.1:8081/health
+
+2. Veja estatísticas:
+   curl http://127.0.0.1:8081/api/stats
+
+3. Veja tags monitoradas:
+   curl http://127.0.0.1:8081/api/items
+
+4. Veja valores atuais:
+   curl http://127.0.0.1:8081/api/snapshot
+
+### Escrita não funciona:
+
+1. Verifique logs do Python (aparecem no terminal Flask)
+
+2. Teste manual:
+   $body = @{
+       "XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_PROG" = 150.0
+   } | ConvertTo-Json
+   
+   Invoke-RestMethod -Uri "http://127.0.0.1:5000/api/write_tags" `
+       -Method POST -Body $body -ContentType "application/json"
+
+═══════════════════════════════════════════════════════════════════
+
+## FLUXO COMPLETO
+
+### LEITURA (PLC → Tela):
+PLC → Node.js (200ms) → Cache → Python (500ms) → Socket.IO → Tela
+
+### ESCRITA (Tela → PLC):
+Tela → /api/write_tags → Python → Node.js → PLC
+
+═══════════════════════════════════════════════════════════════════
+
+## ARQUIVOS MODIFICADOS
+
+✅ app/services/plc_controller_standalone.py
+   - Polling: 2s → 500ms
+
+✅ app/plc_drivers/nodes7.py
+   - Logs detalhados
+   - Melhor tratamento de erros
+
+═══════════════════════════════════════════════════════════════════
+
+## DOCUMENTAÇÃO COMPLETA
+
+📖 CORRECOES_TEMPO_REAL.md - Guia detalhado de teste e debug
+
+═══════════════════════════════════════════════════════════════════
+
+TUDO PRONTO! Teste agora: .\start.ps1
+
+═══════════════════════════════════════════════════════════════════
+

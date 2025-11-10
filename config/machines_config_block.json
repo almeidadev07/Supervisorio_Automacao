@@ -1,0 +1,35 @@
+[
+  {
+    "name": "700CX",
+    "description": "Máquina 700CX com BlockReader - CPU 1517T-3PN",
+    "default_plc_ip": "100.70.0.10",
+    "plc_type": "block_reader",
+    "rack": 0,
+    "slot": 1,
+    "poll_interval": 0.1,
+    "embaladoras": 4,
+    "comm_map_file": "700CX.json"
+  },
+  {
+    "name": "400CX",
+    "description": "Máquina 400CX com BlockReader",
+    "default_plc_ip": "192.168.0.2",
+    "plc_type": "block_reader",
+    "rack": 0,
+    "slot": 1,
+    "poll_interval": 0.1,
+    "embaladoras": 1,
+    "comm_map_file": "400CX.json"
+  },
+  {
+    "name": "200CX",
+    "description": "Máquina 200CX com BlockReader",
+    "default_plc_ip": "192.168.0.3",
+    "plc_type": "block_reader",
+    "rack": 0,
+    "slot": 1,
+    "poll_interval": 0.1,
+    "embaladoras": 1,
+    "comm_map_file": "200CX.json"
+  }
+]

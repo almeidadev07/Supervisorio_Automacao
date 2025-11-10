@@ -188,6 +188,8 @@ def comm_map_json():
 def comm_map_csv():
     """Return communication map for the active machine as CSV for convenience."""
     import io, csv
+    from app.utils_comm_map.comm_map_loader import normalize_comm_map_to_array
+    
     cfg = current_app.plc_controller.active_config
     if not cfg:
         return jsonify({'ok': False, 'error': 'no machine selected'}), 400
@@ -195,13 +197,19 @@ def comm_map_csv():
     comm_map = (current_app.comm_map or {}).get(name)
     if comm_map is None:
         return jsonify({'ok': False, 'error': f'no comm map for {name}'}), 404
+    
+    # Normaliza para formato array (suporta ambos os formatos)
+    comm_map_array = normalize_comm_map_to_array(comm_map)
+    
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['name', 'area', 'db', 'offset', 'byte', 'bit', 'type', 'units', 'description'])
-    for tag in comm_map:
+    for tag in comm_map_array:
+        if not isinstance(tag, dict):
+            continue
         writer.writerow([
             tag.get('name',''),
-            tag.get('area',''),
+            tag.get('area','DB'),
             tag.get('db',''),
             tag.get('offset',''),
             tag.get('byte',''),
@@ -236,11 +244,10 @@ def write_tags():
         machine = cfg.get('name')
         comm_map = (current_app.comm_map or {}).get(machine, [])
         
-        # Garante que comm_map é uma lista de dicionários
-        if isinstance(comm_map, list):
-            valid_tags = {tag['name'] for tag in comm_map if isinstance(tag, dict) and 'name' in tag}
-        else:
-            valid_tags = set()
+        # Normaliza comm_map para formato array (suporta ambos os formatos)
+        from app.utils_comm_map.comm_map_loader import normalize_comm_map_to_array
+        comm_map_array = normalize_comm_map_to_array(comm_map)
+        valid_tags = {tag['name'] for tag in comm_map_array if isinstance(tag, dict) and 'name' in tag}
         
         # Filtra apenas tags válidas
         valid_payload = {k: v for k, v in payload.items() if k in valid_tags}
@@ -283,7 +290,9 @@ def write_word_bit():
         # Valida no comm_map e tipo WORD
         machine = cfg.get('name')
         comm_map = (current_app.comm_map or {}).get(machine, [])
-        tag_def = next((t for t in comm_map if isinstance(t, dict) and t.get('name') == name), None)
+        from app.utils_comm_map.comm_map_loader import normalize_comm_map_to_array
+        comm_map_array = normalize_comm_map_to_array(comm_map)
+        tag_def = next((t for t in comm_map_array if isinstance(t, dict) and t.get('name') == name), None)
         if not tag_def:
             return jsonify({'ok': False, 'error': f'Tag {name} não encontrada no comm_map'}), 400
         if (tag_def.get('type') or '').upper() != 'WORD':
@@ -451,24 +460,34 @@ def get_alarms():
         if not cfg:
             return jsonify({'ok': False, 'error': 'no machine selected'}), 400
         
-        # Verifica se o driver está conectado
-        is_connected = False
-        if current_app.plc_controller.driver:
-            try:
-                is_connected = current_app.plc_controller.driver.is_connected()
-            except:
-                is_connected = False
+        # Verifica se está conectado (compatível com DataHubController)
+        try:
+            is_connected = current_app.plc_controller.is_connected()
+        except:
+            is_connected = False
         
-        if not is_connected:
-            return jsonify({'ok': False, 'error': 'PLC not connected'}), 400
+        # DataHubController pode ter cache mesmo sem conexão ativa
+        # Permite leitura do cache para exibir últimos dados conhecidos
+        #if not is_connected:
+        #    return jsonify({'ok': False, 'error': 'PLC not connected'}), 400
         
         # Lê dados atuais do PLC
         try:
             machine = cfg.get('name')
             
             # Lê tags do PLC usando o controlador (com lock e políticas internas)
-            # Para alarmes, lê todas as tags disponíveis
+            # Para alarmes, lê do cache (que já inclui tags de alarme automaticamente)
+            # Se o cache estiver vazio, força leitura incluindo tags de alarme
             plc_data = current_app.plc_controller.read_tags([])
+            
+            # Se não houver dados no cache, força leitura de tags de alarme
+            if not plc_data or len(plc_data) == 0:
+                # Obtém todas as tags de alarme do comm_map
+                from ..services.plc_controller_standalone import StandalonePLCController
+                if isinstance(current_app.plc_controller, StandalonePLCController):
+                    alarm_tags = current_app.plc_controller._get_alarm_tags()
+                    if alarm_tags:
+                        plc_data = current_app.plc_controller.read_tags(alarm_tags)
             
             # Processa alarmes
             from ..services.alarm_processor import alarm_processor
@@ -544,7 +563,9 @@ def set_weight_range():
             return jsonify({'ok': False, 'error': 'No machine selected'}), 400
         machine = cfg.get('name')
         comm_map = (current_app.comm_map or {}).get(machine, [])
-        valid_tags = {tag['name'] for tag in comm_map if isinstance(tag, dict) and 'name' in tag}
+        from app.utils_comm_map.comm_map_loader import normalize_comm_map_to_array
+        comm_map_array = normalize_comm_map_to_array(comm_map)
+        valid_tags = {tag['name'] for tag in comm_map_array if isinstance(tag, dict) and 'name' in tag}
 
         # Garante driver conectado (tenta reconectar se necessário)
         driver = current_app.plc_controller.driver

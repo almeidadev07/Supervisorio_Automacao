@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Supervisório - NodeS7</title>
+	<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+	<div class="container">
+		<h1>Supervisório (NodeS7 + WebSocket)</h1>
+		<div class="controls">
+			<label>Padrões (separe por vírgula):</label>
+			<input type="text" id="patterns" placeholder="ALARME, VELOCIDADE, DB1" />
+			<button id="btnSub">Assinar</button>
+			<button id="btnSnap">Snapshot</button>
+		</div>
+		<pre id="log" class="log"></pre>
+	</div>
+	<script src="./script.js"></script>
+</body>
+</html>

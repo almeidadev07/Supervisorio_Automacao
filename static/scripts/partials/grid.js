@@ -644,7 +644,7 @@ function pickSpeedProgrammedValue(obj){
     return obj[SPEED_TAG_PROGRAMMED] || null;
 }
 
-// Lê tags com fallback: tenta /api/read_tags (GET) e depois /api/enhanced/read_tags (POST)
+// Lê tags via /api/read_tags (GET)
 async function fetchTagsWithFallback(tagNames){
     try {
         const qs = encodeURIComponent((tagNames||[]).join(','));
@@ -653,18 +653,9 @@ async function fetchTagsWithFallback(tagNames){
             const res = await r.json();
             if (res && res.ok && res.values) return res.values;
         }
-    } catch(_) {}
-    try {
-        const r2 = await fetch('/api/enhanced/read_tags', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ names: tagNames })
-        });
-        if (r2.ok) {
-            const res2 = await r2.json();
-            if (res2 && res2.ok && res2.values) return res2.values;
-        }
-    } catch(_) {}
+    } catch(err) {
+        console.warn('[GRID] Erro ao buscar tags:', err);
+    }
     return null;
 }
 
@@ -834,26 +825,148 @@ function bindTelemetryVelocidadeReal(){
             }
             PLC_CONNECTED = true;
             try { console.log('[GRID][telemetry] keys=', Object.keys(data)); } catch(_) {}
+            
+            // ✅ SISTEMA DE ESTABILIDADE INTELIGENTE - Velocidade Real
             const val = pickSpeedValue(data);
-            if (val == null) {
-                valueStabilityCount = 0; // Reset estabilidade em caso de null
-                return;
-            }
-            try { console.log('[GRID][telemetry] real=', val); } catch(_) {}
-            
-            // Sistema de estabilidade para Socket.IO também
-            if (lastStableValue === val) {
-                valueStabilityCount++;
+            if (val != null) {
+                try { console.log('[GRID][telemetry] real=', val); } catch(_) {}
+                
+                // ✅ IMPORTANTE: Atualiza timestamp SEMPRE que dados chegam
+                // Isso evita que watchdog marque como offline
+                SPEED_LAST_OK_TS = Date.now();
+                SPEED_NULL_STREAK = 0;
+                
+                // Adiciona ao histórico
+                speedRealHistory.push(val);
+                if (speedRealHistory.length > STABILITY_WINDOW) {
+                    speedRealHistory.shift(); // Remove valor mais antigo
+                }
+                
+                // Atualiza se:
+                // 1. Valor é estável (repetiu pelo menos 1x) - rápido para valores consistentes
+                // 2. OU valor mudou significativamente (>5%) - detecta mudanças reais
+                // 3. OU é a primeira leitura válida
+                let shouldUpdate = false;
+                
+                if (speedRealHistory.length === 1) {
+                    // Primeira leitura válida - atualiza imediatamente
+                    shouldUpdate = true;
+                } else if (speedRealHistory.length >= 2) {
+                    const currentVal = speedRealHistory[speedRealHistory.length - 1];
+                    const prevVal = speedRealHistory[speedRealHistory.length - 2];
+                    
+                    // Verifica estabilidade (valor repetiu)
+                    const isStable = currentVal === prevVal;
+                    
+                    // ✅ Verifica mudança significativa (>5% para evitar oscilação por ruído)
+                    const percentChange = prevVal !== 0 ? Math.abs((currentVal - prevVal) / prevVal) : 1;
+                    const isSignificantChange = percentChange > 0.05; // 5% (aumentado de 3%)
+                    
+                    shouldUpdate = isStable || isSignificantChange;
+                    
+                    try {
+                        if (isSignificantChange) {
+                            console.log(`[GRID][telemetry] 📈 Mudança significativa: ${prevVal} → ${currentVal} (${(percentChange*100).toFixed(1)}%)`);
+                        }
+                    } catch(_) {}
+                }
+                
+                if (shouldUpdate) {
+                    atualizarVelocidadeRealUI(val);
+                    lastStableValue = val;
+                }
             } else {
-                valueStabilityCount = 1;
-                lastStableValue = val;
+                // Valor null - tolera 5 leituras null antes de limpar (aumentado de 2)
+                SPEED_NULL_STREAK++;
+                if (SPEED_NULL_STREAK > 5) {
+                    speedRealHistory = []; // Limpa histórico
+                    valueStabilityCount = 0;
+                }
             }
             
-            // Só atualiza UI se valor for estável
-            if (valueStabilityCount >= minStabilityCount || lastStableValue === val) {
-            atualizarVelocidadeRealUI(val);
-            SPEED_LAST_OK_TS = Date.now();
-                SPEED_NULL_STREAK = 0; // Reset contador de nulls
+            // ✅ SISTEMA DE ESTABILIDADE INTELIGENTE - Velocidade Programada
+            const valProg = pickSpeedProgrammedValue(data);
+            if (valProg != null) {
+                try { console.log('[GRID][telemetry] prog=', valProg); } catch(_) {}
+                
+                // Adiciona ao histórico
+                speedProgHistory.push(valProg);
+                if (speedProgHistory.length > STABILITY_WINDOW) {
+                    speedProgHistory.shift();
+                }
+                
+                // Atualiza com mesma lógica de estabilidade
+                let shouldUpdateProg = false;
+                
+                if (speedProgHistory.length === 1) {
+                    shouldUpdateProg = true;
+                } else if (speedProgHistory.length >= 2) {
+                    const currentVal = speedProgHistory[speedProgHistory.length - 1];
+                    const prevVal = speedProgHistory[speedProgHistory.length - 2];
+                    
+                    const isStable = currentVal === prevVal;
+                    const percentChange = prevVal !== 0 ? Math.abs((currentVal - prevVal) / prevVal) : 1;
+                    const isSignificantChange = percentChange > 0.05; // 5% (aumentado de 3%)
+                    
+                    shouldUpdateProg = isStable || isSignificantChange;
+                }
+                
+                if (shouldUpdateProg) {
+                    atualizarVelocidadeProgramadaUI(valProg);
+                }
+            }
+            
+            // ✅ PROCESSA ALARMES EM TEMPO REAL (SEM FILTRO DE ESTABILIDADE)
+            // Alarmes NÃO passam pelo sistema de estabilidade pois precisam atualizar instantaneamente
+            if (data.alarm_summary) {
+                try {
+                    const summary = data.alarm_summary;
+                    
+                    // ✅ PROTEÇÃO: Garante valores numéricos válidos (evita "##")
+                    const contadores = {
+                        emergency: Number(summary.emergency || 0),
+                        nr12: Number(summary.nr12 || 0),
+                        drives: Number(summary.drives || 0),
+                        thermal: Number(summary.thermal || 0),
+                        hardware: Number(summary.hardware || 0),
+                        process: Number(summary.process || 0),
+                        total: Number(summary.total || 0)
+                    };
+                    
+                    // Atualiza os valores na interface
+                    Object.keys(contadores).forEach(tipo => {
+                        const elemento = document.querySelector(`.alarm-count-circle.${tipo} .count-value`);
+                        const circle = document.querySelector(`.alarm-count-circle.${tipo}`);
+                        
+                        if (elemento) {
+                            // ✅ PROTEÇÃO: Valida que é número antes de formatar
+                            const valor = contadores[tipo];
+                            if (typeof valor === 'number' && !isNaN(valor)) {
+                                elemento.textContent = valor.toString().padStart(2, '0');
+                            } else {
+                                elemento.textContent = '00'; // Fallback seguro
+                            }
+                        }
+                        
+                        if (circle) {
+                            if (contadores[tipo] > 0) {
+                                circle.classList.add('has-alarms');
+                            } else {
+                                circle.classList.remove('has-alarms');
+                            }
+                        }
+                    });
+                    
+                    ALARM_LAST_OK_TS = Date.now();
+                    
+                    // Log apenas se houver alarmes ativos (reduz poluição)
+                    const totalAlarmes = contadores.total || 0;
+                    if (totalAlarmes > 0) {
+                        console.log(`[GRID][telemetry] 🚨 ${totalAlarmes} alarmes ativos`);
+                    }
+                } catch (e) {
+                    console.error('[GRID][telemetry] ❌ Erro ao atualizar alarmes:', e);
+                }
             }
         });
         // Quando reconectar, faça uma leitura imediata por HTTP para repopular
@@ -876,8 +989,9 @@ function bindTelemetryVelocidadeReal(){
                                 SPEED_NULL_STREAK = 0;
                                 if (SPEED_WAS_OFFLINE) {
                                     SPEED_WAS_OFFLINE = false;
-                                    console.log('[GRID] 🔄 Reconectado via notificação - recarregando página');
-                                    setTimeout(() => window.location.reload(), 100);
+                                    console.log('[GRID] ✅ Reconectado (sem reload automático)');
+                                    // ✅ DESABILITADO: Reload automático causava oscilação
+                                    // setTimeout(() => window.location.reload(), 100);
                                 }
                             }
                             
@@ -940,15 +1054,18 @@ function bindTelemetryVelocidadeReal(){
                 }, 1000);
             }
         });
-        // watchdog: se passar >2.5s sem dado válido, mostrar ???
+        // ✅ WATCHDOG DESABILITADO: Causava oscilação e reloads desnecessários
+        // Confia na lógica de estabilidade e cache do DataHub
         if (window.supervisorSpeedWatchdog) clearInterval(window.supervisorSpeedWatchdog);
+        
+        // Watchdog MUITO permissivo apenas para casos extremos (2 minutos sem dados)
         window.supervisorSpeedWatchdog = setInterval(() => {
-            // Só mostra "###" se passou muito tempo sem dados E não há valor persistente
-            if (Date.now() - SPEED_LAST_OK_TS > 30000 && 
-                (!lastStableValue || (Date.now() - valuePersistenceTime > maxPersistenceTime))) {
-                mostrarVelocidadeIndisponivel();
+            if (Date.now() - SPEED_LAST_OK_TS > 120000) {  // 2 minutos (era 60s)
+                console.warn('[GRID] ⚠️ Watchdog: >2min sem dados de velocidade');
+                // Não mostra "###", apenas loga - confia no cache
+                // mostrarVelocidadeIndisponivel();
             }
-        }, 5000); // Verifica a cada 5 segundos
+        }, 30000); // Verifica a cada 30 segundos (era 10s)
         return true;
     } catch(e){
         console.warn('Socket.IO indisponível para velocidade real:', e);
@@ -1116,9 +1233,12 @@ function pararAjuste() {
 async function atualizarContadoresAlarme() {
     try {
         const res = await fetch('/api/alarms', { cache: 'no-store' }).then(r => r.json());
+        console.log('[GRID ALARM] Resposta da API /api/alarms:', res);
+        
         if (!res) throw new Error('no response');
         // Se o backend indicar desconexão, mantém '##' e sai
         if (res.connected === false || res.plc_connected === false || res.offline === true) {
+            console.log('[GRID ALARM] Backend indica desconexão');
             setAlarmCountsOffline();
             tryForceReconnect('alarms indicou desconexão');
             return;
@@ -1126,8 +1246,12 @@ async function atualizarContadoresAlarme() {
         if (!res.ok) throw new Error(res && res.error ? res.error : 'API error');
 
         const summary = res.alarm_summary;
+        console.log('[GRID ALARM] Resumo de alarmes:', summary);
+        console.log('[GRID ALARM] Total de alarmes ativos:', res.active_alarms ? res.active_alarms.length : 0);
+        
         // Se não houver resumo válido, considera offline para não sobrescrever '##' com '00'
         if (!summary || typeof summary !== 'object') {
+            console.log('[GRID ALARM] Resumo inválido');
             setAlarmCountsOffline();
             return;
         }
@@ -1141,6 +1265,8 @@ async function atualizarContadoresAlarme() {
             total: Number(summary.total || 0)
         };
 
+        console.log('[GRID ALARM] Contadores calculados:', contadores);
+
         // Atualiza os valores na interface
         Object.keys(contadores).forEach(tipo => {
             const elemento = document.querySelector(`.alarm-count-circle.${tipo} .count-value`);
@@ -1148,10 +1274,17 @@ async function atualizarContadoresAlarme() {
             if (elemento) {
                 const digits = 2;
                 elemento.textContent = contadores[tipo].toString().padStart(digits, '0');
+                console.log(`[GRID ALARM] ✓ Atualizado círculo '${tipo}': ${contadores[tipo]}`);
+            } else {
+                console.log(`[GRID ALARM] ✗ Elemento não encontrado para '${tipo}'`);
             }
             if (circle) {
-                if (contadores[tipo] > 0) circle.classList.add('has-alarms');
-                else circle.classList.remove('has-alarms');
+                if (contadores[tipo] > 0) {
+                    circle.classList.add('has-alarms');
+                    console.log(`[GRID ALARM] ✓ Círculo '${tipo}' marcado com has-alarms`);
+                } else {
+                    circle.classList.remove('has-alarms');
+                }
             }
         });
 
@@ -1211,8 +1344,20 @@ function setAlarmCountsOffline(){
     });
 }
 
+// Flag global para evitar múltiplas inicializações
+let __velocimetroInicializado = false;
+let __pollSpeedLoopAtivo = false;
+let __alarmWatchdogInterval = null;
+
 // Modificar a função inicializarVelocimetro para incluir a atualização dos contadores
 function inicializarVelocimetro() {
+    // ✅ PROTEÇÃO: Evita múltiplas inicializações
+    if (__velocimetroInicializado) {
+        console.warn('[GRID] ⚠️ inicializarVelocimetro já foi executado. Ignorando chamada duplicada.');
+        return;
+    }
+    __velocimetroInicializado = true;
+    
     console.log("Velocímetro e contadores inicializados.");
 
     // Restaura posições salvas do grid antes de inicializar os velocímetros
@@ -1271,6 +1416,11 @@ function inicializarVelocimetro() {
     let valueStabilityCount = 0; // Contador de estabilidade do valor
     let minStabilityCount = 1; // Reduzido para 1 - máximo responsivo
     let connectionStableCount = 0; // Contador de estabilidade da conexão
+    
+    // ✅ SISTEMA DE ESTABILIDADE INTELIGENTE - Evita oscilações na UI
+    const STABILITY_WINDOW = 3; // Mantém últimas 3 leituras para análise
+    let speedRealHistory = []; // Histórico de velocidades reais
+    let speedProgHistory = []; // Histórico de velocidades programadas
     let lastConnectionState = null; // Último estado de conexão conhecido
     let valuePersistenceTime = 0; // Timestamp do último valor válido
     let maxPersistenceTime = 30000; // 30 segundos de persistência de valores
@@ -1283,6 +1433,13 @@ function inicializarVelocimetro() {
     }
     
     async function pollSpeedLoop(){
+        // ✅ PROTEÇÃO: Evita múltiplos loops concorrentes
+        if (__pollSpeedLoopAtivo) {
+            console.warn('[GRID] ⚠️ pollSpeedLoop já está ativo. Ignorando chamada duplicada.');
+            return;
+        }
+        __pollSpeedLoopAtivo = true;
+        
         const now = Date.now();
         
         // Ajusta intervalo baseado na estabilidade
@@ -1298,12 +1455,14 @@ function inicializarVelocimetro() {
 
         try {
             if (!isGridVisible()) {
+                __pollSpeedLoopAtivo = false;
                 setTimeout(pollSpeedLoop, Math.max(2000, nextDelay));
                 return;
             }
             
             // Se recebeu dados recentes via socket, pula esta rodada
             if (now - SPEED_LAST_OK_TS <= 3000) {
+                __pollSpeedLoopAtivo = false;
                 setTimeout(pollSpeedLoop, nextDelay);
                 return;
             }
@@ -1347,8 +1506,9 @@ function inicializarVelocimetro() {
                     
                         if (SPEED_WAS_OFFLINE) {
                             SPEED_WAS_OFFLINE = false;
-                        console.log('[GRID] 🔄 Reconectado - recarregando página');
-                        setTimeout(() => window.location.reload(), 100);
+                        console.log('[GRID] ✅ Reconectado via HTTP (sem reload)');
+                        // ✅ DESABILITADO: Reload automático
+                        // setTimeout(() => window.location.reload(), 100);
                     }
                 } else {
                     SPEED_NULL_STREAK++;
@@ -1356,7 +1516,9 @@ function inicializarVelocimetro() {
                     connectionStableCount = 0; // Reset estabilidade de conexão
                     lastConnectionState = false;
                     
-                    if (SPEED_NULL_STREAK >= 8) { // Aumentado para 8 - muito mais tolerante
+                    // ✅ TOLERÂNCIA MÁXIMA: 20 nulls antes de marcar offline (antes 8)
+                    if (SPEED_NULL_STREAK >= 20) {
+                        console.warn('[GRID] ⚠️ 20+ leituras null consecutivas');
                         PLC_CONNECTED = false;
                         mostrarVelocidadeIndisponivel();
                         tryForceReconnect('velocidade real null repetido');
@@ -1373,8 +1535,9 @@ function inicializarVelocimetro() {
                 lastConnectionState = false;
                 console.log(`[GRID] ⚠️ Falha de leitura #${consecutiveFailures}`);
                 
-                // Sistema de fallback: mantém último valor conhecido por muito mais tempo
-                if (consecutiveFailures >= 10) { // Aumentado para 10 - extremamente tolerante
+                // ✅ Sistema de fallback: EXTREMAMENTE tolerante - 30 falhas (antes 10)
+                if (consecutiveFailures >= 30) {
+                    console.warn('[GRID] ⚠️ 30+ falhas consecutivas de leitura');
                     // Só mostra "###" se não há valor estável conhecido E passou do tempo de persistência
                     if (!lastStableValue || (now - valuePersistenceTime > maxPersistenceTime)) {
                         mostrarVelocidadeIndisponivel();
@@ -1390,8 +1553,9 @@ function inicializarVelocimetro() {
             lastConnectionState = false;
             console.log(`[GRID] ❌ Erro de rede #${consecutiveFailures}:`, error);
             
-            // Sistema de fallback: mantém último valor conhecido por muito mais tempo
-            if (consecutiveFailures >= 10) { // Aumentado para 10 - extremamente tolerante
+            // ✅ Sistema de fallback: EXTREMAMENTE tolerante - 30 falhas (antes 10)
+            if (consecutiveFailures >= 30) {
+                console.warn('[GRID] ⚠️ 30+ erros consecutivos de rede');
                 // Só mostra "###" se não há valor estável conhecido E passou do tempo de persistência
                 if (!lastStableValue || (now - valuePersistenceTime > maxPersistenceTime)) {
                     mostrarVelocidadeIndisponivel();
@@ -1401,6 +1565,7 @@ function inicializarVelocimetro() {
                 tryForceReconnect('erro de rede nas leituras');
             }
         } finally {
+            __pollSpeedLoopAtivo = false;
             setTimeout(pollSpeedLoop, nextDelay);
         }
     }
@@ -1425,21 +1590,31 @@ function inicializarVelocimetro() {
         })
         .catch(() => {});
 
-    // Atualiza contadores de alarme periodicamente
+    // ✅ DESABILITADO: Polling HTTP de alarmes - Agora 100% via SocketIO
+    // O polling HTTP estava COMPETINDO com SocketIO e sobrescrevendo valores corretos com "##"
+    // Alarmes agora são atualizados EXCLUSIVAMENTE via SocketIO (telemetry event)
+    
+    /*
+    // ANTIGO: Polling HTTP a cada 2s (DESABILITADO)
     setInterval(() => {
-        // Busca sempre; a função trata offline e mantém '##' quando necessário
         atualizarContadoresAlarme();
-        // Watchdog: se ficar >30s sem resumo válido, força '##'
-        if (Date.now() - ALARM_LAST_OK_TS > 30000) {
+        if (Date.now() - ALARM_LAST_OK_TS > 120000) {
+            console.warn('[GRID] ⚠️ Watchdog: >120s sem dados de alarmes');
             setAlarmCountsOffline();
         }
-        // [DESABILITADO] Efeito visual de alerta no box de alarmes (pulsar vermelho)
-        // try {
-        //     const anyActive = document.querySelector('.alarm-count-circle.has-alarms');
-        //     const box = document.querySelector('.draggable-btn[data-station="alarmes"]');
-        //     if (box) box.classList.toggle('alarmes-alerta', !!anyActive);
-        // } catch(_) {}
     }, 2000);
+    */
+    
+    // ✅ WATCHDOG DESABILITADO: Confia 100% no Socket.IO e cache do DataHub
+    // Não marca offline automaticamente - apenas loga
+    // Limpa watchdog anterior se existir
+    if (__alarmWatchdogInterval) clearInterval(__alarmWatchdogInterval);
+    __alarmWatchdogInterval = setInterval(() => {
+        if (Date.now() - ALARM_LAST_OK_TS > 300000) {  // 5 minutos (era 120s)
+            console.warn('[GRID] ⚠️ Info: >5min sem dados de alarmes via SocketIO');
+            // Não chama setAlarmCountsOffline() - confia no cache
+        }
+    }, 60000); // Checa a cada 60s (era 10s)
 }
 
 // Inicialização

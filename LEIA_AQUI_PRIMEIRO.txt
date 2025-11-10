@@ -1,0 +1,379 @@
+================================================================================
+                    🎯 LEIA AQUI PRIMEIRO - RESUMO GERAL
+================================================================================
+
+📌 O QUE FOI FEITO?
+
+Criamos um DATAHUB - um sistema que gerencia a comunicação com o PLC.
+
+Ele NÃO substitui seu supervisório atual!
+Ele MELHORA a comunicação com o PLC (mais estável e rápido).
+
+
+================================================================================
+                        🏗️ COMO FUNCIONA AGORA
+================================================================================
+
+ANTES:                           DEPOIS:
+┌─────────────────┐             ┌──────────────────┐
+│   Seu app.py    │             │   Seu app.py     │  Suas telas HTML
+│   + Snap7       │             │   (sem Snap7)    │  continuam aqui
+│   (instável)    │             └──────────────────┘
+└─────────────────┘                      │
+       │                                 │ HTTP
+       │ Snap7                           ↓
+       ↓                          ┌──────────────────┐
+┌─────────────────┐               │   DATAHUB.PY     │  ← NOVO!
+│   PLC 700CX     │               │   (estável)      │
+└─────────────────┘               └──────────────────┘
+                                           │ Snap7
+                                           ↓
+                                  ┌──────────────────┐
+                                  │   PLC 700CX      │
+                                  └──────────────────┘
+
+
+================================================================================
+                      🚀 COMO USAR (3 OPÇÕES)
+================================================================================
+
+OPÇÃO 1 - USAR SÓ O DATAHUB (testar primeiro)
+────────────────────────────────────────────────────────────────────────────
+
+1. Abra PowerShell nesta pasta
+2. Execute:
+   .\start_datahub.ps1
+
+3. Abra navegador:
+   http://localhost:8000/docs
+
+4. Teste os endpoints da API
+
+
+OPÇÃO 2 - INICIAR TUDO JUNTO (recomendado)
+────────────────────────────────────────────────────────────────────────────
+
+1. Abra PowerShell nesta pasta
+2. Execute:
+   .\start_all.ps1
+
+Isso inicia:
+   - DataHub na porta 8000 (comunicação PLC)
+   - Seu app.py na porta 5000 (telas)
+
+3. Acesse suas telas normalmente:
+   http://localhost:5000
+
+
+OPÇÃO 3 - MANUAL (dois terminais)
+────────────────────────────────────────────────────────────────────────────
+
+Terminal 1:
+   .\venv\Scripts\Activate.ps1
+   python datahub.py
+
+Terminal 2:
+   .\venv\Scripts\Activate.ps1
+   python app.py
+
+
+================================================================================
+                    📱 COMO SUAS TELAS USAM O DATAHUB
+================================================================================
+
+Você NÃO precisa mudar seu app.py imediatamente!
+
+Suas telas HTML podem buscar dados diretamente do DataHub:
+
+JAVASCRIPT (nas suas telas):
+────────────────────────────────────────────────────────────────────────────
+
+// Buscar status do PLC
+fetch('http://localhost:8000/api/status')
+    .then(res => res.json())
+    .then(data => {
+        console.log('Conectado:', data.connected);
+        console.log('Máquina:', data.machine_name);
+    });
+
+// Buscar dados da DB1
+fetch('http://localhost:8000/api/data/1')
+    .then(res => res.json())
+    .then(data => {
+        const dbData = data.db.data;  // Array de bytes
+        console.log('Dados:', dbData);
+    });
+
+// WebSocket para tempo real
+const ws = new WebSocket('ws://localhost:8000/ws/alarms');
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'alarm_changes') {
+        console.log('Mudanças:', data.changes);
+    }
+};
+
+
+OU PYTHON (no seu app.py):
+────────────────────────────────────────────────────────────────────────────
+
+import requests
+
+# Buscar status
+response = requests.get('http://localhost:8000/api/status')
+status = response.json()
+
+# Buscar dados
+response = requests.get('http://localhost:8000/api/data/1')
+dados = response.json()['db']['data']
+
+
+================================================================================
+                        📚 DOCUMENTAÇÃO COMPLETA
+================================================================================
+
+Para entender tudo em detalhes, leia nesta ordem:
+
+1. INTEGRACAO_SUPERVISORIO.md  ⭐⭐⭐
+   → Como integrar com suas telas existentes
+   → Exemplos práticos de código
+   → Migração passo a passo
+
+2. CONFIGURAR_700CX.md
+   → Configurações do PLC 700CX
+   → Como priorizar conexões
+   → Troubleshooting
+
+3. MANUAL_DATAHUB.md
+   → Documentação técnica completa
+   → Todos os endpoints da API
+   → Configurações avançadas
+
+4. CORRECAO_ERRO_SNAP7.md
+   → Solução dos erros que apareciam
+   → Explicação técnica
+
+
+================================================================================
+                        ✅ CHECKLIST RÁPIDO
+================================================================================
+
+[ ] 1. Iniciei o DataHub
+       → .\start_datahub.ps1
+
+[ ] 2. Verifiquei que conectou ao 700CX
+       → Logs devem mostrar "✅ Conectado à máquina 700CX"
+
+[ ] 3. Testei a API
+       → Abri http://localhost:8000/docs
+
+[ ] 4. Testei status
+       → http://localhost:8000/api/status mostra connected: true
+
+[ ] 5. Li INTEGRACAO_SUPERVISORIO.md
+       → Entendi como modificar minhas telas
+
+[ ] 6. Testei em UMA tela primeiro
+       → Modifiquei JavaScript para buscar do DataHub
+
+[ ] 7. Funcionou!
+       → Agora posso migrar outras telas gradualmente
+
+
+================================================================================
+                        🔧 CORREÇÕES APLICADAS
+================================================================================
+
+✅ Erro "Cannot change this param now" - CORRIGIDO
+   → O cliente Snap7 agora é recriado a cada conexão
+
+✅ Prioridade do 700CX - CORRIGIDO
+   → 700CX é testado PRIMEIRO agora
+
+✅ Detecção melhorada - IMPLEMENTADO
+   → Testa ping E conexão Snap7 real
+
+✅ Reconexão automática - IMPLEMENTADO
+   → Sistema se recupera automaticamente de quedas
+
+
+================================================================================
+                        🆘 PROBLEMAS COMUNS
+================================================================================
+
+PROBLEMA: DataHub não conecta ao PLC
+────────────────────────────────────────────────────────────────────────────
+SOLUÇÃO:
+   1. Verifique se PLC está ligado
+   2. Teste: ping 100.70.0.10
+   3. Veja: CONFIGURAR_700CX.md
+
+
+PROBLEMA: Erro "Cannot change this param now"
+────────────────────────────────────────────────────────────────────────────
+SOLUÇÃO:
+   → Este erro foi corrigido!
+   → Reinicie o DataHub
+   → Se persistir, veja: CORRECAO_ERRO_SNAP7.md
+
+
+PROBLEMA: Minha tela não atualiza dados
+────────────────────────────────────────────────────────────────────────────
+SOLUÇÃO:
+   1. Verifique se DataHub está rodando
+   2. Abra console do navegador (F12)
+   3. Veja se há erros CORS
+   4. Leia: INTEGRACAO_SUPERVISORIO.md
+
+
+PROBLEMA: Porta 8000 já está em uso
+────────────────────────────────────────────────────────────────────────────
+SOLUÇÃO:
+   Edite datahub.py linha ~800:
+   port=8001  # mude de 8000 para 8001
+
+
+================================================================================
+                        📊 ENDPOINTS DISPONÍVEIS
+================================================================================
+
+GET /api/status
+   → Status da conexão com PLC
+   Retorna: {connected, machine_name, machine_ip, ...}
+
+GET /api/data
+   → Todos os dados em cache
+   Retorna: {timestamp, data: {db1: {...}, db2: {...}}}
+
+GET /api/data/1
+   → Dados da DB1 especificamente
+   Retorna: {timestamp, db: {db, size, data}}
+
+POST /api/write/1?offset=10&value=255
+   → Escreve byte no PLC
+   Retorna: {success, message}
+
+WS /ws/alarms
+   → WebSocket para notificações em tempo real
+   Envia: {type: 'alarm_changes', changes: [...]}
+
+
+================================================================================
+                        💡 EXEMPLOS RÁPIDOS
+================================================================================
+
+TESTAR SE ESTÁ FUNCIONANDO (PowerShell):
+────────────────────────────────────────────────────────────────────────────
+Invoke-WebRequest -Uri http://localhost:8000/api/status | ConvertFrom-Json
+
+
+USAR EM PÁGINA HTML:
+────────────────────────────────────────────────────────────────────────────
+<script>
+    setInterval(() => {
+        fetch('http://localhost:8000/api/status')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('status').textContent = 
+                    data.connected ? '✅ Online' : '❌ Offline';
+            });
+    }, 1000);
+</script>
+
+
+USAR NO SEU APP.PY:
+────────────────────────────────────────────────────────────────────────────
+from flask import Flask, jsonify
+import requests
+
+app = Flask(__name__)
+
+@app.route('/api/plc/dados')
+def get_dados():
+    response = requests.get('http://localhost:8000/api/data/1')
+    return jsonify(response.json())
+
+
+================================================================================
+                        🎓 PRÓXIMOS PASSOS
+================================================================================
+
+1. Inicie o DataHub:
+   → .\start_datahub.ps1
+
+2. Confirme que conectou ao 700CX:
+   → Veja logs na janela do PowerShell
+
+3. Teste a API:
+   → Abra http://localhost:8000/docs
+
+4. Leia integração:
+   → Abra INTEGRACAO_SUPERVISORIO.md
+
+5. Modifique UMA tela para testar:
+   → Escolha a mais simples
+   → Adicione JavaScript para buscar do DataHub
+   → Teste se funciona
+
+6. Migre o resto gradualmente:
+   → Uma tela por vez
+   → Teste cada uma
+
+
+================================================================================
+                        📞 SUPORTE
+================================================================================
+
+Documentação:
+   - INTEGRACAO_SUPERVISORIO.md  ← Como integrar
+   - MANUAL_DATAHUB.md            ← Documentação técnica completa
+   - CONFIGURAR_700CX.md          ← Configurações do 700CX
+   - CORRECAO_ERRO_SNAP7.md       ← Solução de erros
+
+Testes:
+   - python test_datahub.py       ← Testa funcionamento
+   - python exemplo_uso_datahub.py ← Exemplos práticos
+
+Scripts:
+   - .\start_datahub.ps1          ← Inicia só DataHub
+   - .\start_all.ps1              ← Inicia DataHub + seu app
+
+
+================================================================================
+                        ✨ RESUMO FINAL
+================================================================================
+
+O QUE É O DATAHUB?
+   → Sistema que gerencia comunicação com PLC
+
+O QUE ELE SUBSTITUI?
+   → A parte de comunicação Snap7 (instável)
+
+O QUE ELE NÃO SUBSTITUI?
+   → Suas telas HTML
+   → Seu app.py principal
+   → Sua lógica de negócio
+
+COMO USO?
+   1. Inicie DataHub (porta 8000)
+   2. Inicie seu app (porta 5000)
+   3. Suas telas buscam dados do DataHub via fetch()
+
+VANTAGENS?
+   ✅ Conexão estável
+   ✅ Reconexão automática
+   ✅ Cache de dados
+   ✅ API REST simples
+   ✅ WebSocket tempo real
+   ✅ Logs claros
+
+
+================================================================================
+                    DESENVOLVIDO PARA VOCÊ ❤️
+================================================================================
+
+Está pronto para usar! Comece com .\start_datahub.ps1
+
+Qualquer dúvida, consulte INTEGRACAO_SUPERVISORIO.md
+================================================================================
+

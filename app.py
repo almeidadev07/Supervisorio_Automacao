@@ -26,10 +26,10 @@ def serve_pdf(filename):
         response = make_response(send_from_directory(pdf_dir, filename))
         response.headers.pop('X-Frame-Options', None)
         response.headers['Content-Type'] = 'application/pdf'
-        print(f"[PDF] ✅ PDF servido com sucesso: {filename}")
+        print(f"[PDF] PDF servido com sucesso: {filename}")
         return response
     except Exception as e:
-        print(f"[PDF] ❌ Erro ao servir PDF {filename}: {e}")
+        print(f"[PDF] ERRO ao servir PDF {filename}: {e}")
         return f"Erro ao carregar PDF: {e}", 404
 
 if __name__ == "__main__":

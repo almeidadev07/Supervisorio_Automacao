@@ -47,10 +47,12 @@ def create_app():
     # enhanced_plc_controller = init_enhanced_controller(socketio, machines_config)
     enhanced_plc_controller = None
     
-    # Inicializa controlador standalone que resolve problemas de comunicação
-    from .services.plc_controller_standalone import StandalonePLCController
-    robust_plc_controller = StandalonePLCController(socketio, machines_config)
+    # NOVO: Inicializa controlador DataHub (busca dados do DataHub via HTTP)
+    from .services.datahub_controller import DataHubController
+    robust_plc_controller = DataHubController(socketio, machines_config)
     app.plc_controller = robust_plc_controller  # Anexa ao app para uso em blueprints antigos
+    
+    print("[INIT] OK - Usando DataHubController - Dados vem do DataHub (porta 8000)")
 
     # Anexa lista de máquinas ao app para rotas /api/machines e afins
     app.machines = machines_config
@@ -80,7 +82,7 @@ def create_app():
                 # mantém vazio se não encontrado, controlador interno já trata
                 app.comm_map[name] = []
     except Exception as e:
-        print(f"[INIT] ⚠️ Falha ao preparar comm_map para API: {e}")
+        print(f"[INIT] WARN Falha ao preparar comm_map para API: {e}")
 
     # Configura automaticamente a máquina 700CX (100.70.0.10) se disponível
     try:
@@ -90,13 +92,13 @@ def create_app():
             # Passa a configuração completa (dict) para o controlador robusto
             success, msg = robust_plc_controller.set_active_machine(config_700cx)
             if success:
-                print(f"[INIT] ✅ Máquina 700CX configurada com sucesso")
+                print(f"[INIT] Maquina 700CX configurada com sucesso")
             else:
-                print(f"[INIT] ⚠️ Falha ao configurar 700CX: {msg}")
+                print(f"[INIT] WARN Falha ao configurar 700CX: {msg}")
         else:
-            print(f"[INIT] ⚠️ Configuração 700CX não encontrada")
+            print(f"[INIT] WARN Configuracao 700CX nao encontrada")
     except Exception as e:
-        print(f"[INIT] ❌ Erro ao configurar 700CX: {e}")
+        print(f"[INIT] ERRO ao configurar 700CX: {e}")
         
     # O controlador robusto já inicia o polling automaticamente
 

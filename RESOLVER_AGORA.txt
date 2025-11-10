@@ -1,0 +1,119 @@
+═══════════════════════════════════════════════════════════════════
+  PROBLEMA: SERVIDOR NODE.JS NÃO ESTÁ RESPONDENDO
+═══════════════════════════════════════════════════════════════════
+
+## SITUAÇÃO ATUAL
+
+❌ Servidor Node.js NÃO está respondendo na porta 8081
+❌ Todos os testes falharam (timeout/conexão recusada)
+❌ Processos Node.js estão travados (não podem ser parados)
+
+═══════════════════════════════════════════════════════════════════
+  SOLUÇÃO PASSO A PASSO
+═══════════════════════════════════════════════════════════════════
+
+## PASSO 1: Parar processos travados (como Administrador)
+
+Abra PowerShell COMO ADMINISTRADOR e execute:
+
+    Get-Process node | Stop-Process -Force
+
+Se ainda não conseguir, mate pelos PIDs:
+
+    taskkill /PID 5220 /F
+    taskkill /PID 13024 /F
+
+OU use o Gerenciador de Tarefas:
+    1. Abra Gerenciador de Tarefas (Ctrl+Shift+Esc)
+    2. Procure por "Node.js"
+    3. Finalize todos os processos
+
+═══════════════════════════════════════════════════════════════════
+
+## PASSO 2: Verificar se parou
+
+    Get-Process node -ErrorAction SilentlyContinue
+
+Se aparecer nada, está OK.
+
+═══════════════════════════════════════════════════════════════════
+
+## PASSO 3: Iniciar servidor Node.js isoladamente
+
+Execute este comando para ver os logs e identificar o problema:
+
+    .\iniciar_node_isolado.ps1
+
+OU manualmente:
+
+    $env:MACHINE = "700CX"
+    $env:PLC_IP = "100.70.0.10"
+    $env:WS_PORT = "8081"
+    npm start
+
+═══════════════════════════════════════════════════════════════════
+
+## PASSO 4: Verificar se iniciou corretamente
+
+Procure por estas linhas nos logs:
+
+    ✅ [BOOT] NodeS7 iniciando...
+    ✅ [Polling] Carregando comm_map...
+    ✅ [PLC] conectado
+    ✅ [HTTP+WS] Servidor ouvindo em :8081
+
+Se aparecer:
+    ❌ Error: listen EADDRINUSE :::8081
+    → Porta ainda está em uso! Pare os processos primeiro.
+
+    ❌ Error: Cannot connect to PLC
+    → Problema de rede/conexão com PLC
+
+═══════════════════════════════════════════════════════════════════
+
+## PASSO 5: Testar após iniciar
+
+Em OUTRO terminal (deixe o Node.js rodando no primeiro):
+
+    .\teste_terminal.ps1
+
+Deve mostrar:
+    ✅ Health Check: OK
+    ✅ Stats: ciclos aumentando
+    ✅ Leitura: valores válidos
+
+═══════════════════════════════════════════════════════════════════
+
+## SE O SERVIDOR NÃO INICIAR
+
+1. Verifique se há erros no código:
+   
+   node src/server.js
+
+2. Veja os erros que aparecem
+
+3. Me envie os logs completos
+
+═══════════════════════════════════════════════════════════════════
+
+## RESUMO RÁPIDO
+
+1. Pare processos Node.js (como Admin ou via Gerenciador)
+2. Aguarde 3 segundos
+3. Execute: .\iniciar_node_isolado.ps1
+4. Veja os logs e me envie se houver erros
+5. Em outro terminal: .\teste_terminal.ps1
+
+═══════════════════════════════════════════════════════════════════
+
+**O problema é que o servidor Node.js não está rodando!**
+
+Preciso que você:
+1. Pare os processos travados
+2. Inicie o servidor Node.js
+3. Me envie os logs que aparecerem
+
+Assim posso identificar exatamente o que está travando!
+
+═══════════════════════════════════════════════════════════════════
+

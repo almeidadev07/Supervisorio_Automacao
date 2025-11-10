@@ -1,0 +1,21 @@
+{
+  "enabled_alarm_dbs": [1, 4],
+  "velocity_tag_patterns": ["VELOCIDADE", "VELOC", "SPEED"],
+  "additional_velocity_tags": [],
+  "max_tags_per_cycle": 100,
+  "alarm_probe_per_cycle": 16,
+  "alarm_deactivate_grace_s": 10.0,
+  "per_machine": {
+    "200CX": {
+      "enabled_alarm_dbs": [1, 4]
+    },
+    "400CX": {
+      "enabled_alarm_dbs": [1, 4]
+    },
+    "700CX": {
+      "enabled_alarm_dbs": [1, 4]
+    }
+  }
+}
+
+
