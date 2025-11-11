@@ -1,3 +1,13 @@
+// Garantia de histórico de velocidade definido
+try {
+    if (typeof window !== 'undefined') {
+        window.speedRealHistory = window.speedRealHistory || [];
+        window.speedProgHistory = window.speedProgHistory || [];
+    }
+} catch(_) {}
+// Variáveis globais para histórico de velocidades (usadas em múltiplos handlers)
+let speedRealHistory = window.speedRealHistory || [];
+let speedProgHistory = window.speedProgHistory || [];
 let draggedButton = null;
 // timestamp global do último valor válido recebido (socket ou HTTP)
 let SPEED_LAST_OK_TS = 0;
@@ -14,11 +24,16 @@ let PLC_RECONNECT_STABLE_COUNT = 0; // contador de leituras estáveis para confi
 let PLC_OFFLINE_TIMESTAMP = 0; // timestamp quando foi marcado como offline
 const PLC_RECONNECT_STABLE_THRESHOLD = 3; // precisa de 3 leituras estáveis para considerar reconectado (reduzido de 10 para resposta mais rápida)
 const PLC_RECONNECT_MIN_TIME_MS = 5000; // mínimo de 5 segundos offline antes de aceitar reconexão
+// Debounce para evitar piscar offline em quedas muito rápidas
+const PLC_OFFLINE_DEBOUNCE_MS = 2000; // só considera offline se ficar >2s sem dado/ok
+// Sistema de estabilidade para velocidades
+const STABILITY_WINDOW = 3; // Mantém últimas 3 leituras para análise
 // Intervalos globais para Data/Hora (usados em start/stop antes de definições)
 var dateTimeInterval = null;
 var serverTimeSyncInterval = null;
 var TIME_OFFSET_MS = 0; // server_now - client_now
 let POLL_BACKOFF_UNTIL_TS = 0; // backoff dinâmico para polling HTTP
+let __pollSpeedLoopWarned = false; // evita spam de log quando já ativo
 
 // Identidade do cliente/tela para o sistema de subscrições do backend
 const GRID_CLIENT_ID = 'grid-' + Math.random().toString(36).slice(2, 10);
@@ -782,14 +797,24 @@ function bindTelemetryVelocidadeReal(){
         // Tratamento de erros de conexão
         socket.on('connect_error', (error) => {
             console.log('[GRID] ❌ Erro de conexão Socket.IO:', error);
-            PLC_CONNECTED = false;
-            mostrarVelocidadeIndisponivel();
+            const sinceLastOk = Date.now() - (SPEED_LAST_OK_TS || 0);
+            if (sinceLastOk >= PLC_OFFLINE_DEBOUNCE_MS) {
+                PLC_CONNECTED = false;
+                mostrarVelocidadeIndisponivel();
+            } else {
+                console.log(`[GRID] ⚠️ connect_error breve (${sinceLastOk}ms) ignorado (debounce ${PLC_OFFLINE_DEBOUNCE_MS}ms)`);
+            }
         });
         
         socket.on('disconnect', (reason) => {
             console.log('[GRID] 📡 Socket.IO desconectado:', reason);
-            PLC_CONNECTED = false;
-            mostrarVelocidadeIndisponivel();
+            const sinceLastOk = Date.now() - (SPEED_LAST_OK_TS || 0);
+            if (sinceLastOk >= PLC_OFFLINE_DEBOUNCE_MS) {
+                PLC_CONNECTED = false;
+                mostrarVelocidadeIndisponivel();
+            } else {
+                console.log(`[GRID] ⚠️ disconnect breve (${sinceLastOk}ms) ignorado (debounce ${PLC_OFFLINE_DEBOUNCE_MS}ms)`);
+            }
         });
         
         socket.on('connect', () => {
@@ -823,17 +848,22 @@ function bindTelemetryVelocidadeReal(){
         socket.on('telemetry', data => {
             if (!data) return;
             
-            // ✅ PRIORIDADE ABSOLUTA: Se recebeu status offline, SEMPRE bloqueia (mesmo se dados vierem depois)
+            // ✅ PRIORIDADE com DEBOUNCE: Se recebeu status offline, aplica tolerância para quedas rápidas
             if (data.plc_connected === false || data.plc_connected === 'false' || data.plc_connected === 0){
-                PLC_CONNECTED = false;
-                PLC_OFFLINE_CONFIRMED = true; // ✅ Confirma que está offline
-                window.PLC_OFFLINE_CONFIRMED = true; // ✅ Sincroniza com variável global
-                PLC_OFFLINE_TIMESTAMP = Date.now(); // ✅ Marca timestamp do momento offline
-                PLC_RECONNECT_STABLE_COUNT = 0; // Reset contador de reconexão
-                mostrarVelocidadeIndisponivel();
-                setAlarmCountsOffline();
-                console.log('[GRID] 📡 PLC desconectado via telemetria - valores bloqueados até reconexão estável');
-                valueStabilityCount = 0; // Reset estabilidade
+                const sinceLastOk = Date.now() - (SPEED_LAST_OK_TS || 0);
+                if (sinceLastOk < PLC_OFFLINE_DEBOUNCE_MS) {
+                    console.log(`[GRID] ⚠️ Offline breve (${sinceLastOk}ms) ignorado (debounce ${PLC_OFFLINE_DEBOUNCE_MS}ms)`);
+                } else {
+                    PLC_CONNECTED = false;
+                    PLC_OFFLINE_CONFIRMED = true; // ✅ Confirma que está offline
+                    window.PLC_OFFLINE_CONFIRMED = true; // ✅ Sincroniza com variável global
+                    PLC_OFFLINE_TIMESTAMP = Date.now(); // ✅ Marca timestamp do momento offline
+                    PLC_RECONNECT_STABLE_COUNT = 0; // Reset contador de reconexão
+                    mostrarVelocidadeIndisponivel();
+                    setAlarmCountsOffline();
+                    console.log('[GRID] 📡 PLC desconectado via telemetria - valores bloqueados até reconexão estável');
+                    valueStabilityCount = 0; // Reset estabilidade
+                }
                 // ✅ IMPORTANTE: Retorna ANTES de processar qualquer dado
                 return;
             }
@@ -1160,13 +1190,18 @@ function bindTelemetryVelocidadeReal(){
                 ensureMachineSelected();
             }
             else if (s && s.connected === false) {
-                PLC_CONNECTED = false;
-                PLC_OFFLINE_CONFIRMED = true; // ✅ Confirma offline
-                window.PLC_OFFLINE_CONFIRMED = true; // ✅ Sincroniza com variável global
-                PLC_OFFLINE_TIMESTAMP = Date.now(); // ✅ Marca timestamp do momento offline
-                PLC_RECONNECT_STABLE_COUNT = 0; // Reset contador
-                mostrarVelocidadeIndisponivel();
-                setAlarmCountsOffline();
+                const sinceLastOk = Date.now() - (SPEED_LAST_OK_TS || 0);
+                if (sinceLastOk < PLC_OFFLINE_DEBOUNCE_MS) {
+                    console.log(`[GRID] ⚠️ Offline breve via evento ( ${sinceLastOk}ms ) ignorado (debounce ${PLC_OFFLINE_DEBOUNCE_MS}ms)`);
+                } else {
+                    PLC_CONNECTED = false;
+                    PLC_OFFLINE_CONFIRMED = true; // ✅ Confirma offline
+                    window.PLC_OFFLINE_CONFIRMED = true; // ✅ Sincroniza com variável global
+                    PLC_OFFLINE_TIMESTAMP = Date.now(); // ✅ Marca timestamp do momento offline
+                    PLC_RECONNECT_STABLE_COUNT = 0; // Reset contador
+                    mostrarVelocidadeIndisponivel();
+                    setAlarmCountsOffline();
+                }
                 if (s.reason === 'Address out of range errors') {
                     console.log(`[GRID] ⏳ PLC em cooldown por ${s.cooldown}s devido a erros de Address out of range`);
                 } else {
@@ -1492,32 +1527,13 @@ async function atualizarContadoresAlarme() {
                 try {
                     if (window.showAlarm) {
                         // Define a aba desejada para a tela de alarmes
-                        try { window.__desiredAlarmTab = prioridade; } catch(_) {}
-                        // Abre a tela de alarmes
+                        window.__desiredAlarmTab = prioridade;
+                        console.log(`[GRID] ✅ Aba desejada definida: "${prioridade}"`);
+                        // Abre a tela de alarmes; seleção ocorrerá imediatamente dentro de showAlarm
                         window.showAlarm(e);
-                        
-                        // Aguarda UI montar e seleciona a aba com retry
-                        let attempts = 0;
-                        const maxAttempts = 10;
-                        const selectTab = () => {
-                            attempts++;
-                            if (window.selectAlarmTab) {
-                                const success = window.selectAlarmTab(prioridade);
-                                if (!success && attempts < maxAttempts) {
-                                    setTimeout(selectTab, 100);
-                                } else if (attempts >= maxAttempts) {
-                                    console.warn(`[GRID] Não foi possível selecionar aba após ${maxAttempts} tentativas`);
-                                } else {
-                                    console.log(`[GRID] ✅ Aba "${prioridade}" selecionada com sucesso`);
-                                }
-                            } else if (attempts < maxAttempts) {
-                                setTimeout(selectTab, 100);
-                            }
-                        };
-                        
-                        // Primeira tentativa após 100ms, depois retry a cada 100ms
-                        setTimeout(selectTab, 100);
                         return;
+                    } else {
+                        console.error('[GRID] ❌ window.showAlarm não está disponível');
                     }
                 } catch(err) {
                     console.error('[GRID] Erro ao abrir tela de alarmes:', err);
@@ -1543,6 +1559,44 @@ async function atualizarContadoresAlarme() {
         setAlarmCountsOffline();
     }
 }
+
+// Delegação global: garante que clique nos círculos abra a tela de alarmes
+(function bindAlarmCircleClicksOnce(){
+    if (window.__alarmCircleDelegationBound) return;
+    window.__alarmCircleDelegationBound = true;
+    document.addEventListener('click', (e) => {
+        try {
+            const circle = e.target && e.target.closest ? e.target.closest('.alarm-count-circle') : null;
+            if (!circle) return;
+            e.preventDefault();
+            e.stopPropagation();
+            let tipo = (circle.getAttribute('data-type') || '').toLowerCase();
+            if (!tipo) {
+                const classes = Array.from(circle.classList || []);
+                const tipoClass = classes.find(c =>
+                    ['emergency','nr12','drives','thermal','hardware','process','total','alimentador'].includes(c)
+                );
+                if (tipoClass) tipo = tipoClass.toLowerCase();
+            }
+            const tipoMap = { total: 'todas', alimentador: 'todas' };
+            const prioridade = tipoMap[tipo] || tipo || 'todas';
+            console.log(`[GRID_DELEGATION] Clicado no círculo: tipo="${tipo}" -> prioridade="${prioridade}"`);
+            window.__desiredAlarmTab = prioridade;
+            console.log(`[GRID_DELEGATION] ✅ Aba desejada definida: "${prioridade}"`);
+            if (window.showAlarm && typeof window.showAlarm === 'function') {
+                // Define aba desejada e abre imediatamente; seleção ocorre dentro de showAlarm sem delay
+                window.showAlarm(e);
+            } else {
+                console.error('[GRID_DELEGATION] ❌ window.showAlarm não está disponível, usando fallback');
+                // Fallback
+                window.location.hash = `#alarms-${prioridade}`;
+                window.location.reload();
+            }
+        } catch(err) {
+            console.error('[GRID] Erro no clique do círculo de alarme:', err);
+        }
+    }, true);
+})();
 
 function setAlarmCountsOffline(){
     const tipos = ['emergency','nr12','drives','thermal','hardware','process','total','alimentador'];
@@ -1628,9 +1682,7 @@ function inicializarVelocimetro() {
     let connectionStableCount = 0; // Contador de estabilidade da conexão
     
     // ✅ SISTEMA DE ESTABILIDADE INTELIGENTE - Evita oscilações na UI
-    const STABILITY_WINDOW = 3; // Mantém últimas 3 leituras para análise
-    let speedRealHistory = []; // Histórico de velocidades reais
-    let speedProgHistory = []; // Histórico de velocidades programadas
+    // STABILITY_WINDOW, speedRealHistory e speedProgHistory já estão definidos globalmente
     let lastConnectionState = null; // Último estado de conexão conhecido
     let valuePersistenceTime = 0; // Timestamp do último valor válido
     let maxPersistenceTime = 30000; // 30 segundos de persistência de valores
@@ -1645,7 +1697,7 @@ function inicializarVelocimetro() {
     async function pollSpeedLoop(){
         // ✅ PROTEÇÃO: Evita múltiplos loops concorrentes
         if (__pollSpeedLoopAtivo) {
-            console.warn('[GRID] ⚠️ pollSpeedLoop já está ativo. Ignorando chamada duplicada.');
+            // Silencia avisos repetidos; apenas retorna
             return;
         }
         

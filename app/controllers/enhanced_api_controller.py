@@ -1,6 +1,7 @@
 # app/controllers/enhanced_api_controller.py
 from flask import Blueprint, request, jsonify
 from ..services.enhanced_plc_controller import EnhancedPLCController
+from flask import current_app
 import json
 
 # Blueprint para as rotas da API aprimorada
@@ -290,6 +291,98 @@ def get_available_screens():
             }), 404
             
     except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+# ======= COMPAT: Endpoints simples usados pelo frontend legado =======
+
+@enhanced_api_bp.route('/api/read_tags', methods=['GET'])
+def compat_read_tags():
+    """
+    Compatibilidade com frontend: /api/read_tags?names=A,B,C
+    Retorna { ok: true, values: { A: val, B: val, ... } }
+    """
+    try:
+        names = request.args.get('names', '')
+        if not names:
+            return jsonify({'ok': False, 'error': 'names é obrigatório'}), 400
+        # current_app.plc_controller é um DataHubController
+        values = current_app.plc_controller.read_tags(names)
+        return jsonify({'ok': True, 'values': values})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@enhanced_api_bp.route('/api/write_tags', methods=['POST'])
+def compat_write_tags():
+    """
+    Compatibilidade com frontend: POST /api/write_tags
+    Body: { "TAG_NAME": value, ... }
+    Retorna { ok: true }
+    """
+    try:
+        payload = request.get_json(silent=True) or {}
+        if not isinstance(payload, dict) or not payload:
+            return jsonify({'ok': False, 'error': 'payload inválido'}), 400
+        success = current_app.plc_controller.write_tags(payload)
+        return jsonify({'ok': bool(success)})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@enhanced_api_bp.route('/api/weight_range', methods=['GET', 'POST'])
+def weight_range():
+    """
+    GET /api/weight_range?preset=1..4  -> { ok: true, values: [v1..v7] }
+    POST /api/weight_range { preset: 1..4, values: [7 ints] } -> { ok: true }
+    Mapeia para tags XLCLASS_DB229_PESAGEM_MAPA_<mapa>_TIPO_P<i>, onde mapa = preset-1 (0..3)
+    Também sincroniza XLCLASS_DB229_PESAGEM_SELECAO = mapa
+    """
+    try:
+        if request.method == 'GET':
+            preset = int(request.args.get('preset', '0'))
+            if preset < 1 or preset > 4:
+                return jsonify({'ok': False, 'error': 'preset deve ser 1..4'}), 400
+            mapa = preset - 1  # 0..3
+            tag_names = [f'XLCLASS_DB229_PESAGEM_MAPA_{mapa}_TIPO_P{i}' for i in range(1, 8)]
+            values_dict = current_app.plc_controller.read_tags(tag_names)
+            values = []
+            for i in range(1, 8):
+                key = f'XLCLASS_DB229_PESAGEM_MAPA_{mapa}_TIPO_P{i}'
+                v = values_dict.get(key, 0)
+                try:
+                    v = int(v)
+                except Exception:
+                    v = 0
+                # clamp 0..150
+                v = max(0, min(150, v))
+                values.append(v)
+            return jsonify({'ok': True, 'values': values})
+
+        # POST
+        data = request.get_json(silent=True) or {}
+        preset = int(data.get('preset', 0))
+        values = data.get('values', [])
+        if preset < 1 or preset > 4:
+            return jsonify({'ok': False, 'error': 'preset deve ser 1..4'}), 400
+        if not isinstance(values, list) or len(values) != 7:
+            return jsonify({'ok': False, 'error': 'values deve ser lista de 7 números'}), 400
+        mapa = preset - 1  # 0..3
+        # Normaliza valores
+        norm_values = []
+        for v in values:
+            try:
+                n = int(v)
+            except Exception:
+                n = 0
+            n = max(0, min(150, n))
+            norm_values.append(n)
+        # Monta payload de escrita
+        payload = {f'XLCLASS_DB229_PESAGEM_MAPA_{mapa}_TIPO_P{i+1}': norm_values[i] for i in range(7)}
+        # Sincroniza seleção do preset no PLC
+        payload['XLCLASS_DB229_PESAGEM_SELECAO'] = mapa
+        success = current_app.plc_controller.write_tags(payload)
+        return jsonify({'ok': bool(success)})
+
+    except Exception as e:
+        # Evita "cannot unpack non-iterable bool object" retornando sempre JSON
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 @enhanced_api_bp.route('/api/enhanced/screen/<screen_name>', methods=['GET'])

@@ -93,11 +93,16 @@ document.addEventListener('DOMContentLoaded', () => {
           statusDiv.textContent = 'Máquina alterada com sucesso!';
           statusDiv.className = 'status success';
         }
-        
-        // Fecha o modal após sucesso
+        // Solicita atualização dos clientes e recarrega a UI atual
+        try {
+          await fetch('/api/force_reload', { method: 'POST' }).catch(() => {});
+        } catch (_) {}
+        // Fecha o modal e recarrega para refletir máquina conectada/velocidades
         setTimeout(() => {
           hideModal();
-        }, 1000);
+          // Pequeno atraso para permitir troca de máquina no backend
+          setTimeout(() => location.reload(), 300);
+        }, 700);
       } else {
         throw new Error(result.error || 'Erro ao alterar máquina');
       }
@@ -115,6 +120,32 @@ document.addEventListener('DOMContentLoaded', () => {
     showModal();
     await loadMachines();
     await loadCurrentMachine();
+    // Destaque visual na opção conectada e evita reconfirmação desnecessária
+    try {
+      const cur = await fetch('/api/current').then(r => r.json()).catch(()=>null);
+      if (cur && cur.ok && select) {
+        Array.from(select.options).forEach(opt => {
+          // Limpa marcadores anteriores
+          opt.textContent = opt.value;
+          opt.classList.remove('connected');
+          if (opt.value === cur.machine) {
+            opt.textContent = `${opt.value} (Conectada)`;
+            opt.classList.add('connected');
+          }
+        });
+        // Desabilita botão se já está na mesma máquina
+        if (btnConfirm) {
+          btnConfirm.disabled = (select.value === cur.machine);
+          btnConfirm.title = btnConfirm.disabled ? 'Já conectada' : '';
+        }
+        // Reage a mudanças no select para habilitar/desabilitar confirmar
+        select.addEventListener('change', () => {
+          if (!btnConfirm) return;
+          btnConfirm.disabled = (select.value === cur.machine);
+          btnConfirm.title = btnConfirm.disabled ? 'Já conectada' : '';
+        }, { once: true });
+      }
+    } catch(_) {}
   });
 
   btnCancel.addEventListener('click', hideModal);

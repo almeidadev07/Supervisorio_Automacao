@@ -77,7 +77,8 @@ function showGrid(event) {
     }
 
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
-    if (event && event.currentTarget) {
+    // Só marca como ativo se a origem do clique for um botão de menu
+    if (event && event.currentTarget && event.currentTarget.classList && event.currentTarget.classList.contains('menu-btn')) {
         event.currentTarget.classList.add('active');
     }
     
@@ -94,7 +95,8 @@ function showGraphics(event) {
     if (graphics) graphics.style.display = 'block';
 
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
-    if (event && event.currentTarget) {
+    // Marca ativo somente quando for clique em botão do menu
+    if (event && event.currentTarget && event.currentTarget.classList && event.currentTarget.classList.contains('menu-btn')) {
         event.currentTarget.classList.add('active');
     }
 
@@ -129,9 +131,25 @@ function showAlarm(event) {
     const alarm = document.getElementById('alarm-container');
     if (alarm) alarm.style.display = 'block';
 
-    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
-    if (event && event.currentTarget) {
-        event.currentTarget.classList.add('active');
+    // Remove active de todos os botões do menu
+    document.querySelectorAll('.menu-btn').forEach(btn => {
+        if (btn && btn.classList) {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Adiciona active apenas se o currentTarget for um botão do menu válido
+    if (event && event.currentTarget && event.currentTarget.classList) {
+        const isMenuBtn = event.currentTarget.classList.contains('menu-btn') || 
+                         event.currentTarget.closest('.menu-btn');
+        if (isMenuBtn) {
+            const menuBtn = event.currentTarget.classList.contains('menu-btn') 
+                ? event.currentTarget 
+                : event.currentTarget.closest('.menu-btn');
+            if (menuBtn && menuBtn.classList) {
+                menuBtn.classList.add('active');
+            }
+        }
     }
 
     if (window.inicializarAlarmes) {
@@ -147,6 +165,56 @@ function showAlarm(event) {
     if (window.startAlarmAutoRefresh) {
         window.startAlarmAutoRefresh();
     }
+
+    // Seleciona a aba desejada APÓS garantir que o DOM está pronto e os botões existem
+    // Aguarda um pouco mais para garantir que inicializarAlarmes() terminou de configurar os botões
+    const selectDesiredTab = () => {
+        try {
+            let desired = (window.__desiredAlarmTab || '').toLowerCase();
+            if (!desired && window.location && window.location.hash && window.location.hash.startsWith('#alarms-')) {
+                desired = window.location.hash.replace('#alarms-', '').toLowerCase();
+            }
+            if (desired && typeof window.selectAlarmTab === 'function') {
+                console.log(`[SHOW_ALARM] Tentando selecionar aba: "${desired}"`);
+                const ok = window.selectAlarmTab(desired);
+                if (ok) {
+                    window.__desiredAlarmTab = '';
+                    try { if (window.location && window.location.hash) window.location.hash = ''; } catch(_) {}
+                    console.log(`[SHOW_ALARM] ✅ Aba "${desired}" selecionada com sucesso`);
+                    return true;
+                } else {
+                    console.log(`[SHOW_ALARM] ⚠️ Primeira tentativa falhou, tentando novamente...`);
+                    return false;
+                }
+            }
+        } catch(err) {
+            console.error('[SHOW_ALARM] Erro ao selecionar aba:', err);
+        }
+        return false;
+    };
+    
+    // Tenta selecionar após um pequeno delay para garantir que os botões estão prontos
+    requestAnimationFrame(() => {
+        setTimeout(() => {
+            if (!selectDesiredTab()) {
+                // Retry rápido se os botões ainda não estiverem prontos
+                let attempts = 0;
+                const maxAttempts = 50; // Aumentado para dar mais tempo
+                const retry = () => {
+                    attempts++;
+                    if (selectDesiredTab()) {
+                        return; // Sucesso, para de tentar
+                    }
+                    if (attempts < maxAttempts) {
+                        setTimeout(retry, 30); // Aumentado para 30ms
+                    } else {
+                        console.warn(`[SHOW_ALARM] ⚠️ Não foi possível selecionar aba após ${maxAttempts} tentativas`);
+                    }
+                };
+                setTimeout(retry, 50); // Delay inicial maior
+            }
+        }, 50); // Delay inicial aumentado
+    });
 }
 
 function showWeightRange(event) {

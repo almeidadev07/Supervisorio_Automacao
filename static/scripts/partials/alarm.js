@@ -1,13 +1,6 @@
 let alarmesInicializados = false;
 
 function inicializarAlarmes() {
-    if (alarmesInicializados) {
-        console.log('Alarmes já inicializados!');
-        return;
-    }
-
-    console.log('Tentando inicializar tela de alarmes...');
-    
     // Verifica se o DOM está completamente carregado
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', inicializarAlarmes);
@@ -24,48 +17,56 @@ function inicializarAlarmes() {
         return;
     }
     
-    // Configura os filtros de prioridade
-    filterButtons.forEach(btn => {
-        console.log('Configurando botão de filtro:', btn.dataset.prioridade);
-        btn.addEventListener('click', function() {
-            // Remove active class de todos os botões
-            filterButtons.forEach(b => b.classList.remove('active'));
-            // Adiciona active class ao botão clicado
-            this.classList.add('active');
-            // Aplica o filtro
-            aplicarFiltro(this.dataset.prioridade);
+    // Configura os filtros de prioridade (só uma vez, mesmo se já inicializado)
+    if (!alarmesInicializados) {
+        filterButtons.forEach(btn => {
+            console.log('Configurando botão de filtro:', btn.dataset.prioridade);
+            btn.addEventListener('click', function() {
+                // Remove active class de todos os botões
+                filterButtons.forEach(b => b.classList.remove('active'));
+                // Adiciona active class ao botão clicado
+                this.classList.add('active');
+                // Aplica o filtro
+                aplicarFiltro(this.dataset.prioridade);
+            });
         });
-    });
+    }
 
-    alarmesInicializados = true;
-    console.log('Tela de alarmes inicializada com sucesso!');
+    // Inicializa SocketIO e carrega alarmes apenas na primeira vez
+    if (!alarmesInicializados) {
+        alarmesInicializados = true;
+        console.log('Tela de alarmes inicializada com sucesso!');
+        
+        // Inicializa SocketIO para alarmes em tempo real
+        inicializarSocketAlarmes();
+        
+        // Carrega os alarmes iniciais
+        carregarAlarmes('instantaneos');
+    }
     
-    // Inicializa SocketIO para alarmes em tempo real
-    inicializarSocketAlarmes();
-    
-    // Carrega os alarmes iniciais
-    carregarAlarmes('instantaneos');
-
-    // Se o grid solicitou uma aba específica, aplica após renderizar
+    // ✅ SEMPRE tenta selecionar a aba desejada quando os botões estão prontos
+    // Isso garante que mesmo se já foi inicializado, a aba será selecionada ao abrir novamente
     try {
-        const desired = (window.__desiredAlarmTab || '').toLowerCase();
-        if (desired) {
-            let attempts = 0;
-            const maxAttempts = 10;
-            const trySelect = () => {
-                attempts++;
-                if (window.selectAlarmTab) {
-                    const ok = window.selectAlarmTab(desired);
-                    if (ok || attempts >= maxAttempts) {
-                        window.__desiredAlarmTab = '';
-                        return;
-                    }
-                }
-                if (attempts < maxAttempts) setTimeout(trySelect, 100);
-            };
-            setTimeout(trySelect, 50);
+        let desired = (window.__desiredAlarmTab || '').toLowerCase();
+        if (!desired && window.location && window.location.hash && window.location.hash.startsWith('#alarms-')) {
+            desired = window.location.hash.replace('#alarms-', '').toLowerCase();
         }
-    } catch(_) {}
+        if (desired && filterButtons.length > 0 && typeof window.selectAlarmTab === 'function') {
+            // Pequeno delay para garantir que os botões estão totalmente prontos
+            setTimeout(() => {
+                const ok = window.selectAlarmTab(desired);
+                if (ok) {
+                    window.__desiredAlarmTab = '';
+                    try { if (window.location && window.location.hash) window.location.hash = ''; } catch(_) {}
+                    console.log(`[INICIALIZAR_ALARMES] ✅ Aba "${desired}" selecionada com sucesso`);
+                } else {
+                    console.log(`[INICIALIZAR_ALARMES] ⚠️ Falha ao selecionar aba "${desired}" - será tentado novamente por showAlarm`);
+                }
+            }, 10);
+        }
+    } catch(err) {
+        console.error('[INICIALIZAR_ALARMES] Erro ao selecionar aba:', err);
+    }
 }
 
 function toggleAlarmView(button) {
@@ -361,6 +362,8 @@ function atualizarInterfaceAlarmes() {
     if (currentViewMode === 'instantaneos') {
         atualizarIndicadoresAbas();
     }
+    
+    // Removido ajuste tardio de aba para evitar troca após abrir
 }
 
 // Normaliza prioridade separando NR12 de Emergência
@@ -546,15 +549,19 @@ document.addEventListener('DOMContentLoaded', () => {
 window.selectAlarmTab = function(prioridade) {
     try {
         const desired = (prioridade || 'todas').toLowerCase();
-        console.log(`[ALARM] Tentando selecionar aba: "${desired}"`);
+        console.log(`[SELECT_TAB] Tentando selecionar aba: "${desired}"`);
         
         const buttons = document.querySelectorAll('.filtro-btn');
         if (!buttons || buttons.length === 0) {
-            console.log('[ALARM] Botões de filtro não encontrados ainda, aguardando...');
+            console.log('[SELECT_TAB] ⚠️ Botões de filtro não encontrados ainda');
             return false; // Retorna false para indicar que precisa retry
         }
         
-        console.log(`[ALARM] ${buttons.length} botões de filtro encontrados`);
+        console.log(`[SELECT_TAB] ${buttons.length} botões de filtro encontrados`);
+        
+        // Lista todas as prioridades disponíveis para debug
+        const availablePriorities = Array.from(buttons).map(b => (b.getAttribute('data-prioridade') || '').toLowerCase());
+        console.log(`[SELECT_TAB] Prioridades disponíveis:`, availablePriorities);
         
         // Remove seleção atual
         buttons.forEach(b => b.classList.remove('active'));
@@ -562,30 +569,34 @@ window.selectAlarmTab = function(prioridade) {
         // Encontra o botão correspondente
         const btn = Array.from(buttons).find(b => {
             const btnPrioridade = (b.getAttribute('data-prioridade') || '').toLowerCase();
-            return btnPrioridade === desired;
+            const match = btnPrioridade === desired;
+            if (match) {
+                console.log(`[SELECT_TAB] ✅ Encontrado botão com data-prioridade="${btnPrioridade}"`);
+            }
+            return match;
         });
         
         if (btn) {
             btn.classList.add('active');
             aplicarFiltro(desired);
-            console.log(`[ALARM] ✅ Aba "${desired}" selecionada com sucesso`);
+            console.log(`[SELECT_TAB] ✅ Aba "${desired}" selecionada e filtro aplicado com sucesso`);
             return true;
         } else {
-            console.log(`[ALARM] ⚠️ Aba "${desired}" não encontrada, usando fallback "todas"`);
+            console.log(`[SELECT_TAB] ⚠️ Aba "${desired}" não encontrada, usando fallback "todas"`);
             // Fallback para 'todas'
             const allBtn = Array.from(buttons).find(b => (b.getAttribute('data-prioridade') || '').toLowerCase() === 'todas');
             if (allBtn) {
                 allBtn.classList.add('active');
                 aplicarFiltro('todas');
-                console.log('[ALARM] ✅ Fallback para aba "todas" aplicado');
+                console.log('[SELECT_TAB] ✅ Fallback para aba "todas" aplicado');
                 return true;
             } else {
-                console.error('[ALARM] ❌ Nenhuma aba encontrada, nem mesmo "todas"');
+                console.error('[SELECT_TAB] ❌ Nenhuma aba encontrada, nem mesmo "todas"');
                 return false;
             }
         }
     } catch (err) {
-        console.error('[ALARM] Erro ao selecionar aba:', err);
+        console.error('[SELECT_TAB] ❌ Erro ao selecionar aba:', err);
         return false;
     }
 };
