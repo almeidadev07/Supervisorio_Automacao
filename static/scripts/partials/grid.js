@@ -1083,6 +1083,59 @@ function bindTelemetryVelocidadeReal(){
                 }
             }
             
+            // ✅ Atualiza porcentagens dos sliders (Acumuladora e Dosificadora) lendo SEMPRE do PLC,
+            // mas respeita cooldown pós-escrita para não sobrescrever alteração recém-aplicada.
+            if (!PLC_OFFLINE_CONFIRMED) {
+                if (typeof data[TAG_VELOCIDADE_FIXA_ACUMULADORA] !== 'undefined') {
+                    try {
+                        const slider = document.getElementById('slider1');
+                        const nowTs = Date.now();
+                        if (!slider || (!slider.dataset.dragging && (nowTs - (LAST_WRITE_PCT_ACC_TS || 0) >= WRITE_PCT_COOLDOWN_MS))) {
+                            const gauge = document.getElementById('gauge1');
+                            const gaugeVal = document.getElementById('gaugeVal1');
+                            const pct = Math.max(0, Math.min(100, Math.round(parseFloat(data[TAG_VELOCIDADE_FIXA_ACUMULADORA]) || 0)));
+                            if (slider) slider.value = pct;
+                            if (gauge) {
+                                gauge.style.setProperty('--p', pct + '%');
+                                const green2 = [0x00,0xc8,0x53];
+                                const yellow2 = [0xff,0xdd,0x00];
+                                const red2 = [0xff,0x44,0x44];
+                                let rgb;
+                                if (pct <= 50) { const t = pct/50; rgb = [Math.round(green2[0]+(yellow2[0]-green2[0])*t), Math.round(green2[1]+(yellow2[1]-green2[1])*t), Math.round(green2[2]+(yellow2[2]-green2[2])*t)]; }
+                                else { const t = (pct-50)/50; rgb = [Math.round(yellow2[0]+(red2[0]-yellow2[0])*t), Math.round(yellow2[1]+(red2[1]-yellow2[1])*t), Math.round(yellow2[2]+(red2[2]-yellow2[2])*t)]; }
+                                const hex = '#' + [0,1,2].map(i => rgb[i].toString(16).padStart(2,'0')).join('');
+                                gauge.style.setProperty('--fill-color', hex);
+                            }
+                            if (gaugeVal) gaugeVal.textContent = pct + '%';
+                        }
+                    } catch(_) {}
+                }
+                if (typeof data[TAG_VELOCIDADE_FIXA_DOSIFICADORA] !== 'undefined') {
+                    try {
+                        const slider = document.getElementById('slider2');
+                        const nowTs = Date.now();
+                        if (!slider || (!slider.dataset.dragging && (nowTs - (LAST_WRITE_PCT_DOSI_TS || 0) >= WRITE_PCT_COOLDOWN_MS))) {
+                            const gauge = document.getElementById('gauge2');
+                            const gaugeVal = document.getElementById('gaugeVal2');
+                            const pct = Math.max(0, Math.min(100, Math.round(parseFloat(data[TAG_VELOCIDADE_FIXA_DOSIFICADORA]) || 0)));
+                            if (slider) slider.value = pct;
+                            if (gauge) {
+                                gauge.style.setProperty('--p', pct + '%');
+                                const green2 = [0x00,0xc8,0x53];
+                                const yellow2 = [0xff,0xdd,0x00];
+                                const red2 = [0xff,0x44,0x44];
+                                let rgb;
+                                if (pct <= 50) { const t = pct/50; rgb = [Math.round(green2[0]+(yellow2[0]-green2[0])*t), Math.round(green2[1]+(yellow2[1]-green2[1])*t), Math.round(green2[2]+(yellow2[2]-green2[2])*t)]; }
+                                else { const t = (pct-50)/50; rgb = [Math.round(yellow2[0]+(red2[0]-yellow2[0])*t), Math.round(yellow2[1]+(red2[1]-yellow2[1])*t), Math.round(yellow2[2]+(red2[2]-yellow2[2])*t)]; }
+                                const hex = '#' + [0,1,2].map(i => rgb[i].toString(16).padStart(2,'0')).join('');
+                                gauge.style.setProperty('--fill-color', hex);
+                            }
+                            if (gaugeVal) gaugeVal.textContent = pct + '%';
+                        }
+                    } catch(_) {}
+                }
+            }
+            
             // ✅ PROCESSA ALARMES EM TEMPO REAL (SEM FILTRO DE ESTABILIDADE)
             // Alarmes NÃO passam pelo sistema de estabilidade pois precisam atualizar instantaneamente
             // ✅ PROTEÇÃO: Não processa alarmes se está offline confirmado
@@ -1292,7 +1345,14 @@ document.addEventListener('mousedown', function(event) {
     if (teclado.style.display === "grid" && 
         !teclado.contains(event.target) && 
         !event.target.classList.contains('velocimetro-input')) {
-        fecharTeclado();
+        // Cancela a digitação e fecha o teclado SEM escrever
+        try {
+            USER_TYPING_VELOCITY = false;
+            const input = document.getElementById(teclado.dataset.target);
+            if (input) { input.blur(); }
+        } catch(_) {}
+        teclado.style.display = "none";
+        valorDigitado = "";
     }
 });
 
@@ -3126,7 +3186,7 @@ async function writeJogBitToggle() {
         let res = await fetch('/api/write_word_bit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: TAG_JOG_INLINE, bit: JOG_BIT_INDEX, mode: 'state', value: wasOn ? 0 : 1, pure: false })
+            body: JSON.stringify({ name: TAG_JOG_INLINE, bit: JOG_BIT_INDEX, mode: 'toggle', pure: false })
         });
         let text = await res.text();
         let data; try { data = JSON.parse(text); } catch { data = null; }
@@ -3230,6 +3290,227 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setupJogAcumuladora);
 } else {
     setTimeout(setupJogAcumuladora, 0);
+}
+
+// ================== Velocidade Fixa Acumuladora (DB901, offset 8.0 REAL) ==================
+const TAG_VELOCIDADE_FIXA_ACUMULADORA = 'XLCLASS_DB901_ESTEIRA_INLINE_VELOCIDADE_FIXA';
+// Cooldown para evitar que a telemetria sobrescreva logo após escrever
+const WRITE_PCT_COOLDOWN_MS = 1500;
+let LAST_WRITE_PCT_ACC_TS = 0;
+let LAST_WRITE_PCT_DOSI_TS = 0;
+
+async function writeVelocidadeFixaAcumuladora(pct) {
+    try {
+        const value = Math.max(0, Math.min(100, Number(pct) || 0));
+        const res = await fetch('/api/write_tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [TAG_VELOCIDADE_FIXA_ACUMULADORA]: value })
+        });
+        let data = null;
+        try { data = await res.json(); } catch(_) {}
+        console.log('[VELOCIDADE_FIXA] escrita:', value, 'resp:', data);
+    } catch(e) {
+        console.error('[VELOCIDADE_FIXA] erro na escrita:', e);
+    }
+}
+
+function bindVelocidadeFixaAcumuladora() {
+    const slider = document.getElementById('slider1');
+    if (!slider) { setTimeout(bindVelocidadeFixaAcumuladora, 200); return; }
+    // Marca dragging ao iniciar movimento
+    slider.addEventListener('pointerdown', (e) => {
+        try { e.stopPropagation(); } catch(_) {}
+        slider.dataset.dragging = '1';
+    });
+    slider.addEventListener('touchstart', (e) => {
+        try { e.stopPropagation(); } catch(_) {}
+        slider.dataset.dragging = '1';
+    });
+    // Escreve somente ao soltar (reduz tráfego)
+    slider.addEventListener('pointerup', (e) => {
+        try { e.stopPropagation(); } catch(_) {}
+        delete slider.dataset.dragging;
+        LAST_WRITE_PCT_ACC_TS = Date.now();
+        writeVelocidadeFixaAcumuladora(e.currentTarget.value);
+    });
+    // Touch fallback
+    slider.addEventListener('touchend', (e) => {
+        try { e.stopPropagation(); } catch(_) {}
+        delete slider.dataset.dragging;
+        LAST_WRITE_PCT_ACC_TS = Date.now();
+        writeVelocidadeFixaAcumuladora(e.currentTarget.value);
+    });
+    // Segurança: se cancelar, limpa dragging
+    slider.addEventListener('pointercancel', () => { delete slider.dataset.dragging; });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindVelocidadeFixaAcumuladora);
+} else {
+    setTimeout(bindVelocidadeFixaAcumuladora, 0);
+}
+
+// ================== Jog Dosificadora (DB911, bit 13 de COMANDOS) ==================
+const TAG_JOG_DOSIFICADORA = 'XLCLASS_DB911_DOSIFICADORA_COMANDOS';
+const JOG_DOSI_BIT_INDEX = 13;
+let jogDosPollInterval = null;
+
+async function readJogDosWord() {
+    try {
+        const res = await fetch('/api/read_tags?names=' + encodeURIComponent(TAG_JOG_DOSIFICADORA), { cache: 'no-store' });
+        const data = await res.json();
+        if (data && data.ok && data.values && typeof data.values[TAG_JOG_DOSIFICADORA] !== 'undefined') {
+            return Number(data.values[TAG_JOG_DOSIFICADORA]);
+        }
+    } catch(_) {}
+    return null;
+}
+
+let jogDosUIState = null; // estado conhecido (true/false) para escrita pura sem leitura
+async function writeJogDosToggle() {
+    try {
+        // Determina estado atual conhecido; tenta ler uma vez se desconhecido
+        if (jogDosUIState === null) {
+            const before = await readJogDosWord();
+            if (before !== null) jogDosUIState = bitIsSet(before, JOG_DOSI_BIT_INDEX);
+            else jogDosUIState = false;
+        }
+        const targetOn = !jogDosUIState;
+        const mode = targetOn ? 'set' : 'clear';
+        const payload = { name: TAG_JOG_DOSIFICADORA, bit: JOG_DOSI_BIT_INDEX, mode, pure: true };
+        console.log('[JOG-DOSI] escrevendo (puro):', payload);
+        const res = await fetch('/api/write_word_bit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const text = await res.text();
+        let data = null; try { data = JSON.parse(text); } catch(_) {}
+        console.log('[JOG-DOSI] resp:', data || text, 'status=', res.status);
+        if (res.ok) {
+            jogDosUIState = targetOn;
+            setJogDosUIActive(targetOn);
+            setTimeout(syncJogDosFromPLC, 150);
+            return true;
+        }
+    } catch(e) { console.error('[JOG-DOSI] erro toggle:', e); }
+    return false;
+}
+
+function setJogDosUIActive(active) {
+    const jog = document.getElementById('jog2');
+    if (!jog) return;
+    try { jog.checked = !!active; } catch(_) {}
+    const wrapper = jog.closest('.jog-switch');
+    if (wrapper) wrapper.classList.toggle('active', !!active);
+}
+
+async function syncJogDosFromPLC() {
+    const word = await readJogDosWord();
+    if (word === null) return;
+    const on = bitIsSet(word, JOG_DOSI_BIT_INDEX);
+    setJogDosUIActive(on);
+}
+
+function setupJogDosificadora() {
+    const jog = document.getElementById('jog2');
+    if (!jog) { setTimeout(setupJogDosificadora, 200); return; }
+    const jogLabel = document.querySelector('label[for="jog2"]');
+    const jogWrap = jog.closest('.jog-switch');
+    // Evita drag
+    ['pointerdown','mousedown','click','pointerup','mouseup','touchstart','touchend'].forEach(evt => {
+        [jog, jogLabel, jogWrap].forEach(el => {
+            if (!el) return;
+            el.addEventListener(evt, (e) => {
+                try { e.stopPropagation(); e.stopImmediatePropagation(); } catch(_) {}
+                const parent = el.closest && el.closest('.draggable-btn');
+                if (evt === 'pointerdown' || evt === 'mousedown' || evt === 'touchstart') {
+                    if (parent) parent.removeAttribute('draggable');
+                } else if (evt === 'pointerup' || evt === 'mouseup' || evt === 'touchend') {
+                    if (parent) setTimeout(() => parent.setAttribute('draggable','true'), 120);
+                }
+            }, { passive: false });
+        });
+    });
+    if (!jog.dataset.bound) {
+        const clickHandler = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            try { jog.disabled = true; } catch(_) {}
+            const ok = await writeJogDosToggle();
+            try { jog.disabled = false; } catch(_) {}
+            if (!ok) {
+                try { const w = jog.closest('.jog-switch'); if (w) { const prev = w.style.outline; w.style.outline = '2px solid #dc3545'; setTimeout(()=>{ w.style.outline = prev; }, 600); } } catch(_) {}
+            }
+        };
+        jog.addEventListener('click', clickHandler);
+        if (jogLabel) jogLabel.addEventListener('click', clickHandler);
+        jog.dataset.bound = '1';
+    }
+    // Sincroniza estado inicial e inicia polling
+    syncJogDosFromPLC();
+    if (jogDosPollInterval) clearInterval(jogDosPollInterval);
+    jogDosPollInterval = setInterval(syncJogDosFromPLC, 400);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupJogDosificadora);
+} else {
+    setTimeout(setupJogDosificadora, 0);
+}
+
+// ================== Velocidade Fixa Dosificadora (DB911, offset 8.0 REAL) ==================
+const TAG_VELOCIDADE_FIXA_DOSIFICADORA = 'XLCLASS_DB911_DOSIFICADORA_VELOCIDADE_FIXA';
+
+async function writeVelocidadeFixaDosificadora(pct) {
+    try {
+        const value = Math.max(0, Math.min(100, Number(pct) || 0));
+        const res = await fetch('/api/write_tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [TAG_VELOCIDADE_FIXA_DOSIFICADORA]: value })
+        });
+        let data = null;
+        try { data = await res.json(); } catch(_) {}
+        console.log('[VELOCIDADE_FIXA_DOSI] escrita:', value, 'resp:', data);
+    } catch(e) {
+        console.error('[VELOCIDADE_FIXA_DOSI] erro na escrita:', e);
+    }
+}
+
+function bindVelocidadeFixaDosificadora() {
+    const slider = document.getElementById('slider2');
+    if (!slider) { setTimeout(bindVelocidadeFixaDosificadora, 200); return; }
+    // Marca dragging ao iniciar movimento
+    slider.addEventListener('pointerdown', (e) => {
+        try { e.stopPropagation(); } catch(_) {}
+        slider.dataset.dragging = '1';
+    });
+    slider.addEventListener('touchstart', (e) => {
+        try { e.stopPropagation(); } catch(_) {}
+        slider.dataset.dragging = '1';
+    });
+    slider.addEventListener('pointerup', (e) => {
+        try { e.stopPropagation(); } catch(_) {}
+        delete slider.dataset.dragging;
+        LAST_WRITE_PCT_DOSI_TS = Date.now();
+        writeVelocidadeFixaDosificadora(e.currentTarget.value);
+    });
+    slider.addEventListener('touchend', (e) => {
+        try { e.stopPropagation(); } catch(_) {}
+        delete slider.dataset.dragging;
+        LAST_WRITE_PCT_DOSI_TS = Date.now();
+        writeVelocidadeFixaDosificadora(e.currentTarget.value);
+    });
+    // Segurança: se cancelar, limpa dragging
+    slider.addEventListener('pointercancel', () => { delete slider.dataset.dragging; });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindVelocidadeFixaDosificadora);
+} else {
+    setTimeout(bindVelocidadeFixaDosificadora, 0);
 }
 
 // ================== Periféricos (9 botões) ==================
@@ -3392,12 +3673,20 @@ document.addEventListener('click', async function(e){
     try{
         const t = e.target;
         if(!t) return;
-        const isJogEl = (t.id === 'jog1') || (t.closest && (t.closest('label[for="jog1"]') || t.closest('.jog-switch')));
-        if(!isJogEl) return;
+        // Garante que só captura o JOG da acumuladora (jog1)
+        const jog1 = document.getElementById('jog1');
+        const jog1Wrap = jog1 ? jog1.closest('.jog-switch') : null;
+        const withinJog1 =
+            (t === jog1) ||
+            (t.closest && (
+                t.closest('label[for="jog1"]') ||
+                (jog1Wrap && t.closest('.jog-switch') === jog1Wrap)
+            ));
+        if(!withinJog1) return;
         e.preventDefault();
         e.stopPropagation();
         console.log('[JOG] delegation click capturado');
-        const ok = await writeJogBitOne();
+        const ok = await writeJogBitToggle();
         if(!ok){ console.warn('[JOG] delegation: escrita falhou'); }
         await syncJogFromPLC();
     }catch(_){ /* noop */ }

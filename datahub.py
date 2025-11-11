@@ -83,6 +83,10 @@ DBS = [
     # DB Pesagem
     {"id": 229, "size": 1000}, # DB229: Pesagem (alarmes calibração)
     
+    # DBs Esteira Inline (Acumuladora / Dosificadora / Escovas)
+    {"id": 901, "size": 20},   # DB901: Esteira Inline (comandos, velocidades)
+    {"id": 911, "size": 20},   # DB911: Dosificadora Inline (comandos, velocidades)
+    
     # DBs Predição Vermelho (P1-P7)
     {"id": 360, "size": 100},  # DB360: Pred Vermelho P1
     {"id": 361, "size": 100},  # DB361: Pred Vermelho P2
