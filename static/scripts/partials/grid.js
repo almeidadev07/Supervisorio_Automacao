@@ -1135,6 +1135,30 @@ function bindTelemetryVelocidadeReal(){
                         }
                     } catch(_) {}
                 }
+                if (typeof data[TAG_VELOCIDADE_FIXA_ESCOVA] !== 'undefined') {
+                    try {
+                        const slider = document.getElementById('slider3');
+                        const nowTs = Date.now();
+                        if (!slider || (!slider.dataset.dragging && (nowTs - (LAST_WRITE_PCT_ESCOVA_TS || 0) >= WRITE_PCT_COOLDOWN_MS))) {
+                            const gauge = document.getElementById('gauge3');
+                            const gaugeVal = document.getElementById('gaugeVal3');
+                            const pct = Math.max(0, Math.min(100, Math.round(parseFloat(data[TAG_VELOCIDADE_FIXA_ESCOVA]) || 0)));
+                            if (slider) slider.value = pct;
+                            if (gauge) {
+                                gauge.style.setProperty('--p', pct + '%');
+                                const green2 = [0x00,0xc8,0x53];
+                                const yellow2 = [0xff,0xdd,0x00];
+                                const red2 = [0xff,0x44,0x44];
+                                let rgb;
+                                if (pct <= 50) { const t = pct/50; rgb = [Math.round(green2[0]+(yellow2[0]-green2[0])*t), Math.round(green2[1]+(yellow2[1]-green2[1])*t), Math.round(green2[2]+(yellow2[2]-green2[2])*t)]; }
+                                else { const t = (pct-50)/50; rgb = [Math.round(yellow2[0]+(red2[0]-yellow2[0])*t), Math.round(yellow2[1]+(red2[1]-yellow2[1])*t), Math.round(yellow2[2]+(red2[2]-yellow2[2])*t)]; }
+                                const hex = '#' + [0,1,2].map(i => rgb[i].toString(16).padStart(2,'0')).join('');
+                                gauge.style.setProperty('--fill-color', hex);
+                            }
+                            if (gaugeVal) gaugeVal.textContent = pct + '%';
+                        }
+                    } catch(_) {}
+                }
             }
             
             // ✅ PROCESSA ALARMES EM TEMPO REAL (SEM FILTRO DE ESTABILIDADE)
@@ -3352,6 +3376,8 @@ window.testDateTime = function() {
 const TAG_JOG_INLINE = 'XLCLASS_DB901_ESTEIRA_INLINE_COMANDOS';
 const JOG_BIT_INDEX = 13;
 let jogAcPollInterval = null;
+let LAST_WRITE_JOG_ACC_TS = 0;
+const WRITE_JOG_ACC_COOLDOWN_MS = 2000; // 2 segundos de cooldown após escrita
 
 function bitIsSet(word, bit) {
     return ((Number(word) >>> bit) & 1) === 1;
@@ -3398,6 +3424,9 @@ async function writeJogBitOne() {
 // Alterna o bit: se está 1 -> clear, se 0 -> set (ambos modo 'pure' para não depender do word atual)
 async function writeJogBitToggle() {
     try {
+        // Marca timestamp da escrita para evitar que polling sobrescreva
+        LAST_WRITE_JOG_ACC_TS = Date.now();
+        
         // Lê estado atual para decidir fallback se necessário
         const before = await readJogWord();
         const wasOn = before != null ? bitIsSet(before, JOG_BIT_INDEX) : null;
@@ -3423,26 +3452,48 @@ async function writeJogBitToggle() {
                         await new Promise(r => setTimeout(r, 40));
                     }
                 } catch(_) {}
+                LAST_WRITE_JOG_ACC_TS = Date.now(); // Atualiza timestamp
                 setTimeout(syncJogFromPLC, 120);
                 return true;
             }
-            setJogUIActive(!!data.value);
+            // NÃO atualiza UI aqui - já foi atualizada no event handler
+            // Apenas atualiza timestamp para evitar que polling sobrescreva
+            LAST_WRITE_JOG_ACC_TS = Date.now();
             setTimeout(syncJogFromPLC, 120);
             return true;
         }
         return false;
-    } catch(e) { console.error('[JOG] erro na escrita (toggle):', e); return false; }
+    } catch(e) { 
+        console.error('[JOG] erro na escrita (toggle):', e);
+        return false; 
+    }
 }
 
 function setJogUIActive(active) {
     const jog = document.getElementById('jog1');
     if (!jog) return;
-    try { jog.checked = !!active; } catch(_) {}
+    const on = !!active;
+    // Força atualização imediata do checkbox
+    if (jog.checked !== on) {
+        jog.checked = on;
+        // Força reflow para garantir atualização visual imediata
+        void jog.offsetHeight;
+    }
     const wrapper = jog.closest('.jog-switch');
-    if (wrapper) wrapper.classList.toggle('active', !!active);
+    if (wrapper) {
+        wrapper.classList.toggle('active', on);
+        // Força reflow do wrapper também
+        void wrapper.offsetHeight;
+    }
 }
 
 async function syncJogFromPLC() {
+    // Não sincroniza se acabou de escrever (evita sobrescrever escrita do usuário)
+    const nowTs = Date.now();
+    if (nowTs - (LAST_WRITE_JOG_ACC_TS || 0) < WRITE_JOG_ACC_COOLDOWN_MS) {
+        return;
+    }
+    
     const word = await readJogWord();
     if (word === null) return;
     const on = bitIsSet(word, JOG_BIT_INDEX);
@@ -3474,6 +3525,13 @@ function setupJogAcumuladora() {
     // Clique envia comando (escreve 1) e depois sincroniza via leitura
     if (!jog.dataset.bound) {
         jog.addEventListener('click', async (e) => {
+            // ✅ Atualiza UI IMEDIATAMENTE no clique, ANTES de preventDefault
+            const currentState = jog.checked;
+            jog.checked = !currentState;
+            const wrapper = jog.closest('.jog-switch');
+            if (wrapper) wrapper.classList.toggle('active', !currentState);
+            void jog.offsetHeight; // Força reflow
+            
             e.preventDefault();
             e.stopPropagation();
             try { jog.disabled = true; } catch(_) {}
@@ -3486,6 +3544,13 @@ function setupJogAcumuladora() {
         });
         if (jogLabel) {
             jogLabel.addEventListener('click', async (e) => {
+                // ✅ Atualiza UI IMEDIATAMENTE no clique, ANTES de preventDefault
+                const currentState = jog.checked;
+                jog.checked = !currentState;
+                const wrapper = jog.closest('.jog-switch');
+                if (wrapper) wrapper.classList.toggle('active', !currentState);
+                void jog.offsetHeight; // Força reflow
+                
                 e.preventDefault();
                 e.stopPropagation();
                 try { jog.disabled = true; } catch(_) {}
@@ -3513,10 +3578,15 @@ if (document.readyState === 'loading') {
 
 // ================== Velocidade Fixa Acumuladora (DB901, offset 8.0 REAL) ==================
 const TAG_VELOCIDADE_FIXA_ACUMULADORA = 'XLCLASS_DB901_ESTEIRA_INLINE_VELOCIDADE_FIXA';
+// ================== Velocidade Fixa Dosificadora (DB911, offset 8.0 REAL) ==================
+const TAG_VELOCIDADE_FIXA_DOSIFICADORA = 'XLCLASS_DB911_DOSIFICADORA_VELOCIDADE_FIXA';
+// ================== Velocidade Fixa Escova (DB921, offset 8.0 REAL) ==================
+const TAG_VELOCIDADE_FIXA_ESCOVA = 'XLCLASS_DB921_ESCOVAS_VELOCIDADE_FIXA';
 // Cooldown para evitar que a telemetria sobrescreva logo após escrever
 const WRITE_PCT_COOLDOWN_MS = 1500;
 let LAST_WRITE_PCT_ACC_TS = 0;
 let LAST_WRITE_PCT_DOSI_TS = 0;
+let LAST_WRITE_PCT_ESCOVA_TS = 0;
 
 async function writeVelocidadeFixaAcumuladora(pct) {
     try {
@@ -3574,6 +3644,8 @@ if (document.readyState === 'loading') {
 const TAG_JOG_DOSIFICADORA = 'XLCLASS_DB911_DOSIFICADORA_COMANDOS';
 const JOG_DOSI_BIT_INDEX = 13;
 let jogDosPollInterval = null;
+let LAST_WRITE_JOG_DOSI_TS = 0;
+const WRITE_JOG_DOSI_COOLDOWN_MS = 2000; // 2 segundos de cooldown após escrita
 
 async function readJogDosWord() {
     try {
@@ -3586,50 +3658,115 @@ async function readJogDosWord() {
     return null;
 }
 
-let jogDosUIState = null; // estado conhecido (true/false) para escrita pura sem leitura
-async function writeJogDosToggle() {
+// ✅ CORRIGIDO: Usa a mesma lógica da acumuladora que funciona
+async function writeJogDosBitOne() {
     try {
-        // Determina estado atual conhecido; tenta ler uma vez se desconhecido
-        if (jogDosUIState === null) {
-            const before = await readJogDosWord();
-            if (before !== null) jogDosUIState = bitIsSet(before, JOG_DOSI_BIT_INDEX);
-            else jogDosUIState = false;
-        }
-        const targetOn = !jogDosUIState;
-        const mode = targetOn ? 'set' : 'clear';
-        const payload = { name: TAG_JOG_DOSIFICADORA, bit: JOG_DOSI_BIT_INDEX, mode, pure: true };
-        console.log('[JOG-DOSI] escrevendo (puro):', payload);
-        const res = await fetch('/api/write_word_bit', {
+        // Usa endpoint dedicado para garantir read-modify-write no backend
+        let res = await fetch('/api/write_word_bit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ name: TAG_JOG_DOSIFICADORA, bit: JOG_DOSI_BIT_INDEX, mode: 'set', pure: true })
         });
-        const text = await res.text();
-        let data = null; try { data = JSON.parse(text); } catch(_) {}
-        console.log('[JOG-DOSI] resp:', data || text, 'status=', res.status);
-        if (res.ok) {
-            jogDosUIState = targetOn;
-            setJogDosUIActive(targetOn);
-            setTimeout(syncJogDosFromPLC, 150);
+        let text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = null; }
+        console.log('[JOG-DOSI] write_word_bit resp (set pure):', data || text, 'status=', res.status);
+        if (data && data.ok) return true;
+
+        // Fallback: pulso puro
+        res = await fetch('/api/write_word_bit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: TAG_JOG_DOSIFICADORA, bit: JOG_DOSI_BIT_INDEX, mode: 'pulse', pulse_ms: 600, pure: true })
+        });
+        text = await res.text();
+        try { data = JSON.parse(text); } catch { data = null; }
+        console.log('[JOG-DOSI] write_word_bit resp (pulse pure fallback):', data || text, 'status=', res.status);
+        return !!(data && data.ok);
+    } catch(e) { console.error('[JOG-DOSI] erro na escrita:', e); return false; }
+}
+
+// ✅ CORRIGIDO: Alterna o bit usando a mesma lógica da acumuladora
+async function writeJogDosToggle() {
+    try {
+        // Marca timestamp da escrita para evitar que polling sobrescreva
+        LAST_WRITE_JOG_DOSI_TS = Date.now();
+        
+        // Lê estado atual para decidir fallback se necessário
+        const before = await readJogDosWord();
+        const wasOn = before != null ? bitIsSet(before, JOG_DOSI_BIT_INDEX) : null;
+        // Define explicitamente o estado alvo (0/1) no backend usando toggle
+        let res = await fetch('/api/write_word_bit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: TAG_JOG_DOSIFICADORA, bit: JOG_DOSI_BIT_INDEX, mode: 'toggle', pure: false })
+        });
+        let text = await res.text();
+        let data; try { data = JSON.parse(text); } catch { data = null; }
+        console.log('[JOG-DOSI] toggle resp:', data || text, 'status=', res.status);
+        if (data && data.ok && typeof data.value !== 'undefined') {
+            // Se a intenção era limpar, insista com bursts curtos de clear puro para vencer o scan do PLC
+            if (wasOn === true && Number(data.value) === 1) {
+                try {
+                    for (let i=0;i<5;i++){
+                        const res2 = await fetch('/api/write_word_bit', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: TAG_JOG_DOSIFICADORA, bit: JOG_DOSI_BIT_INDEX, mode: 'clear', pure: true })
+                        });
+                        console.log('[JOG-DOSI] burst clear pure try', i+1, 'status=', res2.status);
+                        await new Promise(r => setTimeout(r, 40));
+                    }
+                } catch(_) {}
+                LAST_WRITE_JOG_DOSI_TS = Date.now(); // Atualiza timestamp
+                setTimeout(syncJogDosFromPLC, 120);
+                return true;
+            }
+            // NÃO atualiza UI aqui - já foi atualizada no event handler
+            // Apenas atualiza timestamp para evitar que polling sobrescreva
+            LAST_WRITE_JOG_DOSI_TS = Date.now();
+            console.log('[JOG-DOSI] Estado confirmado pelo servidor:', !!data.value, 'value=', data.value);
+            // Sincroniza novamente após um delay para garantir que o PLC processou
+            setTimeout(syncJogDosFromPLC, 120);
             return true;
         }
-    } catch(e) { console.error('[JOG-DOSI] erro toggle:', e); }
-    return false;
+        return false;
+    } catch(e) { 
+        console.error('[JOG-DOSI] erro na escrita (toggle):', e);
+        return false; 
+    }
 }
 
 function setJogDosUIActive(active) {
     const jog = document.getElementById('jog2');
     if (!jog) return;
-    try { jog.checked = !!active; } catch(_) {}
+    const on = !!active;
+    // Força atualização imediata do checkbox
+    if (jog.checked !== on) {
+        jog.checked = on;
+        // Força reflow para garantir atualização visual imediata
+        void jog.offsetHeight;
+    }
     const wrapper = jog.closest('.jog-switch');
-    if (wrapper) wrapper.classList.toggle('active', !!active);
+    if (wrapper) {
+        wrapper.classList.toggle('active', on);
+        // Força reflow do wrapper também
+        void wrapper.offsetHeight;
+    }
 }
 
 async function syncJogDosFromPLC() {
+    // Não sincroniza se acabou de escrever (evita sobrescrever escrita do usuário)
+    const nowTs = Date.now();
+    if (nowTs - (LAST_WRITE_JOG_DOSI_TS || 0) < WRITE_JOG_DOSI_COOLDOWN_MS) {
+        return;
+    }
+    
     const word = await readJogDosWord();
     if (word === null) return;
     const on = bitIsSet(word, JOG_DOSI_BIT_INDEX);
     setJogDosUIActive(on);
+    // ✅ Atualiza estado conhecido para evitar leituras desnecessárias
+    console.log('[JOG-DOSI] Estado sincronizado do PLC:', on, 'word=', word);
 }
 
 function setupJogDosificadora() {
@@ -3654,6 +3791,13 @@ function setupJogDosificadora() {
     });
     if (!jog.dataset.bound) {
         const clickHandler = async (e) => {
+            // ✅ Atualiza UI IMEDIATAMENTE no clique, ANTES de preventDefault
+            const currentState = jog.checked;
+            jog.checked = !currentState;
+            const wrapper = jog.closest('.jog-switch');
+            if (wrapper) wrapper.classList.toggle('active', !currentState);
+            void jog.offsetHeight; // Força reflow
+            
             e.preventDefault();
             e.stopPropagation();
             try { jog.disabled = true; } catch(_) {}
@@ -3680,7 +3824,7 @@ if (document.readyState === 'loading') {
 }
 
 // ================== Velocidade Fixa Dosificadora (DB911, offset 8.0 REAL) ==================
-const TAG_VELOCIDADE_FIXA_DOSIFICADORA = 'XLCLASS_DB911_DOSIFICADORA_VELOCIDADE_FIXA';
+// Constante já definida acima junto com as outras
 
 async function writeVelocidadeFixaDosificadora(pct) {
     try {
@@ -3730,6 +3874,240 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bindVelocidadeFixaDosificadora);
 } else {
     setTimeout(bindVelocidadeFixaDosificadora, 0);
+}
+
+// ================== Jog Escova (DB921, bit 13 de COMANDOS) ==================
+const TAG_JOG_ESCOVA = 'XLCLASS_DB921_ESCOVAS_COMANDOS';
+const JOG_ESCOVA_BIT_INDEX = 13;
+let jogEscovaPollInterval = null;
+let LAST_WRITE_JOG_ESCOVA_TS = 0;
+const WRITE_JOG_ESCOVA_COOLDOWN_MS = 2000; // 2 segundos de cooldown após escrita
+
+async function readJogEscovaWord() {
+    try {
+        const res = await fetch('/api/read_tags?names=' + encodeURIComponent(TAG_JOG_ESCOVA), { cache: 'no-store' });
+        const data = await res.json();
+        if (data && data.ok && data.values && typeof data.values[TAG_JOG_ESCOVA] !== 'undefined') {
+            return Number(data.values[TAG_JOG_ESCOVA]);
+        }
+    } catch(_) {}
+    return null;
+}
+
+// ✅ Usa a mesma lógica da acumuladora e dosificadora que funciona
+async function writeJogEscovaBitOne() {
+    try {
+        // Usa endpoint dedicado para garantir read-modify-write no backend
+        let res = await fetch('/api/write_word_bit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: TAG_JOG_ESCOVA, bit: JOG_ESCOVA_BIT_INDEX, mode: 'set', pure: true })
+        });
+        let text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = null; }
+        console.log('[JOG-ESCOVA] write_word_bit resp (set pure):', data || text, 'status=', res.status);
+        if (data && data.ok) return true;
+
+        // Fallback: pulso puro
+        res = await fetch('/api/write_word_bit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: TAG_JOG_ESCOVA, bit: JOG_ESCOVA_BIT_INDEX, mode: 'pulse', pulse_ms: 600, pure: true })
+        });
+        text = await res.text();
+        try { data = JSON.parse(text); } catch { data = null; }
+        console.log('[JOG-ESCOVA] write_word_bit resp (pulse pure fallback):', data || text, 'status=', res.status);
+        return !!(data && data.ok);
+    } catch(e) { console.error('[JOG-ESCOVA] erro na escrita:', e); return false; }
+}
+
+// ✅ CORRIGIDO: Alterna o bit usando a mesma lógica da acumuladora
+async function writeJogEscovaToggle() {
+    try {
+        // Marca timestamp da escrita para evitar que polling sobrescreva
+        LAST_WRITE_JOG_ESCOVA_TS = Date.now();
+        
+        // Lê estado atual para decidir fallback se necessário
+        const before = await readJogEscovaWord();
+        const wasOn = before != null ? bitIsSet(before, JOG_ESCOVA_BIT_INDEX) : null;
+        // Define explicitamente o estado alvo (0/1) no backend usando toggle
+        let res = await fetch('/api/write_word_bit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: TAG_JOG_ESCOVA, bit: JOG_ESCOVA_BIT_INDEX, mode: 'toggle', pure: false })
+        });
+        let text = await res.text();
+        let data; try { data = JSON.parse(text); } catch { data = null; }
+        console.log('[JOG-ESCOVA] toggle resp:', data || text, 'status=', res.status);
+        if (data && data.ok && typeof data.value !== 'undefined') {
+            // Se a intenção era limpar, insista com bursts curtos de clear puro para vencer o scan do PLC
+            if (wasOn === true && Number(data.value) === 1) {
+                try {
+                    for (let i=0;i<5;i++){
+                        const res2 = await fetch('/api/write_word_bit', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: TAG_JOG_ESCOVA, bit: JOG_ESCOVA_BIT_INDEX, mode: 'clear', pure: true })
+                        });
+                        console.log('[JOG-ESCOVA] burst clear pure try', i+1, 'status=', res2.status);
+                        await new Promise(r => setTimeout(r, 40));
+                    }
+                } catch(_) {}
+                LAST_WRITE_JOG_ESCOVA_TS = Date.now(); // Atualiza timestamp
+                setTimeout(syncJogEscovaFromPLC, 120);
+                return true;
+            }
+            // NÃO atualiza UI aqui - já foi atualizada no event handler
+            // Apenas atualiza timestamp para evitar que polling sobrescreva
+            LAST_WRITE_JOG_ESCOVA_TS = Date.now();
+            console.log('[JOG-ESCOVA] Estado confirmado pelo servidor:', !!data.value, 'value=', data.value);
+            // Sincroniza novamente após um delay para garantir que o PLC processou
+            setTimeout(syncJogEscovaFromPLC, 120);
+            return true;
+        }
+        return false;
+    } catch(e) { 
+        console.error('[JOG-ESCOVA] erro na escrita (toggle):', e);
+        return false; 
+    }
+}
+
+function setJogEscovaUIActive(active) {
+    const jog = document.getElementById('jog3');
+    if (!jog) return;
+    const on = !!active;
+    // Força atualização imediata do checkbox
+    if (jog.checked !== on) {
+        jog.checked = on;
+        // Força reflow para garantir atualização visual imediata
+        void jog.offsetHeight;
+    }
+    const wrapper = jog.closest('.jog-switch');
+    if (wrapper) {
+        wrapper.classList.toggle('active', on);
+        // Força reflow do wrapper também
+        void wrapper.offsetHeight;
+    }
+}
+
+async function syncJogEscovaFromPLC() {
+    // Não sincroniza se acabou de escrever (evita sobrescrever escrita do usuário)
+    const nowTs = Date.now();
+    if (nowTs - (LAST_WRITE_JOG_ESCOVA_TS || 0) < WRITE_JOG_ESCOVA_COOLDOWN_MS) {
+        return;
+    }
+    
+    const word = await readJogEscovaWord();
+    if (word === null) return;
+    const on = bitIsSet(word, JOG_ESCOVA_BIT_INDEX);
+    setJogEscovaUIActive(on);
+    // ✅ Atualiza estado conhecido para evitar leituras desnecessárias
+    console.log('[JOG-ESCOVA] Estado sincronizado do PLC:', on, 'word=', word);
+}
+
+function setupJogEscova() {
+    const jog = document.getElementById('jog3');
+    if (!jog) { setTimeout(setupJogEscova, 200); return; }
+    const jogLabel = document.querySelector('label[for="jog3"]');
+    const jogWrap = jog.closest('.jog-switch');
+    // Evita drag
+    ['pointerdown','mousedown','click','pointerup','mouseup','touchstart','touchend'].forEach(evt => {
+        [jog, jogLabel, jogWrap].forEach(el => {
+            if (!el) return;
+            el.addEventListener(evt, (e) => {
+                try { e.stopPropagation(); e.stopImmediatePropagation(); } catch(_) {}
+                const parent = el.closest && el.closest('.draggable-btn');
+                if (evt === 'pointerdown' || evt === 'mousedown' || evt === 'touchstart') {
+                    if (parent) parent.removeAttribute('draggable');
+                } else if (evt === 'pointerup' || evt === 'mouseup' || evt === 'touchend') {
+                    if (parent) setTimeout(() => parent.setAttribute('draggable','true'), 120);
+                }
+            }, { passive: false });
+        });
+    });
+    if (!jog.dataset.bound) {
+        const clickHandler = async (e) => {
+            // ✅ Atualiza UI IMEDIATAMENTE no clique, ANTES de preventDefault
+            const currentState = jog.checked;
+            jog.checked = !currentState;
+            const wrapper = jog.closest('.jog-switch');
+            if (wrapper) wrapper.classList.toggle('active', !currentState);
+            void jog.offsetHeight; // Força reflow
+            
+            e.preventDefault();
+            e.stopPropagation();
+            try { jog.disabled = true; } catch(_) {}
+            const ok = await writeJogEscovaToggle();
+            try { jog.disabled = false; } catch(_) {}
+            if (!ok) {
+                try { const w = jog.closest('.jog-switch'); if (w) { const prev = w.style.outline; w.style.outline = '2px solid #dc3545'; setTimeout(()=>{ w.style.outline = prev; }, 600); } } catch(_) {}
+            }
+        };
+        jog.addEventListener('click', clickHandler);
+        if (jogLabel) jogLabel.addEventListener('click', clickHandler);
+        jog.dataset.bound = '1';
+    }
+    // Sincroniza estado inicial e inicia polling
+    syncJogEscovaFromPLC();
+    if (jogEscovaPollInterval) clearInterval(jogEscovaPollInterval);
+    jogEscovaPollInterval = setInterval(syncJogEscovaFromPLC, 400);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupJogEscova);
+} else {
+    setTimeout(setupJogEscova, 0);
+}
+
+
+async function writeVelocidadeFixaEscova(pct) {
+    try {
+        const value = Math.max(0, Math.min(100, Number(pct) || 0));
+        const res = await fetch('/api/write_tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [TAG_VELOCIDADE_FIXA_ESCOVA]: value })
+        });
+        let data = null;
+        try { data = await res.json(); } catch(_) {}
+        console.log('[VELOCIDADE_FIXA_ESCOVA] escrita:', value, 'resp:', data);
+    } catch(e) {
+        console.error('[VELOCIDADE_FIXA_ESCOVA] erro na escrita:', e);
+    }
+}
+
+function bindVelocidadeFixaEscova() {
+    const slider = document.getElementById('slider3');
+    if (!slider) { setTimeout(bindVelocidadeFixaEscova, 200); return; }
+    // Marca dragging ao iniciar movimento
+    slider.addEventListener('pointerdown', (e) => {
+        try { e.stopPropagation(); } catch(_) {}
+        slider.dataset.dragging = '1';
+    });
+    slider.addEventListener('touchstart', (e) => {
+        try { e.stopPropagation(); } catch(_) {}
+        slider.dataset.dragging = '1';
+    });
+    slider.addEventListener('pointerup', (e) => {
+        try { e.stopPropagation(); } catch(_) {}
+        delete slider.dataset.dragging;
+        LAST_WRITE_PCT_ESCOVA_TS = Date.now();
+        writeVelocidadeFixaEscova(e.currentTarget.value);
+    });
+    slider.addEventListener('touchend', (e) => {
+        try { e.stopPropagation(); } catch(_) {}
+        delete slider.dataset.dragging;
+        LAST_WRITE_PCT_ESCOVA_TS = Date.now();
+        writeVelocidadeFixaEscova(e.currentTarget.value);
+    });
+    // Segurança: se cancelar, limpa dragging
+    slider.addEventListener('pointercancel', () => { delete slider.dataset.dragging; });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindVelocidadeFixaEscova);
+} else {
+    setTimeout(bindVelocidadeFixaEscova, 0);
 }
 
 // ================== Periféricos (9 botões) ==================
@@ -3887,7 +4265,7 @@ if (document.readyState === 'loading') {
     setTimeout(initPeripherals, 0);
 }
 
-// ========== Delegation de segurança para Jog (garante captura mesmo se bindings falharem) ==========
+// ========== Delegation de segurança para Jog Acumuladora (garante captura mesmo se bindings falharem) ==========
 document.addEventListener('click', async function(e){
     try{
         const t = e.target;
@@ -3902,12 +4280,111 @@ document.addEventListener('click', async function(e){
                 (jog1Wrap && t.closest('.jog-switch') === jog1Wrap)
             ));
         if(!withinJog1) return;
+        
+        // ✅ Atualiza UI IMEDIATAMENTE no clique, ANTES de preventDefault
+        if (jog1) {
+            const currentState = jog1.checked;
+            jog1.checked = !currentState;
+            if (jog1Wrap) jog1Wrap.classList.toggle('active', !currentState);
+            void jog1.offsetHeight; // Força reflow
+        }
+        
         e.preventDefault();
         e.stopPropagation();
-        console.log('[JOG] delegation click capturado');
+        console.log('[JOG-ACUM] delegation click capturado');
         const ok = await writeJogBitToggle();
-        if(!ok){ console.warn('[JOG] delegation: escrita falhou'); }
-        await syncJogFromPLC();
+        if(!ok){ 
+            console.warn('[JOG-ACUM] delegation: escrita falhou');
+            // Reverte em caso de erro
+            if (jog1) {
+                const currentState = jog1.checked;
+                jog1.checked = !currentState;
+                if (jog1Wrap) jog1Wrap.classList.toggle('active', !currentState);
+            }
+        }
+        // NÃO chama syncJogFromPLC aqui - o polling fará isso após o cooldown
+    }catch(_){ /* noop */ }
+}, true);
+
+// ========== Delegation de segurança para Jog Dosificadora (garante captura mesmo se bindings falharem) ==========
+document.addEventListener('click', async function(e){
+    try{
+        const t = e.target;
+        if(!t) return;
+        // Garante que só captura o JOG da dosificadora (jog2)
+        const jog2 = document.getElementById('jog2');
+        const jog2Wrap = jog2 ? jog2.closest('.jog-switch') : null;
+        const withinJog2 =
+            (t === jog2) ||
+            (t.closest && (
+                t.closest('label[for="jog2"]') ||
+                (jog2Wrap && t.closest('.jog-switch') === jog2Wrap)
+            ));
+        if(!withinJog2) return;
+        
+        // ✅ Atualiza UI IMEDIATAMENTE no clique, ANTES de preventDefault
+        if (jog2) {
+            const currentState = jog2.checked;
+            jog2.checked = !currentState;
+            if (jog2Wrap) jog2Wrap.classList.toggle('active', !currentState);
+            void jog2.offsetHeight; // Força reflow
+        }
+        
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[JOG-DOSI] delegation click capturado');
+        const ok = await writeJogDosToggle();
+        if(!ok){ 
+            console.warn('[JOG-DOSI] delegation: escrita falhou');
+            // Reverte em caso de erro
+            if (jog2) {
+                const currentState = jog2.checked;
+                jog2.checked = !currentState;
+                if (jog2Wrap) jog2Wrap.classList.toggle('active', !currentState);
+            }
+        }
+        // NÃO chama syncJogDosFromPLC aqui - o polling fará isso após o cooldown
+    }catch(_){ /* noop */ }
+}, true);
+
+// ========== Delegation de segurança para Jog Escova (garante captura mesmo se bindings falharem) ==========
+document.addEventListener('click', async function(e){
+    try{
+        const t = e.target;
+        if(!t) return;
+        // Garante que só captura o JOG da escova (jog3)
+        const jog3 = document.getElementById('jog3');
+        const jog3Wrap = jog3 ? jog3.closest('.jog-switch') : null;
+        const withinJog3 =
+            (t === jog3) ||
+            (t.closest && (
+                t.closest('label[for="jog3"]') ||
+                (jog3Wrap && t.closest('.jog-switch') === jog3Wrap)
+            ));
+        if(!withinJog3) return;
+        console.log('[JOG-ESCOVA] delegation click capturado');
+        
+        // ✅ Atualiza UI IMEDIATAMENTE no clique, ANTES de preventDefault
+        if (jog3) {
+            const currentState = jog3.checked;
+            jog3.checked = !currentState;
+            if (jog3Wrap) jog3Wrap.classList.toggle('active', !currentState);
+            void jog3.offsetHeight; // Força reflow
+        }
+        
+        e.preventDefault();
+        e.stopPropagation();
+        const ok = await writeJogEscovaToggle();
+        if(!ok){ 
+            console.warn('[JOG-ESCOVA] delegation: escrita falhou');
+            // Reverte em caso de erro
+            if (jog3) {
+                const currentState = jog3.checked;
+                jog3.checked = !currentState;
+                if (jog3Wrap) jog3Wrap.classList.toggle('active', !currentState);
+            }
+        }
+        // NÃO chama syncJogEscovaFromPLC aqui - o polling fará isso após o cooldown
     }catch(_){ /* noop */ }
 }, true);
 
