@@ -339,7 +339,7 @@
     "14": "nr12",
     "15": "emergency"
   },
-  "XLCLASS_DB104_INFO_DISPOSITIVOS_RMT_DESCONEC_EMB15_EMB30_INTERNO": {
+  "XLCLASS_DB104_INFO_DISPOSITIVOS_MODULO_ERRO_EMB15_EMB30_INTERNO": {
     "0": "process",
     "1": "process",
     "2": "process",
@@ -357,7 +357,7 @@
     "14": "hardware",
     "15": "hardware"
   },
-  "XLCLASS_DB104_INFO_DISPOSITIVOS_MODULO_ERRO_EMB15_EMB30_INTERNO": {
+  "XLCLASS_DB104_INFO_DISPOSITIVOS_RMT_DESCONEC_EMB15_EMB30_INTERNO": {
     "0": "process",
     "1": "process",
     "2": "process",

@@ -4113,6 +4113,21 @@ if (document.readyState === 'loading') {
 // ================== Periféricos (9 botões) ==================
 const PERIPHERALS_STATE_KEY = 'grid_peripherals_state';
 
+// Imagens usadas nos periféricos - pré-carregadas para evitar espaço vazio
+const PERIPHERAL_IMAGES = [
+    '/static/images/pages/icons/comandos/icone_habilita_azul.png',
+    '/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png',
+    '/static/images/pages/icons/comandos/icone_habilita_desabilitado.png'
+];
+
+// Pré-carrega todas as imagens dos periféricos
+function preloadPeripheralImages() {
+    PERIPHERAL_IMAGES.forEach(src => {
+        const img = new Image();
+        img.src = src;
+    });
+}
+
 function loadPeripheralsState() {
     try {
         const raw = localStorage.getItem(PERIPHERALS_STATE_KEY);
@@ -4143,6 +4158,9 @@ function initPeripherals() {
     const container = document.querySelector('.draggable-btn[data-station="botao-9"]');
     if (!container) return;
 
+    // Pré-carrega imagens antes de inicializar
+    preloadPeripheralImages();
+
     const state = loadPeripheralsState();
     // Espera os elementos internos existirem se ainda não montaram
     let buttons = container.querySelectorAll('.peripheral-btn');
@@ -4158,6 +4176,9 @@ function initPeripherals() {
         // normaliza ids novos
         if (role === 'btn-ovoscopia-toggle') role = 'ovoscopia';
         if (role === 'btn-crack-toggle') role = 'crack';
+        if (role === 'btn-nebulizador-oleo-toggle') role = 'nebulizador-oleo';
+        if (role === 'btn-lampadas-uv-toggle') role = 'lampadas-uv';
+        if (role === 'btn-escova-manual-toggle') role = 'escova-manual';
 
         // Evita que o clique/mousedown nos botões internos inicie drag do grid
         btn.addEventListener('mousedown', (ev) => {
@@ -4203,26 +4224,58 @@ function initPeripherals() {
                 // Não aplicar visual states para botões-ícone
                 const label = document.getElementById('label-ovoscopia');
                 if (label) label.textContent = nowEnabled ? 'Magna Visio' : 'Ovoscopia';
-                // Aplica nova imagem diretamente
-                btn.style.setProperty('background', (nowEnabled
-                    ? 'url(/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png)'
-                    : 'url(/static/images/pages/icons/comandos/icone_habilita_azul.png)') + ' center/contain no-repeat', 'important');
+                // Troca a imagem de forma instantânea (já pré-carregada no início)
+                const newImageSrc = nowEnabled
+                    ? '/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png'
+                    : '/static/images/pages/icons/comandos/icone_habilita_azul.png';
+                // Aplica diretamente - imagens já estão pré-carregadas e em cache
+                btn.style.setProperty('background', `url(${newImageSrc}) center/contain no-repeat`, 'important');
                 savePeripheralsState(state);
                 // micro-efeito de clique (sem delay na troca de imagem)
                 btn.style.transform = 'scale(0.98)';
                 setTimeout(() => { btn.style.transform = ''; }, 50);
-            } else if (role === 'crack') {
-                // Toggle habilitado/desabilitado com persistência
+            } else if (role === 'crack' || role === 'nebulizador-oleo' || role === 'lampadas-uv') {
+                // Toggle habilitado/desabilitado com persistência (Crack, Nebulizador Óleo, Lâmpadas UV)
                 const wasEnabled = !!state[role];
                 const nowEnabled = !wasEnabled;
                 state[role] = nowEnabled;
                 // Não aplicar visual states para botões-ícone
-                const label = document.getElementById('label-crack');
-                if (label) label.textContent = 'Crack';
-                // Aplica nova imagem diretamente
-                btn.style.setProperty('background', (nowEnabled
-                    ? 'url(/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png)'
-                    : 'url(/static/images/pages/icons/comandos/icone_habilita_desabilitado.png)') + ' center/contain no-repeat', 'important');
+                const labelMap = {
+                    'crack': 'label-crack',
+                    'nebulizador-oleo': 'label-nebulizador-oleo',
+                    'lampadas-uv': 'label-lampadas-uv'
+                };
+                const labelTextMap = {
+                    'crack': 'Crack',
+                    'nebulizador-oleo': 'Nebulizador Óleo',
+                    'lampadas-uv': 'Lâmpadas UV'
+                };
+                const label = document.getElementById(labelMap[role]);
+                if (label) label.textContent = labelTextMap[role];
+                // Troca a imagem de forma instantânea (já pré-carregada no início)
+                const newImageSrc = nowEnabled
+                    ? '/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png'
+                    : '/static/images/pages/icons/comandos/icone_habilita_desabilitado.png';
+                // Aplica diretamente - imagens já estão pré-carregadas e em cache
+                btn.style.setProperty('background', `url(${newImageSrc}) center/contain no-repeat`, 'important');
+                savePeripheralsState(state);
+                // micro-efeito de clique (sem delay na troca de imagem)
+                btn.style.transform = 'scale(0.98)';
+                setTimeout(() => { btn.style.transform = ''; }, 50);
+            } else if (role === 'escova-manual') {
+                // Toggle visual e alterna texto/ícone Escova Manual <-> Escova Automática
+                const wasEnabled = !!state[role];
+                const nowEnabled = !wasEnabled;
+                state[role] = nowEnabled;
+                // Não aplicar visual states para botões-ícone
+                const label = document.getElementById('label-escova-manual');
+                if (label) label.textContent = nowEnabled ? 'Escova Automática' : 'Escova Manual';
+                // Troca a imagem de forma instantânea (já pré-carregada no início)
+                const newImageSrc = nowEnabled
+                    ? '/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png'
+                    : '/static/images/pages/icons/comandos/icone_habilita_azul.png';
+                // Aplica diretamente - imagens já estão pré-carregadas e em cache
+                btn.style.setProperty('background', `url(${newImageSrc}) center/contain no-repeat`, 'important');
                 savePeripheralsState(state);
                 // micro-efeito de clique (sem delay na troca de imagem)
                 btn.style.transform = 'scale(0.98)';
@@ -4254,6 +4307,27 @@ function initPeripherals() {
             btn.style.setProperty('background', (enabled
                 ? 'url(/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png)'
                 : 'url(/static/images/pages/icons/comandos/icone_habilita_desabilitado.png)') + ' center/contain no-repeat', 'important');
+        } else if (role === 'nebulizador-oleo') {
+            const label = document.getElementById('label-nebulizador-oleo');
+            if (label) label.textContent = 'Nebulizador Óleo';
+            // Aplica imagem inicial diretamente
+            btn.style.setProperty('background', (enabled
+                ? 'url(/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png)'
+                : 'url(/static/images/pages/icons/comandos/icone_habilita_desabilitado.png)') + ' center/contain no-repeat', 'important');
+        } else if (role === 'lampadas-uv') {
+            const label = document.getElementById('label-lampadas-uv');
+            if (label) label.textContent = 'Lâmpadas UV';
+            // Aplica imagem inicial diretamente
+            btn.style.setProperty('background', (enabled
+                ? 'url(/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png)'
+                : 'url(/static/images/pages/icons/comandos/icone_habilita_desabilitado.png)') + ' center/contain no-repeat', 'important');
+        } else if (role === 'escova-manual') {
+            const label = document.getElementById('label-escova-manual');
+            if (label) label.textContent = enabled ? 'Escova Automática' : 'Escova Manual';
+            // Aplica imagem inicial diretamente
+            btn.style.setProperty('background', (enabled
+                ? 'url(/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png)'
+                : 'url(/static/images/pages/icons/comandos/icone_habilita_azul.png)') + ' center/contain no-repeat', 'important');
         }
     });
 }
