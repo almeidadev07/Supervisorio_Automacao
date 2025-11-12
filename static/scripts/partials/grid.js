@@ -81,7 +81,8 @@ async function ensureMachineSelected(){
         if(f && f.machine){ return; }
         const name = localStorage.getItem('supervisor_machine');
         if(!name){ return; }
-        await fetch('/api/set_machine', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({name})});
+        // ✅ Restauração automática: pula validação para permitir restauração de máquina salva
+        await fetch('/api/set_machine', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({name, skip_validation: true})});
     }catch(_){ /* ignore */ }
 }
 
@@ -1614,11 +1615,192 @@ async function atualizarContadoresAlarme() {
             alimentadorEl.setAttribute('data-visible', isHidden ? 'false' : 'true');
         }
 
+        // ✅ CONFIGURAÇÃO DO BOTÃO PLASSON FARM: Abre link baseado na máquina ativa
+        configurarBotaoPlassonFarm();
+
     } catch (e) {
         // Em perda de comunicação, mostra placeholder '##' para todos os tipos
         setAlarmCountsOffline();
     }
 }
+
+// ✅ FUNÇÃO: Configura o botão Plasson Farm para abrir link baseado na máquina ativa
+function configurarBotaoPlassonFarm() {
+    const btnPlassonFarm = document.querySelector('.draggable-btn[data-station="plasson-farm"]');
+    if (!btnPlassonFarm) {
+        console.warn('[GRID] Botão Plasson Farm não encontrado');
+        return;
+    }
+
+    // ✅ Verifica se já foi configurado para evitar múltiplos listeners
+    if (btnPlassonFarm.hasAttribute('data-plasson-configured')) {
+        console.log('[GRID] Botão Plasson Farm já configurado');
+        return;
+    }
+
+    console.log('[GRID] 🔧 Configurando botão Plasson Farm...');
+    console.log('[GRID] 📍 Botão encontrado:', btnPlassonFarm);
+    console.log('[GRID] 📍 Data-station:', btnPlassonFarm.getAttribute('data-station'));
+
+    // ✅ Função para abrir o link do Plasson Farm
+    const abrirPlassonFarm = async () => {
+        console.log('[GRID] 🖱️ Função abrirPlassonFarm chamada');
+
+        try {
+            // Obtém a máquina ativa via API
+            const response = await fetch('/api/current');
+            const result = await response.json();
+
+            console.log('[GRID] Resposta da API /api/current:', result);
+
+            if (!result.ok || !result.machine) {
+                console.error('[GRID] Não foi possível obter máquina ativa');
+                alert('Erro: Não foi possível determinar a máquina conectada');
+                return;
+            }
+
+            const machineName = result.machine.toUpperCase();
+            console.log(`[GRID] Máquina ativa detectada: ${machineName}`);
+
+            // Mapeia máquina para URL
+            const urlMap = {
+                '200CX': 'https://100.20.0.200:3000',
+                '400CX': 'https://100.40.0.200:3000',
+                '700CX': 'https://100.70.0.200:3000'
+            };
+
+            const url = urlMap[machineName];
+            if (!url) {
+                console.error(`[GRID] Máquina ${machineName} não possui URL configurada`);
+                alert(`Máquina ${machineName} não possui link configurado para Plasson Farm`);
+                return;
+            }
+
+            console.log(`[GRID] Abrindo Plasson Farm para ${machineName}: ${url}`);
+            // Abre o link em nova aba
+            const newWindow = window.open(url, '_blank');
+            if (!newWindow) {
+                alert('Erro: Pop-up bloqueado. Permita pop-ups para este site.');
+            } else {
+                console.log('[GRID] ✅ Link aberto com sucesso');
+            }
+        } catch (error) {
+            console.error('[GRID] Erro ao abrir Plasson Farm:', error);
+            alert('Erro ao abrir Plasson Farm. Verifique a conexão.');
+        }
+    };
+
+    // ✅ Variáveis para rastrear se foi um clique ou drag
+    let plassonMouseDown = false;
+    let plassonMouseDownTime = 0;
+    let plassonMouseDownX = 0;
+    let plassonMouseDownY = 0;
+    
+    // ✅ Handler de mousedown
+    btnPlassonFarm.addEventListener('mousedown', (e) => {
+        plassonMouseDown = true;
+        plassonMouseDownTime = Date.now();
+        plassonMouseDownX = e.clientX;
+        plassonMouseDownY = e.clientY;
+        console.log('[GRID] 🖱️ Mouse down no Plasson Farm');
+    }, true);
+    
+    // ✅ Handler de mouseup (clique completo)
+    btnPlassonFarm.addEventListener('mouseup', (e) => {
+        if (!plassonMouseDown) return;
+        
+        const timeDiff = Date.now() - plassonMouseDownTime;
+        const distanceX = Math.abs(e.clientX - plassonMouseDownX);
+        const distanceY = Math.abs(e.clientY - plassonMouseDownY);
+        const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+        
+        console.log(`[GRID] 🖱️ Mouse up no Plasson Farm - distância: ${distance.toFixed(1)}px, tempo: ${timeDiff}ms`);
+        
+        // Se foi um clique rápido sem movimento significativo
+        if (distance < 10 && timeDiff < 500 && !btnPlassonFarm.classList.contains('dragging')) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[GRID] ✅ Clique válido detectado - abrindo Plasson Farm');
+            abrirPlassonFarm();
+        }
+        
+        plassonMouseDown = false;
+    }, true);
+    
+    // ✅ Handler de clique como fallback
+    btnPlassonFarm.addEventListener('click', (e) => {
+        console.log('[GRID] 🔍 Evento click no Plasson Farm detectado');
+        // Não previne aqui, deixa o mouseup processar primeiro
+    }, false);
+
+    // Adiciona cursor pointer para indicar que é clicável
+    btnPlassonFarm.style.cursor = 'pointer';
+    // Marca como configurado para evitar reconfiguração
+    btnPlassonFarm.setAttribute('data-plasson-configured', 'true');
+    console.log('[GRID] ✅ Botão Plasson Farm configurado com sucesso');
+}
+
+// ✅ DELEGAÇÃO GLOBAL: Garante que clique no botão Plasson Farm funcione mesmo com drag and drop
+(function bindPlassonFarmClickOnce(){
+    if (window.__plassonFarmDelegationBound) return;
+    window.__plassonFarmDelegationBound = true;
+    
+    document.addEventListener('click', (e) => {
+        try {
+            // Verifica se o clique foi no botão Plasson Farm ou em seus filhos
+            const plassonBtn = e.target && e.target.closest ? e.target.closest('.draggable-btn[data-station="plasson-farm"]') : null;
+            if (!plassonBtn) return;
+            
+            // Verifica se não foi um drag
+            if (plassonBtn.classList.contains('dragging')) {
+                console.log('[GRID_DELEGATION] Clique no Plasson Farm ignorado - está em drag');
+                return;
+            }
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('[GRID_DELEGATION] ✅ Clique no Plasson Farm detectado via delegação global');
+            
+            // Chama a função para abrir o link
+            (async () => {
+                try {
+                    const response = await fetch('/api/current');
+                    const result = await response.json();
+                    
+                    if (!result.ok || !result.machine) {
+                        alert('Erro: Não foi possível determinar a máquina conectada');
+                        return;
+                    }
+                    
+                    const machineName = result.machine.toUpperCase();
+                    const urlMap = {
+                        '200CX': 'https://100.20.0.200:3000',
+                        '400CX': 'https://100.40.0.200:3000',
+                        '700CX': 'https://100.70.0.200:3000'
+                    };
+                    
+                    const url = urlMap[machineName];
+                    if (!url) {
+                        alert(`Máquina ${machineName} não possui link configurado para Plasson Farm`);
+                        return;
+                    }
+                    
+                    console.log(`[GRID_DELEGATION] Abrindo Plasson Farm: ${url}`);
+                    const newWindow = window.open(url, '_blank');
+                    if (!newWindow) {
+                        alert('Erro: Pop-up bloqueado. Permita pop-ups para este site.');
+                    }
+                } catch (error) {
+                    console.error('[GRID_DELEGATION] Erro:', error);
+                    alert('Erro ao abrir Plasson Farm. Verifique a conexão.');
+                }
+            })();
+        } catch(err) {
+            console.error('[GRID_DELEGATION] Erro no clique do Plasson Farm:', err);
+        }
+    }, true); // Use capture phase
+})();
 
 // Delegação global: garante que clique nos círculos abra a tela de alarmes
 (function bindAlarmCircleClicksOnce(){
@@ -1988,7 +2170,16 @@ function inicializarVelocimetro() {
 }
 
 // Inicialização
-document.addEventListener("DOMContentLoaded", inicializarVelocimetro);
+document.addEventListener("DOMContentLoaded", () => {
+    inicializarVelocimetro();
+    // ✅ Garante que o botão Plasson Farm seja configurado mesmo se inicializarVelocimetro falhar
+    setTimeout(() => {
+        const btn = document.querySelector('.draggable-btn[data-station="plasson-farm"]');
+        if (btn && !btn.hasAttribute('data-plasson-configured')) {
+            configurarBotaoPlassonFarm();
+        }
+    }, 500);
+});
 
 // Função global para resetar posições (pode ser chamada do console ou por botão)
 window.resetGridPositions = resetGridPositions;
@@ -3005,7 +3196,7 @@ function updateDateTime() {
     console.log(`🕒 Data/Hora renderizada: ${systemTime}`);
 }
 
-// Função de teste para verificar se os elementos existem
+// Função de teste para verificar se os elementos existem (sem definir valores de teste)
 function testDateTimeElements() {
     console.log('🧪 Testando elementos de data/hora...');
     
@@ -3014,14 +3205,30 @@ function testDateTimeElements() {
     
     if (dateElement) {
         console.log('✅ Elemento current-date encontrado:', dateElement);
-        dateElement.textContent = 'TESTE DATA';
+        // ✅ NÃO define valores de teste - deixa os valores padrão ou atualiza imediatamente
+        if (dateElement.textContent === '--/--/----' || dateElement.textContent === 'TESTE DATA') {
+            // Se ainda não foi atualizado, atualiza imediatamente com data local
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            dateElement.textContent = `${day}/${month}/${year}`;
+        }
     } else {
         console.error('❌ Elemento current-date NÃO encontrado!');
     }
     
     if (timeElement) {
         console.log('✅ Elemento current-time encontrado:', timeElement);
-        timeElement.textContent = 'TESTE HORA';
+        // ✅ NÃO define valores de teste - deixa os valores padrão ou atualiza imediatamente
+        if (timeElement.textContent === '--:--:--' || timeElement.textContent === 'TESTE HORA') {
+            // Se ainda não foi atualizado, atualiza imediatamente com hora local
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            timeElement.textContent = `${hours}:${minutes}:${seconds}`;
+        }
     } else {
         console.error('❌ Elemento current-time NÃO encontrado!');
     }
@@ -3070,14 +3277,24 @@ function startDateTimeUpdate() {
         clearInterval(serverTimeSyncInterval);
     }
     
-    // Testar se os elementos existem primeiro
+    // ✅ ATUALIZA IMEDIATAMENTE com data/hora local (antes de sincronizar com servidor)
+    // Isso evita mostrar "TESTE DATA" ou "TESTE HORA"
+    updateDateTime();
+    
+    // Testar se os elementos existem (sem definir valores de teste)
     testDateTimeElements();
     
     // Aguardar um pouco para garantir que o DOM esteja pronto
     setTimeout(() => {
-        console.log('⏰ Executando primeira atualização...');
-        // Sincroniza imediatamente com o servidor antes do primeiro render
-        syncWithServerTime().finally(() => updateDateTime());
+        console.log('⏰ Executando sincronização com servidor...');
+        // Sincroniza com o servidor em background (não bloqueia a atualização)
+        syncWithServerTime().then(() => {
+            // Após sincronizar, atualiza novamente com offset correto
+            updateDateTime();
+        }).catch(() => {
+            // Se falhar, continua usando data local
+            console.warn('⚠️ Falha ao sincronizar com servidor, usando data local');
+        });
         
         // Atualizar a cada segundo com alta precisão
         dateTimeInterval = setInterval(updateDateTime, 1000);
@@ -3087,6 +3304,8 @@ function startDateTimeUpdate() {
     // Sincronizar com servidor a cada 30 segundos (opcional)
     serverTimeSyncInterval = setInterval(async () => {
         await syncWithServerTime();
+        // Atualiza após sincronizar
+        updateDateTime();
     }, 30000);
     
     console.log('🕒 Iniciado atualização de data/hora sincronizada com Windows');

@@ -39,16 +39,87 @@ def detect_by_ip_and_switch():
     return jsonify({'detected': detected_name, 'reachable': reachable})
 
 
-@machines_bp.route('/set_machine', methods=['POST'])
-def set_machine():
+@machines_bp.route('/test_machine', methods=['POST'])
+def test_machine():
+    """Testa se uma máquina está conectada (ping + PLC válido)"""
     payload = request.json or {}
     name = payload.get('name')
     if not name:
         return jsonify({'ok': False, 'error': 'no machine name provided'}), 400
-    print(f"[API] /api/set_machine called with name={name}")
+    
     cfg = next((m for m in (current_app.machines or []) if m['name'] == name), None)
     if not cfg:
         return jsonify({'ok': False, 'error': 'machine not found'}), 404
+    
+    ip = cfg.get('default_plc_ip')
+    if not ip:
+        return jsonify({'ok': False, 'error': 'machine has no IP configured'}), 400
+    
+    # Importa funções de teste
+    from ..utils import ping_ip, _is_real_plc
+    
+    # Testa ping
+    ping_ok = ping_ip(ip, timeout_ms=2000)
+    
+    if not ping_ok:
+        return jsonify({
+            'ok': False,
+            'connected': False,
+            'ping_ok': False,
+            'plc_valid': False,
+            'message': f'PLC da máquina {name} ({ip}) não está respondendo ao ping'
+        })
+    
+    # Testa se é PLC válido
+    plc_valid = _is_real_plc(ip)
+    
+    if not plc_valid:
+        return jsonify({
+            'ok': False,
+            'connected': False,
+            'ping_ok': True,
+            'plc_valid': False,
+            'message': f'PLC da máquina {name} ({ip}) responde ao ping mas não é um PLC válido'
+        })
+    
+    return jsonify({
+        'ok': True,
+        'connected': True,
+        'ping_ok': True,
+        'plc_valid': True,
+        'message': f'Máquina {name} ({ip}) está conectada e é um PLC válido'
+    })
+
+@machines_bp.route('/set_machine', methods=['POST'])
+def set_machine():
+    payload = request.json or {}
+    name = payload.get('name')
+    skip_validation = payload.get('skip_validation', False)  # Permite pular validação para detecção automática
+    if not name:
+        return jsonify({'ok': False, 'error': 'no machine name provided'}), 400
+    print(f"[API] /api/set_machine called with name={name}, skip_validation={skip_validation}")
+    cfg = next((m for m in (current_app.machines or []) if m['name'] == name), None)
+    if not cfg:
+        return jsonify({'ok': False, 'error': 'machine not found'}), 404
+    
+    # ✅ VALIDAÇÃO: Se não for detecção automática, verifica conexão antes de permitir
+    if not skip_validation:
+        from ..utils import ping_ip, _is_real_plc
+        ip = cfg.get('default_plc_ip')
+        if ip:
+            ping_ok = ping_ip(ip, timeout_ms=2000)
+            if not ping_ok:
+                return jsonify({
+                    'ok': False, 
+                    'error': f'PLC da máquina {name} ({ip}) não está respondendo ao ping'
+                }), 400
+            plc_valid = _is_real_plc(ip)
+            if not plc_valid:
+                return jsonify({
+                    'ok': False,
+                    'error': f'PLC da máquina {name} ({ip}) responde ao ping mas não é um PLC válido'
+                }), 400
+    
     # use PLCController attached to app
     ok, msg = current_app.plc_controller.set_active_machine(cfg)
     if not ok:

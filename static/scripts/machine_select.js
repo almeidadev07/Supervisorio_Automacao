@@ -70,12 +70,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ✅ FUNÇÃO: Testa se uma máquina está conectada antes de permitir seleção
+  async function testMachineConnection(machineName) {
+    try {
+      const response = await fetch('/api/test_machine', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: machineName })
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Erro ao testar conexão da máquina:', error);
+      return {
+        ok: false,
+        connected: false,
+        message: 'Erro ao verificar conexão da máquina'
+      };
+    }
+  }
+
   // Função para definir máquina ativa
-  async function setMachine(machineName) {
+  async function setMachine(machineName, skipValidation = false) {
     try {
       if (statusDiv) {
-        statusDiv.textContent = 'Alterando máquina...';
+        statusDiv.textContent = 'Verificando conexão...';
         statusDiv.className = 'status loading';
+      }
+
+      // ✅ VALIDAÇÃO: Testa conexão antes de permitir seleção (exceto detecção automática)
+      if (!skipValidation) {
+        const testResult = await testMachineConnection(machineName);
+        
+        if (!testResult.ok || !testResult.connected) {
+          if (statusDiv) {
+            statusDiv.textContent = testResult.message || `PLC da máquina ${machineName} não está conectado`;
+            statusDiv.className = 'status error';
+          }
+          console.error(`[MACHINE_SELECT] ❌ ${testResult.message}`);
+          return; // Não permite seleção se não estiver conectada
+        }
+        
+        if (statusDiv) {
+          statusDiv.textContent = 'Conexão OK. Alterando máquina...';
+          statusDiv.className = 'status loading';
+        }
       }
 
       const response = await fetch('/api/set_machine', {
@@ -83,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ name: machineName })
+        body: JSON.stringify({ name: machineName, skip_validation: skipValidation })
       });
 
       const result = await response.json();
