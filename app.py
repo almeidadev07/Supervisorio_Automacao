@@ -32,6 +32,32 @@ def serve_pdf(filename):
         print(f"[PDF] ERRO ao servir PDF {filename}: {e}")
         return f"Erro ao carregar PDF: {e}", 404
 
+@app.route('/static/3D/<path:filename>')
+def serve_3d(filename):
+    try:
+        print(f"[3D] Tentando servir: {filename}")
+        # Caminho absoluto para o diretório de arquivos 3D
+        model_dir = os.path.join(os.path.dirname(__file__), 'static', '3D')
+        print(f"[3D] Diretório 3D: {model_dir}")
+        print(f"[3D] Arquivo existe? {os.path.exists(os.path.join(model_dir, filename))}")
+        
+        # Determina o Content-Type baseado na extensão
+        content_type = 'application/octet-stream'
+        if filename.lower().endswith('.glb'):
+            content_type = 'model/gltf-binary'
+        elif filename.lower().endswith('.gltf'):
+            content_type = 'model/gltf+json'
+        
+        response = make_response(send_from_directory(model_dir, filename))
+        response.headers.pop('X-Frame-Options', None)
+        response.headers['Content-Type'] = content_type
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        print(f"[3D] Arquivo 3D servido com sucesso: {filename}")
+        return response
+    except Exception as e:
+        print(f"[3D] ERRO ao servir arquivo 3D {filename}: {e}")
+        return f"Erro ao carregar arquivo 3D: {e}", 404
+
 if __name__ == "__main__":
     host = os.environ.get('APP_HOST', '127.0.0.1')
     port = int(os.environ.get('APP_PORT', 5000))

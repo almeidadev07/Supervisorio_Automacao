@@ -396,6 +396,34 @@ function showWindows(event) {
     }
 }
 
+// Função para exibir a tela do visualizador 3D
+function showViewer3D(event) {
+    hideAllContainers();
+    const viewer3dContainer = document.getElementById('viewer3d-container');
+    if (viewer3dContainer) {
+        viewer3dContainer.style.display = 'block';
+    }
+
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
+
+    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+    if (event?.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+    
+    // Inicializa o visualizador 3D quando a tela for exibida
+    // Usa um pequeno delay para garantir que o DOM está pronto
+    setTimeout(() => {
+        if (typeof window.initViewer3D === 'function') {
+            console.log('🎯 Inicializando visualizador 3D...');
+            window.initViewer3D();
+            window.viewer3dInitialized = true;
+        }
+    }, 100);
+}
+
 
 // Carregar os scripts de forma assíncrona
 Promise.all([
@@ -411,7 +439,8 @@ Promise.all([
     loadScript('/static/scripts/partials/dryer.js'), // ✅ Script da secadora
     loadScript('/static/scripts/partials/diagram.js'), 
     loadScript('/static/scripts/partials/windows.js'),
-    loadScript('/static/scripts/partials/graphics.js')
+    loadScript('/static/scripts/partials/graphics.js'),
+    loadScript('/static/scripts/partials/viewer3d.js')
 
 ])
 .then(() => {
@@ -474,5 +503,6 @@ window.showWasher = showWasher; // ✅ Exportação global da função da lavado
 window.showDryer = showDryer;   // ✅ Exportação global da função da secadora
 window.showDiagram = showDiagram;
 window.showWindows = showWindows;
+window.showViewer3D = showViewer3D; // ✅ Exportação global da função do visualizador 3D
 
 

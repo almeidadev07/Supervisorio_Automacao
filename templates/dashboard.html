@@ -68,6 +68,11 @@
                     {% include 'partials/graphics.html' %}
                 </div>
                 
+                <!-- Viewer 3D container -->
+                <div id="viewer3d-container" class="container" style="display: none;">
+                    {% include 'partials/viewer3d.html' %}
+                </div>
+                
                 <!-- Componentes de interface -->
                 {% include 'partials/virtual_keyboard.html' %}
             </div>
@@ -112,5 +117,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/dryer.css') }}">
     <script src="{{ url_for('static', filename='scripts/partials/dryer.js') }}" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/graphics.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/viewer3d.css') }}">
 </body>
 </html>
