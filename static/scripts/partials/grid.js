@@ -4339,6 +4339,173 @@ if (document.readyState === 'loading') {
     setTimeout(initPeripherals, 0);
 }
 
+// ================== Botão Liga/Desliga no Grid de Periféricos ==================
+const POWER_STATUS_TAG_GRID = 'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_01';
+const POWER_STATUS_BIT_GRID = 12; // bit 12
+
+// Função auxiliar para setar bit
+function setBit(word, bitIndex, on) {
+    const b = Number(bitIndex) >>> 0;
+    const w = Number(word) >>> 0;
+    return on ? (w | (1 << b)) : (w & ~(1 << b));
+}
+
+// Função para ler palavras do PLC
+async function readWordsGrid(tags) {
+    const names = tags.join(',');
+    try {
+        const res = await fetch(`/api/read_tags?names=${encodeURIComponent(names)}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error('bad');
+        const data = await res.json();
+        return data?.values || {};
+    } catch (_) {
+        return {};
+    }
+}
+
+// Função para escrever palavras no PLC
+async function writeWordsGrid(payload) {
+    try {
+        const res = await fetch('/api/write_tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        return !!(res.ok && data && data.ok);
+    } catch (_) {
+        return false;
+    }
+}
+
+// Atualiza o botão baseado no status do PLC
+function updatePowerButtonsFromStatusGrid(rawStatus) {
+    try {
+        const powerBtn = document.getElementById('btn-power-toggle');
+        if (!powerBtn) {
+            return;
+        }
+        const isOn = (((Number(rawStatus) >>> 0) >>> POWER_STATUS_BIT_GRID) & 1) === 1;
+        if (isOn) {
+            powerBtn.classList.add('power-on');
+        } else {
+            powerBtn.classList.remove('power-on');
+        }
+    } catch (e) {
+        console.error('[POWER-GRID] Erro ao atualizar botão:', e);
+    }
+}
+
+// Alterna o bit de liga/desliga
+async function togglePowerBitGrid() {
+    try {
+        const current = await readWordsGrid([POWER_STATUS_TAG_GRID]);
+        const v = Number(current[POWER_STATUS_TAG_GRID] ?? 0) >>> 0;
+        const isOn = (((v >>> POWER_STATUS_BIT_GRID) & 1) === 1);
+        const next = setBit(v, POWER_STATUS_BIT_GRID, !isOn) >>> 0;
+        const ok = await writeWordsGrid({ [POWER_STATUS_TAG_GRID]: next });
+        if (!ok) console.warn('[POWER-GRID] Falha ao escrever bit de liga/desliga');
+        // Atualiza UI imediatamente
+        updatePowerButtonsFromStatusGrid(next);
+    } catch (e) {
+        console.error('[POWER-GRID] Erro ao alternar liga/desliga:', e);
+    }
+}
+
+// Inicializa o botão de liga/desliga no grid
+function initPowerSwitchGrid() {
+    try {
+        const powerBtn = document.getElementById('btn-power-toggle');
+        
+        if (!powerBtn) {
+            console.warn('[POWER-GRID] Botão não encontrado');
+            setTimeout(initPowerSwitchGrid, 200);
+            return;
+        }
+        
+        console.log('[POWER-GRID] Botão encontrado no grid de periféricos');
+        
+        // Adiciona event listener
+        powerBtn.addEventListener('click', togglePowerBitGrid);
+        
+        // Previne que o drag do grid seja iniciado ao clicar no botão
+        powerBtn.addEventListener('mousedown', (ev) => {
+            ev.stopPropagation();
+            const parent = powerBtn.closest('.draggable-btn');
+            if (parent) parent.removeAttribute('draggable');
+        });
+        powerBtn.addEventListener('pointerdown', (ev) => {
+            ev.stopPropagation();
+            const parent = powerBtn.closest('.draggable-btn');
+            if (parent) parent.removeAttribute('draggable');
+        });
+        powerBtn.addEventListener('mouseup', (ev) => {
+            ev.stopPropagation();
+            const parent = powerBtn.closest('.draggable-btn');
+            if (parent) setTimeout(() => parent.setAttribute('draggable', 'true'), 120);
+        });
+        powerBtn.addEventListener('pointerup', (ev) => {
+            ev.stopPropagation();
+            const parent = powerBtn.closest('.draggable-btn');
+            if (parent) setTimeout(() => parent.setAttribute('draggable', 'true'), 120);
+        });
+        
+        // Sincroniza estado inicial do PLC
+        syncPowerSwitchFromPLC();
+        
+        // Polling para manter sincronizado (a cada 1 segundo)
+        setInterval(syncPowerSwitchFromPLC, 1000);
+    } catch (e) {
+        console.error('[POWER-GRID] Erro ao inicializar botão:', e);
+    }
+}
+
+// Sincroniza o estado do botão com o PLC
+async function syncPowerSwitchFromPLC() {
+    try {
+        const current = await readWordsGrid([POWER_STATUS_TAG_GRID]);
+        const rawStatus = Number(current[POWER_STATUS_TAG_GRID] ?? 0) >>> 0;
+        updatePowerButtonsFromStatusGrid(rawStatus);
+    } catch (e) {
+        console.error('[POWER-GRID] Erro ao sincronizar estado do PLC:', e);
+    }
+}
+
+// Função para garantir que o botão só esteja no grid de periféricos
+function ensurePowerButtonInCorrectPlace() {
+    const powerBtn = document.getElementById('btn-power-toggle');
+    
+    if (!powerBtn) return;
+    
+    // Verifica se o botão está dentro do grid de periféricos
+    const peripheralsGrid = powerBtn.closest('[data-station="botao-9"]');
+    if (peripheralsGrid) {
+        console.log('[POWER-GRID] Botão confirmado no grid de periféricos');
+    } else {
+        console.warn('[POWER-GRID] Botão não está no grid de periféricos');
+    }
+}
+
+// Inicializa quando o DOM estiver pronto (com delay para garantir que outros scripts já carregaram)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        ensurePowerButtonInCorrectPlace();
+        setTimeout(() => {
+            ensurePowerButtonInCorrectPlace();
+            initPowerSwitchGrid();
+        }, 500);
+    });
+} else {
+    ensurePowerButtonInCorrectPlace();
+    setTimeout(() => {
+        ensurePowerButtonInCorrectPlace();
+        initPowerSwitchGrid();
+    }, 500);
+}
+
+// Verifica periodicamente se o botão está no lugar correto
+setInterval(ensurePowerButtonInCorrectPlace, 2000);
+
 // ========== Delegation de segurança para Jog Acumuladora (garante captura mesmo se bindings falharem) ==========
 document.addEventListener('click', async function(e){
     try{

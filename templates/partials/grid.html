@@ -183,7 +183,11 @@
                     </div>
                     <div class="peripheral-item">
                         <div class="peripheral-label" id="label-escova-manual">Escova Manual</div>
-                        <div class="peripheral-btn btn-icon" id="btn-escova-manual-toggle" data-role="escova-manual" role="button" tabindex="0"></div>
+                        <div class="escova-power-container">
+                            <div class="peripheral-btn btn-icon" id="btn-escova-manual-toggle" data-role="escova-manual" role="button" tabindex="0"></div>
+                            <!-- Botão Liga/Desliga (funciona como peripheral-btn) -->
+                            <div class="peripheral-btn btn-icon" id="btn-power-toggle" data-role="power-switch" role="button" tabindex="0" title="Liga/Desliga"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -199,5 +203,4 @@
     </button>
     <button class="draggable-btn" draggable="true" data-station="botao-11">11</button>
     <button class="draggable-btn" draggable="true" data-station="botao-12">12</button>
-</section>
 </section>

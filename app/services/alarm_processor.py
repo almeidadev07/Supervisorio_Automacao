@@ -20,7 +20,6 @@ class AlarmProcessor:
         self._type_overrides_mtime: Optional[float] = None
         self._history_path = os.path.join("alarmes", "alarm_history.json")
         self._last_alarm_state: Dict[str, Any] = {}
-        self._recent_events: Dict[str, float] = {}  # Cache de eventos recentes para evitar duplicação
         self._history_lock = False  # Lock simples para evitar processamento simultâneo
         self._load_alarm_descriptions()
         self._load_priority_overrides()
@@ -779,16 +778,7 @@ class AlarmProcessor:
         
         self._history_lock = True
         try:
-            import time
-            current_time = time.time()
-            
-            # Limpa cache de eventos recentes (mais de 10 segundos)
-            self._recent_events = {
-                k: v for k, v in self._recent_events.items() 
-                if current_time - v < 10.0
-            }
-            
-            # Cria chave única para cada alarme
+            # Cria chave única para cada alarme no estado atual
             current_state = {}
             for alarm in active_alarms:
                 alarm_id = alarm["id"]
@@ -803,21 +793,15 @@ class AlarmProcessor:
                     "full_timestamp": alarm.get("full_timestamp")
                 }
             
-            # ✅ CORREÇÃO: Atualiza estado ANTES de detectar mudanças para evitar duplicação
-            # Mas preserva o estado anterior para comparação
-            previous_state = self._last_alarm_state.copy()
-            self._last_alarm_state = current_state
+            # ✅ CORREÇÃO: Preserva o estado anterior ANTES de atualizar para comparação correta
+            previous_state = self._last_alarm_state.copy() if self._last_alarm_state else {}
             
             # Detecta alarmes que acabaram de ativar (não estavam no estado anterior)
+            # Esta é a única verificação necessária - se não estava em previous_state, é novo
             new_alarms = []
             for alarm_id, alarm_data in current_state.items():
+                # ✅ PREVENÇÃO DE DUPLICATAS: Só registra se realmente não estava no estado anterior
                 if alarm_id not in previous_state:
-                    # ✅ PROTEÇÃO: Verifica se já foi salvo recentemente (evita duplicação)
-                    event_key = f"{alarm_id}_activated"
-                    if event_key in self._recent_events:
-                        print(f"[ALARM HISTORY] ⚠️ Evento 'activated' já processado recentemente, ignorando: {alarm_id}")
-                        continue
-                    
                     new_alarms.append({
                         "id": alarm_id,
                         "var_name": alarm_data.get("var_name", ""),
@@ -830,20 +814,13 @@ class AlarmProcessor:
                         "type": alarm_data.get("type", "hardware"),
                         "machine": alarm_data.get("machine", machine)
                     })
-                    # Marca como processado recentemente
-                    self._recent_events[event_key] = current_time
                     print(f"[ALARM HISTORY] ✅ Novo alarme detectado: {alarm_id} - {alarm_data.get('description', '')}")
             
             # Detecta alarmes que acabaram de desativar (estavam no estado anterior mas não estão mais)
             cleared_alarms = []
             for alarm_id in previous_state:
+                # ✅ PREVENÇÃO DE DUPLICATAS: Só registra se realmente não está mais no estado atual
                 if alarm_id not in current_state:
-                    # ✅ PROTEÇÃO: Verifica se já foi salvo recentemente (evita duplicação)
-                    event_key = f"{alarm_id}_cleared"
-                    if event_key in self._recent_events:
-                        print(f"[ALARM HISTORY] ⚠️ Evento 'cleared' já processado recentemente, ignorando: {alarm_id}")
-                        continue
-                    
                     old_data = previous_state[alarm_id]
                     cleared_alarms.append({
                         "id": alarm_id,
@@ -857,9 +834,10 @@ class AlarmProcessor:
                         "type": old_data.get("type", "hardware"),
                         "machine": old_data.get("machine", machine)
                     })
-                    # Marca como processado recentemente
-                    self._recent_events[event_key] = current_time
                     print(f"[ALARM HISTORY] ✅ Alarme limpo: {alarm_id} - {old_data.get('description', '')}")
+            
+            # ✅ ATUALIZA O ESTADO APÓS DETECTAR MUDANÇAS (evita duplicatas em chamadas subsequentes)
+            self._last_alarm_state = current_state
             
             # Salva mudanças no histórico se houver
             if new_alarms or cleared_alarms:
@@ -893,46 +871,14 @@ class AlarmProcessor:
                     print(f"[ALARM HISTORY] Erro ao carregar histórico existente: {e}")
                     history = []
             
-            # Adiciona novos eventos com timestamp ISO, evitando duplicatas
+            # Adiciona novos eventos com timestamp ISO
+            # ✅ NOTA: Duplicatas já foram prevenidas em _update_alarm_history, então não precisamos verificar novamente
             for event in alarm_events:
                 if "full_timestamp" not in event:
                     event["full_timestamp"] = datetime.now().isoformat()
                 
-                # ✅ PROTEÇÃO FINAL: Verifica se já existe evento idêntico no histórico (últimos 30 segundos)
-                event_id = event.get("id", "")
-                event_action = event.get("action", "")
-                event_timestamp = event.get("full_timestamp", "")
-                
-                # Verifica se já existe um evento com mesmo id, action e timestamp muito próximo (dentro de 30s)
-                is_duplicate = False
-                if event_timestamp:
-                    try:
-                        event_time = datetime.fromisoformat(event_timestamp).timestamp()
-                        for existing in history:
-                            existing_id = existing.get("id", "")
-                            existing_action = existing.get("action", "")
-                            existing_timestamp = existing.get("full_timestamp", "")
-                            
-                            if (existing_id == event_id and 
-                                existing_action == event_action and 
-                                existing_timestamp):
-                                try:
-                                    existing_time = datetime.fromisoformat(existing_timestamp).timestamp()
-                                    # Se os eventos estão dentro de 30 segundos, considera duplicata
-                                    if abs(event_time - existing_time) < 30.0:
-                                        is_duplicate = True
-                                        print(f"[ALARM HISTORY] ⚠️ Duplicata detectada no arquivo, ignorando: {event_id} - {event_action}")
-                                        break
-                                except:
-                                    pass
-                    except:
-                        pass
-                
-                if not is_duplicate:
-                    history.append(event)
-                    print(f"[ALARM HISTORY] ✅ Evento adicionado: {event.get('action', 'unknown')} - {event.get('id', 'unknown')}")
-                else:
-                    print(f"[ALARM HISTORY] ❌ Evento duplicado ignorado: {event.get('action', 'unknown')} - {event.get('id', 'unknown')}")
+                history.append(event)
+                print(f"[ALARM HISTORY] ✅ Evento adicionado: {event.get('action', 'unknown')} - {event.get('id', 'unknown')}")
             
             # Remove eventos antigos (mais de 7 dias)
             cutoff_date = datetime.now().timestamp() - (7 * 24 * 60 * 60)

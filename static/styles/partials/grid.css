@@ -1070,6 +1070,14 @@
     gap: 2px; 
     width: 100%;
 }
+
+/* Permite ajustar a posição do container de escova e power */
+.peripheral-item .escova-power-container {
+    align-self: center !important;
+    position: relative !important;
+    /* Use left para mover os botões para a direita (valores positivos) ou esquerda (valores negativos) */
+    left: -8px !important; /* Ajuste este valor para mover os botões (ex: 10px, 20px, 30px para direita) */
+}
 .peripheral-label { font-weight: 700; 
     font-size: 0.85rem; 
     color: #222; 
@@ -1241,5 +1249,48 @@
         font-size: 1.4em;
         letter-spacing: 1px;
     }
+}
+
+/* Estilos específicos para o botão de liga/desliga no grid de periféricos */
+/* Botão de liga/desliga funciona como os outros peripheral-btn */
+#btn-power-toggle {
+    /* Imagem padrão (desligado) */
+    background-image: url('/static/images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') !important;
+    /* Ajuste o tamanho do botão aqui */
+    width: 70px !important;
+    height: 50px !important;
+    min-width: 70px !important;
+    min-height: 50px !important;
+    max-width: 70px !important;
+    max-height: 50px !important;
+}
+
+#btn-power-toggle.power-on {
+    /* Imagem quando ligado */
+    background-image: url('/static/images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') !important;
+}
+
+/* Container que agrupa escova e botão liga/desliga - ajuste o espaçamento aqui */
+.escova-power-container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0px !important; /* Ajuste este valor para mudar o espaço entre os botões (0px = sem espaço) */
+    margin: 0 !important;
+    padding: 0 !important;
+    width: fit-content !important; /* Ajusta a largura ao conteúdo */
+    position: relative !important;
+}
+
+/* Remove margens e paddings dos botões dentro do container */
+.escova-power-container .peripheral-btn {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+}
+
+/* Espaçamento específico entre os dois botões usando margin-right no primeiro */
+.escova-power-container #btn-escova-manual-toggle {
+    margin-right: -20px !important; /* Ajuste este valor (0px, 1px, 2px, etc) */
 }
 
