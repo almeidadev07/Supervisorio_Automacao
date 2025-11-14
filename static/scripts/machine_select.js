@@ -8,24 +8,197 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnConfirm = document.getElementById('btn-confirm-machine');
   const btnCancel = document.getElementById('btn-cancel-machine');
   const statusDiv = document.getElementById('machine-modal-status');
+  const embaladoraQuantity = document.getElementById('embaladora-quantity');
+  
+  // Checkboxes de visibilidade
+  const checkboxMagnaOvoscopia = document.getElementById('checkbox-magna-ovoscopia');
+  const checkboxCrack = document.getElementById('checkbox-crack');
+  const checkboxNebulizador = document.getElementById('checkbox-nebulizador');
+  const checkboxLampadaUV = document.getElementById('checkbox-lampada-uv');
+  const checkboxEscova = document.getElementById('checkbox-escova');
+  
+  // Chave para localStorage
+  const GRID_VISIBILITY_KEY = 'supervisor_grid_visibility';
+  const EMBALADORA_QUANTITY_KEY = 'supervisor_embaladora_quantity';
+  
+  // Armazena valores iniciais quando o modal é aberto (para restaurar no cancelar)
+  let initialSettings = null;
+  let initialQuantity = null;
+  let initialMachine = null;
 
+  // Função para salvar configurações de visibilidade
+  function saveVisibilitySettings() {
+    const settings = {
+      perifericos: true, // Sempre true, pois o botão de periféricos sempre existe
+      magnaOvoscopia: checkboxMagnaOvoscopia?.checked ?? true,
+      crack: checkboxCrack?.checked ?? true,
+      nebulizador: checkboxNebulizador?.checked ?? true,
+      lampadaUV: checkboxLampadaUV?.checked ?? true,
+      escova: checkboxEscova?.checked ?? true
+    };
+    localStorage.setItem(GRID_VISIBILITY_KEY, JSON.stringify(settings));
+    
+    // Salva quantidade de embaladora
+    if (embaladoraQuantity) {
+      localStorage.setItem(EMBALADORA_QUANTITY_KEY, embaladoraQuantity.value);
+    }
+    
+    // Aplica as configurações no grid
+    if (window.applyGridVisibility) {
+      window.applyGridVisibility(settings);
+    }
+    
+    console.log('[MACHINE_SELECT] Configurações de visibilidade salvas:', settings);
+  }
+  
+  // Função para restaurar valores iniciais (usado no cancelar)
+  function restoreInitialSettings() {
+    if (initialSettings) {
+      if (checkboxMagnaOvoscopia) checkboxMagnaOvoscopia.checked = initialSettings.magnaOvoscopia;
+      if (checkboxCrack) checkboxCrack.checked = initialSettings.crack;
+      if (checkboxNebulizador) checkboxNebulizador.checked = initialSettings.nebulizador;
+      if (checkboxLampadaUV) checkboxLampadaUV.checked = initialSettings.lampadaUV;
+      if (checkboxEscova) checkboxEscova.checked = initialSettings.escova;
+    }
+    
+    if (initialQuantity && embaladoraQuantity) {
+      embaladoraQuantity.value = initialQuantity;
+    }
+    
+    if (initialMachine && select) {
+      select.value = initialMachine;
+    }
+    
+    console.log('[MACHINE_SELECT] Valores iniciais restaurados');
+  }
+  
+  // Função para capturar valores iniciais quando o modal abre
+  function captureInitialSettings() {
+    initialSettings = {
+      magnaOvoscopia: checkboxMagnaOvoscopia?.checked ?? true,
+      crack: checkboxCrack?.checked ?? true,
+      nebulizador: checkboxNebulizador?.checked ?? true,
+      lampadaUV: checkboxLampadaUV?.checked ?? true,
+      escova: checkboxEscova?.checked ?? true
+    };
+    
+    initialQuantity = embaladoraQuantity?.value || '24';
+    initialMachine = select?.value || null;
+    
+    console.log('[MACHINE_SELECT] Valores iniciais capturados:', {
+      settings: initialSettings,
+      quantity: initialQuantity,
+      machine: initialMachine
+    });
+  }
+  
+  // Função para carregar configurações de visibilidade
+  function loadVisibilitySettings() {
+    try {
+      const saved = localStorage.getItem(GRID_VISIBILITY_KEY);
+      if (saved) {
+        const settings = JSON.parse(saved);
+        if (checkboxMagnaOvoscopia) checkboxMagnaOvoscopia.checked = settings.magnaOvoscopia !== false;
+        if (checkboxCrack) checkboxCrack.checked = settings.crack !== false;
+        if (checkboxNebulizador) checkboxNebulizador.checked = settings.nebulizador !== false;
+        if (checkboxLampadaUV) checkboxLampadaUV.checked = settings.lampadaUV !== false;
+        if (checkboxEscova) checkboxEscova.checked = settings.escova !== false;
+      } else {
+        // Valores padrão: todos marcados
+        if (checkboxMagnaOvoscopia) checkboxMagnaOvoscopia.checked = true;
+        if (checkboxCrack) checkboxCrack.checked = true;
+        if (checkboxNebulizador) checkboxNebulizador.checked = true;
+        if (checkboxLampadaUV) checkboxLampadaUV.checked = true;
+        if (checkboxEscova) checkboxEscova.checked = true;
+      }
+      
+      // Carrega quantidade de embaladora
+      const savedQuantity = localStorage.getItem(EMBALADORA_QUANTITY_KEY);
+      if (embaladoraQuantity && savedQuantity) {
+        embaladoraQuantity.value = savedQuantity;
+      } else if (embaladoraQuantity) {
+        // Valor padrão: 24
+        embaladoraQuantity.value = '24';
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações de visibilidade:', error);
+    }
+  }
+  
   // Função para mostrar o modal
   function showModal() {
     if (modal) {
+      // Carrega as configurações salvas primeiro
+      loadVisibilitySettings();
+      
+      // Captura os valores iniciais ANTES de permitir alterações
+      captureInitialSettings();
+      
       modal.classList.remove('hidden');
       modal.classList.add('show');
       modal.style.display = 'block';
+      
+      // Garante que o botão de confirmar está habilitado quando o modal abre
+      if (btnConfirm) {
+        btnConfirm.disabled = false;
+        btnConfirm.style.opacity = '1';
+        btnConfirm.style.cursor = 'pointer';
+      }
     }
   }
 
   // Função para esconder o modal
-  function hideModal() {
+  function hideModal(restoreValues = false) {
     if (modal) {
+      // Se restoreValues for true, restaura os valores iniciais (cancelar)
+      if (restoreValues) {
+        restoreInitialSettings();
+      }
+      
       modal.classList.add('hidden');
       modal.classList.remove('show');
       modal.style.display = 'none';
+      
+      // Reabilita o botão quando o modal fecha
+      if (btnConfirm) {
+        btnConfirm.disabled = false;
+        btnConfirm.style.opacity = '1';
+        btnConfirm.style.cursor = 'pointer';
+      }
+      
+      // Limpa mensagens de status
+      if (statusDiv) {
+        statusDiv.textContent = '';
+        statusDiv.className = '';
+      }
     }
   }
+  
+  // Fecha o modal ao clicar fora dele (apenas no overlay, não no conteúdo)
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      // Fecha apenas se clicar diretamente no overlay (background), não no conteúdo
+      if (e.target === modal) {
+        // Restaura valores ao fechar clicando fora (comportamento de cancelar)
+        hideModal(true);
+      }
+    });
+    
+    // Previne que cliques no conteúdo do modal fechem o modal
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+      modalContent.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+  }
+  
+  // Fecha o modal com a tecla ESC (comportamento de cancelar)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+      hideModal(true); // true = restaurar valores (cancelar)
+    }
+  });
 
   // Função para carregar lista de máquinas
   async function loadMachines() {
@@ -110,6 +283,12 @@ document.addEventListener('DOMContentLoaded', () => {
             statusDiv.textContent = testResult.message || `PLC da máquina ${machineName} não está conectado`;
             statusDiv.className = 'status error';
           }
+          // Reabilita o botão em caso de erro de conexão
+          if (btnConfirm) {
+            btnConfirm.disabled = false;
+            btnConfirm.style.opacity = '1';
+            btnConfirm.style.cursor = 'pointer';
+          }
           console.error(`[MACHINE_SELECT] ❌ ${testResult.message}`);
           return; // Não permite seleção se não estiver conectada
         }
@@ -135,17 +314,26 @@ document.addEventListener('DOMContentLoaded', () => {
           statusDiv.textContent = 'Máquina alterada com sucesso!';
           statusDiv.className = 'status success';
         }
+        
+        // Fecha o modal imediatamente após sucesso
+        hideModal();
+        
         // Solicita atualização dos clientes e recarrega a UI atual
         try {
           await fetch('/api/force_reload', { method: 'POST' }).catch(() => {});
         } catch (_) {}
-        // Fecha o modal e recarrega para refletir máquina conectada/velocidades
+        
+        // Pequeno atraso para permitir troca de máquina no backend antes de recarregar
         setTimeout(() => {
-          hideModal();
-          // Pequeno atraso para permitir troca de máquina no backend
-          setTimeout(() => location.reload(), 300);
-        }, 700);
+          location.reload();
+        }, 500);
       } else {
+        // Reabilita o botão em caso de erro
+        if (btnConfirm) {
+          btnConfirm.disabled = false;
+          btnConfirm.style.opacity = '1';
+          btnConfirm.style.cursor = 'pointer';
+        }
         throw new Error(result.error || 'Erro ao alterar máquina');
       }
     } catch (error) {
@@ -153,6 +341,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (statusDiv) {
         statusDiv.textContent = `Erro: ${error.message}`;
         statusDiv.className = 'status error';
+      }
+      // Reabilita o botão em caso de erro
+      if (btnConfirm) {
+        btnConfirm.disabled = false;
+        btnConfirm.style.opacity = '1';
+        btnConfirm.style.cursor = 'pointer';
       }
     }
   }
@@ -175,28 +369,136 @@ document.addEventListener('DOMContentLoaded', () => {
             opt.classList.add('connected');
           }
         });
-        // Desabilita botão se já está na mesma máquina
+        // Atualiza o título do botão se já está na mesma máquina, mas NÃO desabilita
+        // O botão deve estar sempre habilitado para permitir salvar alterações de checkboxes/quantidade
         if (btnConfirm) {
-          btnConfirm.disabled = (select.value === cur.machine);
-          btnConfirm.title = btnConfirm.disabled ? 'Já conectada' : '';
+          const isSameMachine = (select.value === cur.machine);
+          btnConfirm.title = isSameMachine ? 'Máquina já conectada (pode salvar outras alterações)' : 'Confirmar alterações';
+          btnConfirm.disabled = false; // Sempre habilitado para permitir salvar checkboxes/quantidade
+          btnConfirm.style.opacity = '1';
+          btnConfirm.style.cursor = 'pointer';
         }
-        // Reage a mudanças no select para habilitar/desabilitar confirmar
+        // Reage a mudanças no select para atualizar título
         select.addEventListener('change', () => {
           if (!btnConfirm) return;
-          btnConfirm.disabled = (select.value === cur.machine);
-          btnConfirm.title = btnConfirm.disabled ? 'Já conectada' : '';
+          const isSameMachine = (select.value === cur.machine);
+          btnConfirm.title = isSameMachine ? 'Máquina já conectada (pode salvar outras alterações)' : 'Confirmar alterações';
+          btnConfirm.disabled = false; // Sempre habilitado
+          btnConfirm.style.opacity = '1';
+          btnConfirm.style.cursor = 'pointer';
         }, { once: true });
       }
     } catch(_) {}
   });
 
-  btnCancel.addEventListener('click', hideModal);
+  if (btnCancel) {
+    btnCancel.addEventListener('click', () => {
+      // Restaura valores iniciais ao cancelar
+      hideModal(true);
+    });
+  }
 
-  btnConfirm.addEventListener('click', () => {
-    const machineName = select.value;
-    if (!machineName) return;
-    setMachine(machineName);
-  });
+  if (btnConfirm) {
+    btnConfirm.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('[MACHINE_SELECT] Botão Confirmar clicado');
+      
+      // Desabilita o botão temporariamente para evitar cliques múltiplos
+      if (btnConfirm.disabled) {
+        console.warn('[MACHINE_SELECT] Botão já está desabilitado');
+        return;
+      }
+      
+      const machineName = select?.value;
+      if (!machineName) {
+        if (statusDiv) {
+          statusDiv.textContent = 'Por favor, selecione uma máquina';
+          statusDiv.className = 'status error';
+        }
+        console.warn('[MACHINE_SELECT] Nenhuma máquina selecionada');
+        return;
+      }
+      
+      console.log('[MACHINE_SELECT] Máquina selecionada:', machineName);
+      
+      // Desabilita o botão durante o processamento
+      btnConfirm.disabled = true;
+      btnConfirm.style.opacity = '0.6';
+      btnConfirm.style.cursor = 'not-allowed';
+      
+      try {
+        // Verifica se a máquina mudou
+        const machineChanged = (machineName !== initialMachine);
+        
+        // Verifica se há alterações nos checkboxes ou quantidade
+        const currentSettings = {
+          magnaOvoscopia: checkboxMagnaOvoscopia?.checked ?? true,
+          crack: checkboxCrack?.checked ?? true,
+          nebulizador: checkboxNebulizador?.checked ?? true,
+          lampadaUV: checkboxLampadaUV?.checked ?? true,
+          escova: checkboxEscova?.checked ?? true
+        };
+        const settingsChanged = !initialSettings || 
+          JSON.stringify(currentSettings) !== JSON.stringify(initialSettings);
+        
+        const quantityChanged = (embaladoraQuantity?.value || '24') !== (initialQuantity || '24');
+        
+        const hasChanges = machineChanged || settingsChanged || quantityChanged;
+        
+        if (!hasChanges) {
+          // Não há alterações, apenas fecha o modal
+          if (statusDiv) {
+            statusDiv.textContent = 'Nenhuma alteração para salvar';
+            statusDiv.className = 'status';
+          }
+          setTimeout(() => {
+            hideModal(false);
+          }, 1000);
+          btnConfirm.disabled = false;
+          btnConfirm.style.opacity = '1';
+          btnConfirm.style.cursor = 'pointer';
+          return;
+        }
+        
+        // SEMPRE salva as configurações de visibilidade e quantidade (mesmo sem mudar máquina)
+        saveVisibilitySettings();
+        console.log('[MACHINE_SELECT] Configurações de visibilidade e quantidade salvas');
+        
+        // Se a máquina mudou, processa a mudança de máquina
+        if (machineChanged) {
+          await setMachine(machineName);
+        } else {
+          // Se não mudou a máquina, apenas fecha o modal após salvar
+          if (statusDiv) {
+            statusDiv.textContent = 'Configurações salvas com sucesso!';
+            statusDiv.className = 'status success';
+          }
+          
+          setTimeout(() => {
+            hideModal(false); // false = não restaurar valores (já salvamos)
+          }, 500);
+          
+          // Reabilita o botão
+          btnConfirm.disabled = false;
+          btnConfirm.style.opacity = '1';
+          btnConfirm.style.cursor = 'pointer';
+        }
+      } catch (error) {
+        console.error('[MACHINE_SELECT] Erro ao processar:', error);
+        // Reabilita o botão em caso de erro
+        btnConfirm.disabled = false;
+        btnConfirm.style.opacity = '1';
+        btnConfirm.style.cursor = 'pointer';
+      }
+    });
+  } else {
+    console.error('[MACHINE_SELECT] Botão de confirmar não encontrado!');
+  }
+  
+  // NOTA: Removidos os listeners automáticos de save
+  // Agora as alterações são salvas APENAS quando o botão Confirmar é clicado
+  // Isso permite que o usuário faça alterações e cancele sem salvar
 
   // Socket.IO: telemetria em tempo real
   socket.on('telemetry', (data) => {

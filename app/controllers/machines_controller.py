@@ -2,10 +2,23 @@
 from flask import Blueprint, jsonify, request, current_app, Response
 import logging
 import time
+import threading
 from ..utils import get_local_ip, find_machine_config, find_machine_by_plc_ip, detect_by_reachable_plc
 
 logger = logging.getLogger(__name__)
 machines_bp = Blueprint('machines', __name__)
+
+# ✅ PROTEÇÃO CRÍTICA: Lock por tag WORD para evitar escritas simultâneas
+# Isso garante que apenas uma escrita por WORD aconteça por vez
+_word_write_locks = {}  # tag_name -> threading.Lock
+_locks_lock = threading.Lock()  # Lock para proteger o dicionário de locks
+
+def get_word_lock(tag_name):
+    """Obtém ou cria um lock para uma tag WORD específica"""
+    with _locks_lock:
+        if tag_name not in _word_write_locks:
+            _word_write_locks[tag_name] = threading.Lock()
+        return _word_write_locks[tag_name]
 
 @machines_bp.route('/machines', methods=['GET'])
 def list_machines():
@@ -420,25 +433,38 @@ def write_word_bit():
             new_on = 1 if ((new_word >> bit) & 1) == 1 else 0
             return jsonify({'ok': True, 'written': new_word, 'bit': bit, 'value': new_on})
         elif mode == 'state':
-            # Define explicitamente o estado do bit (0/1). Se pure=True, escreve somente o bit; senão read-modify-write.
-            val = 1 if int(payload.get('value', 0)) else 0
-            if pure:
-                new_word = (1 << bit) if val == 1 else 0
-            else:
-                if need_read is False:
-                    # Garante leitura para r-m-w
+            # ✅ PROTEÇÃO CRÍTICA: Usa lock para garantir que apenas uma escrita por WORD aconteça por vez
+            # Isso evita race conditions onde duas requisições simultâneas podem sobrescrever uma à outra
+            word_lock = get_word_lock(name)
+            
+            with word_lock:
+                # Define explicitamente o estado do bit (0/1). Se pure=True, escreve somente o bit; senão read-modify-write.
+                val = 1 if int(payload.get('value', 0)) else 0
+                
+                # ✅ CRÍTICO: Re-lê o valor atual DENTRO do lock (pode ter mudado enquanto aguardava)
+                if need_read is False or True:  # Sempre re-lê para garantir valor mais recente
                     values = current_app.plc_controller.read_tags([name]) or {}
                     if name not in values or values[name] is None:
                         return jsonify({'ok': False, 'error': 'Falha ao ler valor atual'}), 500
                     word = int(values[name]) & 0xFFFF
-                if val == 1:
-                    new_word = (word | (1 << bit)) & 0xFFFF
+                    logger.info(f"[WRITE_WORD_BIT] Re-lido valor da tag {name} dentro do lock: {word} (0x{word:04X}), bit {bit} = {val}")
+                
+                if pure:
+                    new_word = (1 << bit) if val == 1 else 0
                 else:
-                    new_word = (word & ~(1 << bit)) & 0xFFFF
-            ok = do_write(new_word)
-            if not ok:
-                return jsonify({'ok': False, 'error': 'Falha ao escrever WORD no state'}), 500
-            return jsonify({'ok': True, 'written': new_word, 'bit': bit, 'value': val})
+                    if val == 1:
+                        new_word = (word | (1 << bit)) & 0xFFFF
+                    else:
+                        new_word = (word & ~(1 << bit)) & 0xFFFF
+                
+                logger.info(f"[WRITE_WORD_BIT] Escrevendo bit {bit} da tag {name}: {word} (0x{word:04X}) -> {new_word} (0x{new_word:04X})")
+                
+                ok = do_write(new_word)
+                if not ok:
+                    return jsonify({'ok': False, 'error': 'Falha ao escrever WORD no state'}), 500
+                
+                logger.info(f"[WRITE_WORD_BIT] ✅ Bit {bit} da tag {name} escrito com sucesso: {val}")
+                return jsonify({'ok': True, 'written': new_word, 'bit': bit, 'value': val})
         else:
             return jsonify({'ok': False, 'error': 'mode inválido (use set|clear|pulse)'}), 400
     except Exception as e:

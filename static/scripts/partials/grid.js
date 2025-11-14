@@ -215,6 +215,128 @@ function restoreGridPositions() {
     return true;
 }
 
+// Função para aplicar visibilidade dos botões do grid baseado nas configurações
+function applyGridVisibility(settings) {
+    if (!settings) {
+        // Tenta carregar do localStorage se não foi fornecido
+        try {
+            const saved = localStorage.getItem('supervisor_grid_visibility');
+            if (saved) {
+                settings = JSON.parse(saved);
+            } else {
+                // Valores padrão: todos visíveis
+                settings = {
+                    perifericos: true,
+                    magnaOvoscopia: true,
+                    crack: true,
+                    nebulizador: true,
+                    lampadaUV: true,
+                    escova: true
+                };
+            }
+        } catch (error) {
+            console.error('Erro ao carregar configurações de visibilidade:', error);
+            return;
+        }
+    }
+    
+    console.log('🎯 Aplicando visibilidade do grid:', settings);
+    
+    // 1. Esconde/mostra o botão de periféricos inteiro
+    const btnPerifericos = document.querySelector('.draggable-btn[data-station="botao-9"]');
+    if (btnPerifericos) {
+        if (!settings.perifericos) {
+            btnPerifericos.style.display = 'none';
+            console.log('✅ Botão de periféricos escondido');
+        } else {
+            btnPerifericos.style.display = '';
+            console.log('✅ Botão de periféricos mostrado');
+        }
+    }
+    
+    // 2. Esconde/mostra botões individuais dentro do container de periféricos
+    if (settings.perifericos && btnPerifericos) {
+        const container = btnPerifericos.querySelector('.peripherals-container');
+        if (container) {
+            // Mapa de roles para checkboxes
+            const roleMap = {
+                'ovoscopia': settings.magnaOvoscopia,
+                'crack': settings.crack,
+                'nebulizador-oleo': settings.nebulizador,
+                'lampadas-uv': settings.lampadaUV,
+                'escova-manual': settings.escova
+            };
+            
+            // Esconde/mostra cada botão individual
+            Object.keys(roleMap).forEach(role => {
+                const btn = container.querySelector(`[data-role="${role}"]`);
+                const item = btn ? btn.closest('.peripheral-item') : null;
+                if (item) {
+                    if (!roleMap[role]) {
+                        item.style.display = 'none';
+                        console.log(`✅ Botão ${role} escondido`);
+                    } else {
+                        item.style.display = '';
+                        console.log(`✅ Botão ${role} mostrado`);
+                    }
+                }
+            });
+            
+            // Ajusta o grid-template-columns do container baseado na quantidade de itens visíveis
+            // Aguarda um frame para garantir que os estilos foram aplicados
+            setTimeout(() => {
+                const allItems = container.querySelectorAll('.peripheral-item');
+                const visibleCount = Array.from(allItems).filter(item => {
+                    const style = window.getComputedStyle(item);
+                    return style.display !== 'none';
+                }).length;
+                
+                // Ajusta o grid para ter no máximo 3 colunas
+                if (visibleCount > 0) {
+                    // Garante que o container está visível
+                    container.style.display = 'grid';
+                    const cols = Math.min(visibleCount, 3);
+                    container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+                    console.log(`✅ Grid de periféricos ajustado para ${cols} colunas (${visibleCount} itens visíveis)`);
+                } else {
+                    // Se não há itens visíveis, esconde o container inteiro
+                    container.style.display = 'none';
+                }
+            }, 10);
+        }
+    }
+    
+    // 3. Ajusta o layout do grid principal automaticamente
+    // Remove botões escondidos do fluxo do grid e recalcula
+    const gridContainer = document.getElementById('grid-container');
+    if (gridContainer) {
+        const visibleButtons = Array.from(gridContainer.querySelectorAll('.draggable-btn')).filter(btn => {
+            const style = window.getComputedStyle(btn);
+            return style.display !== 'none';
+        });
+        
+        console.log(`✅ Grid ajustado: ${visibleButtons.length} botões visíveis`);
+        
+        // O CSS Grid já ajusta automaticamente, mas podemos forçar um recálculo
+        // Salvando e restaurando posições para garantir que o layout se ajuste
+        setTimeout(() => {
+            saveGridPositions();
+        }, 100);
+    }
+}
+
+// Torna a função acessível globalmente
+window.applyGridVisibility = applyGridVisibility;
+
+// Aplica visibilidade ao carregar a página
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => applyGridVisibility(), 500);
+    });
+} else {
+    setTimeout(() => applyGridVisibility(), 500);
+}
+
 // Função para resetar posições para o padrão
 function resetGridPositions() {
     try {
@@ -4154,6 +4276,50 @@ function applyPeripheralVisual(button, enabled) {
     button.classList.toggle('active', on);
 }
 
+// Função auxiliar para atualizar o estado visual de um botão de periférico
+function updatePeripheralButtonVisual(role, enabled, state) {
+    // ✅ PROTEÇÃO CRÍTICA: Não atualiza se está aguardando confirmação (exceto quando chamado pelo próprio clique)
+    // Esta verificação é importante para evitar que a sincronização sobrescreva durante validação
+    // Mas permitimos atualização quando é chamado pelo próprio handler de clique (que já setou PENDING_CONFIRMATION)
+    
+    const btn = document.querySelector(`[data-role="${role}"]`);
+    if (!btn) return;
+    
+    // Atualiza estado interno
+    state[role] = enabled;
+    
+    // Atualiza label
+    const labelMap = {
+        'ovoscopia': { id: 'label-ovoscopia', text: enabled ? 'Magna Visio' : 'Ovoscopia' },
+        'crack': { id: 'label-crack', text: 'Crack' },
+        'nebulizador-oleo': { id: 'label-nebulizador-oleo', text: 'Nebulizador Óleo' },
+        'lampadas-uv': { id: 'label-lampadas-uv', text: 'Lâmpadas UV' },
+        'escova-manual': { id: 'label-escova-manual', text: enabled ? 'Escova Automática' : 'Escova Manual' }
+    };
+    
+    const labelInfo = labelMap[role];
+    if (labelInfo) {
+        const label = document.getElementById(labelInfo.id);
+        if (label) label.textContent = labelInfo.text;
+    }
+    
+    // Atualiza imagem
+    let newImageSrc;
+    if (role === 'ovoscopia' || role === 'escova-manual') {
+        newImageSrc = enabled
+            ? '/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png'
+            : '/static/images/pages/icons/comandos/icone_habilita_azul.png';
+    } else {
+        newImageSrc = enabled
+            ? '/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png'
+            : '/static/images/pages/icons/comandos/icone_habilita_desabilitado.png';
+    }
+    btn.style.setProperty('background', `url(${newImageSrc}) center/contain no-repeat`, 'important');
+    
+    // Salva estado
+    savePeripheralsState(state);
+}
+
 function initPeripherals() {
     const container = document.querySelector('.draggable-btn[data-station="botao-9"]');
     if (!container) return;
@@ -4213,71 +4379,242 @@ function initPeripherals() {
         // aplica design semelhante ao botão de histórico (tema azul ativo) somente quando não for ícone
         // não aplicar alarm-toggle aos ícones (sem borda/sombra)
 
-        btn.addEventListener('click', (e) => {
+        // ✅ PROTEÇÃO: Evita múltiplos event listeners e cliques simultâneos
+        if (btn.dataset.listenerAttached === 'true') {
+            return; // Já tem listener, não adiciona novamente
+        }
+        btn.dataset.listenerAttached = 'true';
+        
+        // Flag para evitar processamento simultâneo de cliques
+        let isProcessing = false;
+
+        btn.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation(); // ✅ Evita que outros listeners sejam chamados
+            
+            // ✅ PROTEÇÃO: Verifica se o clique foi realmente neste botão específico
+            const clickedBtn = e.target.closest('[data-role]');
+            if (!clickedBtn || clickedBtn.getAttribute('data-role') !== role) {
+                console.log(`[PERIPHERALS] ⚠️ Clique não corresponde ao botão ${role}, ignorando`);
+                return;
+            }
+            
+            // ✅ PROTEÇÃO CRÍTICA: Evita processamento simultâneo (verifica antes de qualquer ação)
+            if (isProcessing) {
+                console.log(`[PERIPHERALS] ⏸️ Botão ${role} já está processando, ignorando clique duplicado`);
+                return;
+            }
+            
+            // ✅ PROTEÇÃO ADICIONAL: Verifica se já está aguardando confirmação
+            if (PENDING_CONFIRMATION.has(role)) {
+                console.log(`[PERIPHERALS] ⏸️ Botão ${role} já está aguardando confirmação, ignorando clique`);
+                return;
+            }
+            
+            isProcessing = true;
+            console.log(`[PERIPHERALS] 🎯 Processando clique no botão ${role} - INÍCIO`);
+            
+            try {
             if (role === 'ovoscopia') {
-                // Toggle visual e alterna texto/ícone Ovoscopia <-> Magna Visio
+                // ✅ NOVA LÓGICA: Atualiza UI imediatamente, valida após 10s e reverte se necessário
                 const wasEnabled = !!state[role];
                 const nowEnabled = !wasEnabled;
-                state[role] = nowEnabled;
-                // Não aplicar visual states para botões-ícone
-                const label = document.getElementById('label-ovoscopia');
-                if (label) label.textContent = nowEnabled ? 'Magna Visio' : 'Ovoscopia';
-                // Troca a imagem de forma instantânea (já pré-carregada no início)
-                const newImageSrc = nowEnabled
-                    ? '/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png'
-                    : '/static/images/pages/icons/comandos/icone_habilita_azul.png';
-                // Aplica diretamente - imagens já estão pré-carregadas e em cache
-                btn.style.setProperty('background', `url(${newImageSrc}) center/contain no-repeat`, 'important');
-                savePeripheralsState(state);
-                // micro-efeito de clique (sem delay na troca de imagem)
+                
+                // ✅ CRÍTICO: Marca como aguardando confirmação ANTES de atualizar UI
+                // Isso garante que a sincronização não interfira
+                PENDING_CONFIRMATION.set(role, Date.now());
+                console.log(`[PERIPHERALS] 🔒 PENDING_CONFIRMATION setado para ${role} - sincronização bloqueada`);
+                
+                // Marca timestamp da escrita
+                LAST_WRITE_PERIPHERALS_TS = Date.now();
+                
+                // ✅ Atualiza UI IMEDIATAMENTE (feedback visual instantâneo)
+                updatePeripheralButtonVisual(role, nowEnabled, state);
+                
+                // Escreve no PLC: bit 8 de XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03
+                // Magna Visio = 1, Ovoscopia = 0
+                console.log(`[PERIPHERALS] 🖱️ Botão Ovoscopia clicado! Estado: ${nowEnabled ? 'Magna Visio (1)' : 'Ovoscopia (0)'}`);
+                
+                // ✅ CRÍTICO: Escreve no PLC de forma síncrona (aguarda conclusão antes de continuar)
+                // Isso garante que apenas uma escrita aconteça por vez
+                (async () => {
+                    try {
+                        const writeResult = await writeWordBit('XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03', 8, nowEnabled ? 1 : 0);
+                        if (!writeResult) {
+                            console.warn(`[PERIPHERALS] ⚠️ Falha ao escrever no PLC, revertendo estado`);
+                            // Reverte imediatamente se falhou a escrita
+                            updatePeripheralButtonVisual(role, wasEnabled, state);
+                            PENDING_CONFIRMATION.delete(role);
+                            return;
+                        }
+                        
+                        // ✅ Valida após 10 segundos (PENDING_CONFIRMATION mantido durante todo este período)
+                        console.log(`[PERIPHERALS] ⏳ Iniciando validação de 10s para ${role} - PENDING_CONFIRMATION ativo`);
+                        const validated = await validateBitChangeDelayed('XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03', 8, nowEnabled ? 1 : 0, 10000);
+                        console.log(`[PERIPHERALS] ⏳ Validação concluída para ${role} - resultado: ${validated}`);
+                        
+                        if (!validated) {
+                            console.warn(`[PERIPHERALS] ⚠️ Mudança não foi validada no PLC após 10s, revertendo estado`);
+                            // Reverte o estado visual
+                            updatePeripheralButtonVisual(role, wasEnabled, state);
+                        } else {
+                            console.log(`[PERIPHERALS] ✅ Mudança validada no PLC após 10s`);
+                        }
+                        
+                        // ✅ Remove do mapa de pendentes APENAS após validação completa
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        console.log(`[PERIPHERALS] 🔓 Removendo ${role} do PENDING_CONFIRMATION após validação`);
+                        PENDING_CONFIRMATION.delete(role);
+                        // Agenda sincronização para confirmar o estado (agora pode sincronizar)
+                        setTimeout(syncPeripheralsFromPLC, 200);
+                    } catch (error) {
+                        console.error(`[PERIPHERALS] ❌ Erro ao processar escrita:`, error);
+                        updatePeripheralButtonVisual(role, wasEnabled, state);
+                        PENDING_CONFIRMATION.delete(role);
+                    }
+                })();
+                
+                // micro-efeito de clique
                 btn.style.transform = 'scale(0.98)';
                 setTimeout(() => { btn.style.transform = ''; }, 50);
             } else if (role === 'crack' || role === 'nebulizador-oleo' || role === 'lampadas-uv') {
-                // Toggle habilitado/desabilitado com persistência (Crack, Nebulizador Óleo, Lâmpadas UV)
+                // ✅ NOVA LÓGICA: Atualiza UI imediatamente, valida após 10s e reverte se necessário
                 const wasEnabled = !!state[role];
                 const nowEnabled = !wasEnabled;
-                state[role] = nowEnabled;
-                // Não aplicar visual states para botões-ícone
-                const labelMap = {
-                    'crack': 'label-crack',
-                    'nebulizador-oleo': 'label-nebulizador-oleo',
-                    'lampadas-uv': 'label-lampadas-uv'
-                };
-                const labelTextMap = {
-                    'crack': 'Crack',
-                    'nebulizador-oleo': 'Nebulizador Óleo',
-                    'lampadas-uv': 'Lâmpadas UV'
-                };
-                const label = document.getElementById(labelMap[role]);
-                if (label) label.textContent = labelTextMap[role];
-                // Troca a imagem de forma instantânea (já pré-carregada no início)
-                const newImageSrc = nowEnabled
-                    ? '/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png'
-                    : '/static/images/pages/icons/comandos/icone_habilita_desabilitado.png';
-                // Aplica diretamente - imagens já estão pré-carregadas e em cache
-                btn.style.setProperty('background', `url(${newImageSrc}) center/contain no-repeat`, 'important');
-                savePeripheralsState(state);
-                // micro-efeito de clique (sem delay na troca de imagem)
+                
+                // ✅ CRÍTICO: Marca como aguardando confirmação ANTES de atualizar UI
+                // Isso garante que a sincronização não interfira
+                PENDING_CONFIRMATION.set(role, Date.now());
+                console.log(`[PERIPHERALS] 🔒 PENDING_CONFIRMATION setado para ${role} - sincronização bloqueada`);
+                
+                // Marca timestamp da escrita
+                LAST_WRITE_PERIPHERALS_TS = Date.now();
+                
+                // ✅ Atualiza UI IMEDIATAMENTE (feedback visual instantâneo)
+                updatePeripheralButtonVisual(role, nowEnabled, state);
+                
+                // Escreve no PLC conforme o botão
+                console.log(`[PERIPHERALS] 🖱️ Botão ${role} clicado! Estado: ${nowEnabled ? 'Habilitado (1)' : 'Desabilitado (0)'}`);
+                let tagName = '';
+                let bit = 0;
+                
+                if (role === 'crack') {
+                    // Bit 9 de XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03
+                    tagName = 'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03';
+                    bit = 9;
+                } else if (role === 'nebulizador-oleo') {
+                    // Bit 8 de XLCLASS_DB03_PERIFERICOS_ALARMES_CMD
+                    tagName = 'XLCLASS_DB03_PERIFERICOS_ALARMES_CMD';
+                    bit = 8;
+                } else if (role === 'lampadas-uv') {
+                    // Bit 9 de XLCLASS_DB03_PERIFERICOS_ALARMES_CMD
+                    tagName = 'XLCLASS_DB03_PERIFERICOS_ALARMES_CMD';
+                    bit = 9;
+                }
+                
+                // ✅ CRÍTICO: Escreve no PLC de forma síncrona (aguarda conclusão antes de continuar)
+                // Isso garante que apenas uma escrita aconteça por vez
+                (async () => {
+                    try {
+                        const writeResult = await writeWordBit(tagName, bit, nowEnabled ? 1 : 0);
+                        if (!writeResult) {
+                            console.warn(`[PERIPHERALS] ⚠️ Falha ao escrever no PLC, revertendo estado`);
+                            // Reverte imediatamente se falhou a escrita
+                            updatePeripheralButtonVisual(role, wasEnabled, state);
+                            PENDING_CONFIRMATION.delete(role);
+                            return;
+                        }
+                        
+                        // ✅ Valida após 10 segundos (PENDING_CONFIRMATION mantido durante todo este período)
+                        console.log(`[PERIPHERALS] ⏳ Iniciando validação de 10s para ${role} - PENDING_CONFIRMATION ativo`);
+                        const validated = await validateBitChangeDelayed(tagName, bit, nowEnabled ? 1 : 0, 10000);
+                        console.log(`[PERIPHERALS] ⏳ Validação concluída para ${role} - resultado: ${validated}`);
+                        
+                        if (!validated) {
+                            console.warn(`[PERIPHERALS] ⚠️ Mudança não foi validada no PLC após 10s, revertendo estado`);
+                            // Reverte o estado visual
+                            updatePeripheralButtonVisual(role, wasEnabled, state);
+                        } else {
+                            console.log(`[PERIPHERALS] ✅ Mudança validada no PLC após 10s`);
+                        }
+                        
+                        // ✅ Remove do mapa de pendentes APENAS após validação completa
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        console.log(`[PERIPHERALS] 🔓 Removendo ${role} do PENDING_CONFIRMATION após validação`);
+                        PENDING_CONFIRMATION.delete(role);
+                        // Agenda sincronização para confirmar o estado (agora pode sincronizar)
+                        setTimeout(syncPeripheralsFromPLC, 200);
+                    } catch (error) {
+                        console.error(`[PERIPHERALS] ❌ Erro ao processar escrita:`, error);
+                        updatePeripheralButtonVisual(role, wasEnabled, state);
+                        PENDING_CONFIRMATION.delete(role);
+                    }
+                })();
+                
+                // micro-efeito de clique
                 btn.style.transform = 'scale(0.98)';
                 setTimeout(() => { btn.style.transform = ''; }, 50);
             } else if (role === 'escova-manual') {
-                // Toggle visual e alterna texto/ícone Escova Manual <-> Escova Automática
+                // ✅ NOVA LÓGICA: Atualiza UI imediatamente, valida após 10s e reverte se necessário
                 const wasEnabled = !!state[role];
                 const nowEnabled = !wasEnabled;
-                state[role] = nowEnabled;
-                // Não aplicar visual states para botões-ícone
-                const label = document.getElementById('label-escova-manual');
-                if (label) label.textContent = nowEnabled ? 'Escova Automática' : 'Escova Manual';
-                // Troca a imagem de forma instantânea (já pré-carregada no início)
-                const newImageSrc = nowEnabled
-                    ? '/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png'
-                    : '/static/images/pages/icons/comandos/icone_habilita_azul.png';
-                // Aplica diretamente - imagens já estão pré-carregadas e em cache
-                btn.style.setProperty('background', `url(${newImageSrc}) center/contain no-repeat`, 'important');
-                savePeripheralsState(state);
-                // micro-efeito de clique (sem delay na troca de imagem)
+                
+                // ✅ CRÍTICO: Marca como aguardando confirmação ANTES de atualizar UI
+                // Isso garante que a sincronização não interfira
+                PENDING_CONFIRMATION.set(role, Date.now());
+                console.log(`[PERIPHERALS] 🔒 PENDING_CONFIRMATION setado para ${role} - sincronização bloqueada`);
+                
+                // Marca timestamp da escrita
+                LAST_WRITE_PERIPHERALS_TS = Date.now();
+                
+                // ✅ Atualiza UI IMEDIATAMENTE (feedback visual instantâneo)
+                updatePeripheralButtonVisual(role, nowEnabled, state);
+                
+                // Escreve no PLC: XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS
+                // Escova Automática = 1, Escova Manual = 0
+                console.log(`[PERIPHERALS] 🖱️ Botão Escova clicado! Estado: ${nowEnabled ? 'Automática (1)' : 'Manual (0)'}`);
+                
+                // ✅ CRÍTICO: Escreve no PLC de forma síncrona (aguarda conclusão antes de continuar)
+                // Isso garante que apenas uma escrita aconteça por vez
+                (async () => {
+                    try {
+                        const writeResult = await writeTagValue('XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS', nowEnabled ? 1 : 0);
+                        if (!writeResult) {
+                            console.warn(`[PERIPHERALS] ⚠️ Falha ao escrever no PLC, revertendo estado`);
+                            // Reverte imediatamente se falhou a escrita
+                            updatePeripheralButtonVisual(role, wasEnabled, state);
+                            PENDING_CONFIRMATION.delete(role);
+                            return;
+                        }
+                        
+                        // ✅ Valida após 10 segundos (PENDING_CONFIRMATION mantido durante todo este período)
+                        console.log(`[PERIPHERALS] ⏳ Iniciando validação de 10s para ${role} - PENDING_CONFIRMATION ativo`);
+                        const validated = await validateTagChangeDelayed('XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS', nowEnabled ? 1 : 0, 10000);
+                        console.log(`[PERIPHERALS] ⏳ Validação concluída para ${role} - resultado: ${validated}`);
+                        
+                        if (!validated) {
+                            console.warn(`[PERIPHERALS] ⚠️ Mudança não foi validada no PLC após 10s, revertendo estado`);
+                            // Reverte o estado visual
+                            updatePeripheralButtonVisual(role, wasEnabled, state);
+                        } else {
+                            console.log(`[PERIPHERALS] ✅ Mudança validada no PLC após 10s`);
+                        }
+                        
+                        // ✅ Remove do mapa de pendentes APENAS após validação completa
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        console.log(`[PERIPHERALS] 🔓 Removendo ${role} do PENDING_CONFIRMATION após validação`);
+                        PENDING_CONFIRMATION.delete(role);
+                        // Agenda sincronização para confirmar o estado (agora pode sincronizar)
+                        setTimeout(syncPeripheralsFromPLC, 200);
+                    } catch (error) {
+                        console.error(`[PERIPHERALS] ❌ Erro ao processar escrita:`, error);
+                        updatePeripheralButtonVisual(role, wasEnabled, state);
+                        PENDING_CONFIRMATION.delete(role);
+                    }
+                })();
+                
+                // micro-efeito de clique
                 btn.style.transform = 'scale(0.98)';
                 setTimeout(() => { btn.style.transform = ''; }, 50);
             } else {
@@ -4290,7 +4627,15 @@ function initPeripherals() {
                 btn.style.transform = 'scale(0.98)';
                 setTimeout(() => { btn.style.transform = ''; }, 80);
             }
-        });
+            } finally {
+                // ✅ Libera flag de processamento após um delay maior para evitar cliques duplicados
+                // O delay garante que a escrita foi iniciada antes de permitir novo clique
+                setTimeout(() => { 
+                    isProcessing = false; 
+                    console.log(`[PERIPHERALS] 🎯 Processamento do botão ${role} liberado`);
+                }, 1000);
+            }
+        }, { once: false, passive: false }); // ✅ Garante que o listener não seja removido
 
         // Ajusta labels/ícones iniciais
         if (role === 'ovoscopia') {
@@ -4339,6 +4684,307 @@ if (document.readyState === 'loading') {
     setTimeout(initPeripherals, 0);
 }
 
+// ================== Sincronização dos Botões de Periféricos com o PLC ==================
+let peripheralsSyncInterval = null;
+let LAST_WRITE_PERIPHERALS_TS = 0;
+const WRITE_PERIPHERALS_COOLDOWN_MS = 15000; // 15 segundos de cooldown após escrita (cobre período de validação de 10s + margem de segurança)
+// Mapa de botões aguardando confirmação (não devem ser atualizados pela sincronização)
+const PENDING_CONFIRMATION = new Map();
+// ✅ PROTEÇÃO: Lock global para evitar escritas simultâneas na mesma WORD
+const WRITE_LOCKS = new Map(); // tagName -> timestamp
+const WRITE_LOCK_TIMEOUT_MS = 6000; // 6 segundos de lock por escrita (aumentado para evitar race conditions)
+// ✅ PROTEÇÃO: Flag para evitar múltiplas sincronizações simultâneas
+let isSyncing = false;
+// ✅ PROTEÇÃO: Mapa de roles que compartilham a mesma WORD (para bloquear sincronização de todos quando um é clicado)
+const WORD_SHARED_ROLES = {
+    'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03': ['ovoscopia', 'crack'],
+    'XLCLASS_DB03_PERIFERICOS_ALARMES_CMD': ['nebulizador-oleo', 'lampadas-uv'],
+    'XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS': ['escova-manual', 'power-switch']
+};
+
+// Função para sincronizar o estado dos botões de periféricos com o PLC
+async function syncPeripheralsFromPLC() {
+    // ✅ PROTEÇÃO: Evita múltiplas sincronizações simultâneas
+    if (isSyncing) {
+        console.log('[PERIPHERALS-SYNC] ⏸️ Sincronização já em andamento, ignorando');
+        return;
+    }
+    
+    // Não sincroniza se acabou de escrever (evita sobrescrever escrita do usuário)
+    const nowTs = Date.now();
+    if (nowTs - (LAST_WRITE_PERIPHERALS_TS || 0) < WRITE_PERIPHERALS_COOLDOWN_MS) {
+        console.log('[PERIPHERALS-SYNC] ⏸️ Cooldown ativo, ignorando sincronização');
+        return;
+    }
+    
+    // ✅ PROTEÇÃO CRÍTICA: Se HÁ QUALQUER botão aguardando confirmação, NÃO sincroniza
+    // Isso é ESSENCIAL para evitar que a sincronização sobrescreva mudanças do usuário
+    if (PENDING_CONFIRMATION.size > 0) {
+        const pendingList = Array.from(PENDING_CONFIRMATION.keys());
+        const oldestPending = Math.min(...Array.from(PENDING_CONFIRMATION.values()));
+        const age = nowTs - oldestPending;
+        console.log(`[PERIPHERALS-SYNC] ⏸️ Botões aguardando confirmação (${pendingList.join(', ')}), ignorando sincronização. Idade: ${Math.round(age/1000)}s`);
+        return;
+    }
+    
+    // Remove botões que já passaram do cooldown do mapa de pendentes (com margem de segurança)
+    for (const [role, timestamp] of PENDING_CONFIRMATION.entries()) {
+        // Remove apenas se passou do cooldown + margem de segurança (5 segundos)
+        if (nowTs - timestamp >= (WRITE_PERIPHERALS_COOLDOWN_MS + 5000)) {
+            console.log(`[PERIPHERALS-SYNC] 🗑️ Removendo ${role} do PENDING_CONFIRMATION (passou do cooldown)`);
+            PENDING_CONFIRMATION.delete(role);
+        }
+    }
+    
+    // Remove locks expirados
+    for (const [tagName, lockTime] of WRITE_LOCKS.entries()) {
+        if (nowTs - lockTime >= WRITE_LOCK_TIMEOUT_MS) {
+            WRITE_LOCKS.delete(tagName);
+        }
+    }
+    
+    isSyncing = true;
+    
+    try {
+        // Lê todas as tags necessárias de uma vez
+        const tagsToRead = [
+            'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03',  // Para Ovoscopia (bit 8) e Crack (bit 9)
+            'XLCLASS_DB03_PERIFERICOS_ALARMES_CMD',      // Para Nebulizador (bit 8) e Lâmpada (bit 9)
+            'XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS'       // Para Escova e Ligado
+        ];
+        
+        const names = tagsToRead.join(',');
+        const response = await fetch(`/api/read_tags?names=${encodeURIComponent(names)}`, { cache: 'no-store' });
+        const data = await response.json();
+        
+        if (!data || !data.ok || !data.values) {
+            console.warn('[PERIPHERALS-SYNC] Erro ao ler tags do PLC');
+            return;
+        }
+        
+        const values = data.values;
+        
+        // ✅ PROTEÇÃO CRÍTICA: Verifica novamente ANTES de atualizar qualquer botão
+        // Isso evita race conditions onde PENDING_CONFIRMATION pode ter sido adicionado após a verificação inicial
+        if (PENDING_CONFIRMATION.size > 0) {
+            console.log('[PERIPHERALS-SYNC] ⏸️ PENDING_CONFIRMATION detectado durante atualização, abortando sincronização');
+            return;
+        }
+        
+        // ✅ CORREÇÃO: Atualiza cada botão individualmente e verifica se está pendente antes de atualizar
+        // Atualiza botão Ovoscopia/Magna Visio (bit 8 de COMANDO_STATUS_03)
+        const status03 = Number(values['XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03'] ?? 0) >>> 0;
+        const ovoscopiaBit8 = ((status03 >>> 8) & 1) === 1;
+        // ✅ Só atualiza se não estiver aguardando confirmação E se nenhum botão da mesma WORD estiver pendente
+        const status03Roles = WORD_SHARED_ROLES['XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03'] || [];
+        const status03HasPending = status03Roles.some(role => PENDING_CONFIRMATION.has(role));
+        if (!PENDING_CONFIRMATION.has('ovoscopia') && !status03HasPending) {
+            updatePeripheralButton('ovoscopia', ovoscopiaBit8, ovoscopiaBit8 ? 'Magna Visio' : 'Ovoscopia');
+        } else {
+            console.log(`[PERIPHERALS-SYNC] ⏸️ Botão ovoscopia não atualizado (pendente: ${status03HasPending})`);
+        }
+        
+        // Atualiza botão Crack (bit 9 de COMANDO_STATUS_03)
+        const crackBit9 = ((status03 >>> 9) & 1) === 1;
+        // ✅ Só atualiza se não estiver aguardando confirmação E se nenhum botão da mesma WORD estiver pendente
+        if (!PENDING_CONFIRMATION.has('crack') && !status03HasPending) {
+            updatePeripheralButton('crack', crackBit9, 'Crack');
+        } else {
+            console.log(`[PERIPHERALS-SYNC] ⏸️ Botão crack não atualizado (pendente: ${status03HasPending})`);
+        }
+        
+        // Atualiza botão Nebulizador (bit 8 de PERIFERICOS_ALARMES_CMD)
+        const perifericosCmd = Number(values['XLCLASS_DB03_PERIFERICOS_ALARMES_CMD'] ?? 0) >>> 0;
+        const nebulizadorBit8 = ((perifericosCmd >>> 8) & 1) === 1;
+        // ✅ Só atualiza se não estiver aguardando confirmação E se nenhum botão da mesma WORD estiver pendente
+        const perifericosRoles = WORD_SHARED_ROLES['XLCLASS_DB03_PERIFERICOS_ALARMES_CMD'] || [];
+        const perifericosHasPending = perifericosRoles.some(role => PENDING_CONFIRMATION.has(role));
+        if (!PENDING_CONFIRMATION.has('nebulizador-oleo') && !perifericosHasPending) {
+            updatePeripheralButton('nebulizador-oleo', nebulizadorBit8, 'Nebulizador Óleo');
+        } else {
+            console.log(`[PERIPHERALS-SYNC] ⏸️ Botão nebulizador-oleo não atualizado (pendente: ${perifericosHasPending})`);
+        }
+        
+        // Atualiza botão Lâmpada (bit 9 de PERIFERICOS_ALARMES_CMD)
+        const lampadaBit9 = ((perifericosCmd >>> 9) & 1) === 1;
+        // ✅ Só atualiza se não estiver aguardando confirmação E se nenhum botão da mesma WORD estiver pendente
+        if (!PENDING_CONFIRMATION.has('lampadas-uv') && !perifericosHasPending) {
+            updatePeripheralButton('lampadas-uv', lampadaBit9, 'Lâmpadas UV');
+        } else {
+            console.log(`[PERIPHERALS-SYNC] ⏸️ Botão lampadas-uv não atualizado (pendente: ${perifericosHasPending})`);
+        }
+        
+        // Atualiza botão Escova (valor direto de PARTIDA_DIRETA_COMANDOS)
+        const partidaDireta = Number(values['XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS'] ?? 0) >>> 0;
+        const escovaAuto = partidaDireta === 1;
+        // ✅ Só atualiza se não estiver aguardando confirmação E se nenhum botão da mesma WORD estiver pendente
+        const partidaDiretaRoles = WORD_SHARED_ROLES['XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS'] || [];
+        const partidaDiretaHasPending = partidaDiretaRoles.some(role => PENDING_CONFIRMATION.has(role));
+        if (!PENDING_CONFIRMATION.has('escova-manual') && !partidaDiretaHasPending) {
+            updatePeripheralButton('escova-manual', escovaAuto, escovaAuto ? 'Escova Automática' : 'Escova Manual');
+        } else {
+            console.log(`[PERIPHERALS-SYNC] ⏸️ Botão escova-manual não atualizado (pendente: ${partidaDiretaHasPending})`);
+        }
+        
+        // Atualiza botão Ligado (valor direto de PARTIDA_DIRETA_COMANDOS - mesmo valor da escova)
+        // ✅ Não atualiza se está aguardando confirmação OU se algum botão da mesma WORD estiver pendente
+        if (!PENDING_CONFIRMATION.has('power-switch') && !partidaDiretaHasPending) {
+            const powerBtn = document.getElementById('btn-power-toggle');
+            if (powerBtn) {
+                if (partidaDireta === 1) {
+                    powerBtn.classList.add('power-on');
+                } else {
+                    powerBtn.classList.remove('power-on');
+                }
+            }
+        } else {
+            console.log(`[PERIPHERALS-SYNC] ⏸️ Botão power-switch não atualizado (pendente: ${partidaDiretaHasPending})`);
+        }
+        
+        // ✅ NÃO atualiza estado persistido se há botões aguardando confirmação
+        // Isso evita que a sincronização sobrescreva mudanças do usuário
+        if (PENDING_CONFIRMATION.size === 0) {
+            const state = loadPeripheralsState();
+            state['ovoscopia'] = ovoscopiaBit8;
+            state['crack'] = crackBit9;
+            state['nebulizador-oleo'] = nebulizadorBit8;
+            state['lampadas-uv'] = lampadaBit9;
+            state['escova-manual'] = escovaAuto;
+            savePeripheralsState(state);
+        } else {
+            console.log('[PERIPHERALS-SYNC] ⏸️ Não atualizando estado persistido (há botões aguardando confirmação)');
+        }
+        
+    } catch (e) {
+        console.error('[PERIPHERALS-SYNC] Erro ao sincronizar periféricos:', e);
+    } finally {
+        // ✅ Libera flag de sincronização
+        isSyncing = false;
+    }
+}
+
+// Função auxiliar para atualizar o estado visual de um botão de periférico
+function updatePeripheralButton(role, enabled, labelText) {
+    // ✅ PROTEÇÃO CRÍTICA: Não atualiza se o botão está aguardando confirmação
+    if (PENDING_CONFIRMATION.has(role)) {
+        console.log(`[PERIPHERALS-SYNC] ⏸️ Botão ${role} aguardando confirmação, ignorando sincronização`);
+        return;
+    }
+    
+    // ✅ PROTEÇÃO ADICIONAL: Verifica se algum botão da mesma WORD está pendente
+    let wordTag = null;
+    for (const [tag, roles] of Object.entries(WORD_SHARED_ROLES)) {
+        if (roles.includes(role)) {
+            wordTag = tag;
+            break;
+        }
+    }
+    if (wordTag) {
+        const sharedRoles = WORD_SHARED_ROLES[wordTag] || [];
+        const hasPending = sharedRoles.some(r => PENDING_CONFIRMATION.has(r));
+        if (hasPending) {
+            console.log(`[PERIPHERALS-SYNC] ⏸️ Botão ${role} não atualizado (outro botão da mesma WORD está pendente)`);
+            return;
+        }
+    }
+    
+    // ✅ PROTEÇÃO: Busca o botão específico pelo data-role (não por querySelector genérico)
+    const btn = document.querySelector(`[data-role="${role}"]`);
+    if (!btn) {
+        console.warn(`[PERIPHERALS-SYNC] ⚠️ Botão com role "${role}" não encontrado`);
+        return;
+    }
+    
+    // ✅ PROTEÇÃO: Verifica se o botão já está no estado desejado (evita atualizações desnecessárias)
+    const currentState = getPeripheralButtonState(btn, role);
+    if (currentState === enabled) {
+        console.log(`[PERIPHERALS-SYNC] ✅ Botão ${role} já está no estado ${enabled ? 'habilitado' : 'desabilitado'}, ignorando atualização`);
+        return;
+    }
+    
+    console.log(`[PERIPHERALS-SYNC] 🔄 Atualizando botão ${role} para ${enabled ? 'habilitado' : 'desabilitado'}`);
+    
+    const labelMap = {
+        'ovoscopia': 'label-ovoscopia',
+        'crack': 'label-crack',
+        'nebulizador-oleo': 'label-nebulizador-oleo',
+        'lampadas-uv': 'label-lampadas-uv',
+        'escova-manual': 'label-escova-manual'
+    };
+    
+    const labelId = labelMap[role];
+    if (labelId) {
+        const label = document.getElementById(labelId);
+        if (label) label.textContent = labelText;
+    }
+    
+    // Atualiza a imagem do botão
+    let imageSrc;
+    if (role === 'ovoscopia' || role === 'escova-manual') {
+        // Botões que alternam entre dois estados (azul/verde)
+        imageSrc = enabled
+            ? '/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png'
+            : '/static/images/pages/icons/comandos/icone_habilita_azul.png';
+    } else {
+        // Botões habilitado/desabilitado (verde/cinza)
+        imageSrc = enabled
+            ? '/static/images/pages/icons/comandos/icone_habilita_verde_invertido.png'
+            : '/static/images/pages/icons/comandos/icone_habilita_desabilitado.png';
+    }
+    
+    btn.style.setProperty('background', `url(${imageSrc}) center/contain no-repeat`, 'important');
+}
+
+// Função auxiliar para obter o estado atual de um botão de periférico
+function getPeripheralButtonState(btn, role) {
+    if (!btn) return null;
+    
+    // Verifica o estado baseado na imagem de fundo ou classe
+    const bgImage = btn.style.backgroundImage || '';
+    const isGreen = bgImage.includes('icone_habilita_verde_invertido');
+    const isBlue = bgImage.includes('icone_habilita_azul');
+    const isDisabled = bgImage.includes('icone_habilita_desabilitado');
+    
+    // Para botões que alternam entre azul/verde (ovoscopia, escova)
+    if (role === 'ovoscopia' || role === 'escova-manual') {
+        return isGreen; // Verde = habilitado, Azul = desabilitado
+    }
+    
+    // Para botões habilitado/desabilitado (crack, nebulizador, lâmpada)
+    return isGreen; // Verde = habilitado, Cinza = desabilitado
+}
+
+// Inicia a sincronização periódica dos periféricos
+function startPeripheralsSync() {
+    // Sincroniza imediatamente
+    syncPeripheralsFromPLC();
+    
+    // Sincroniza a cada 3 segundos (aumentado para evitar conflito com escrita e validação)
+    if (peripheralsSyncInterval) {
+        clearInterval(peripheralsSyncInterval);
+    }
+    peripheralsSyncInterval = setInterval(syncPeripheralsFromPLC, 3000);
+    console.log('[PERIPHERALS-SYNC] Sincronização iniciada (intervalo: 3s, cooldown: 15s, validação: 10s)');
+}
+
+// Para a sincronização periódica
+function stopPeripheralsSync() {
+    if (peripheralsSyncInterval) {
+        clearInterval(peripheralsSyncInterval);
+        peripheralsSyncInterval = null;
+        console.log('[PERIPHERALS-SYNC] Sincronização parada');
+    }
+}
+
+// Inicia a sincronização quando o DOM estiver pronto
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(startPeripheralsSync, 1000); // Aguarda 1s para garantir que initPeripherals já rodou
+    });
+} else {
+    setTimeout(startPeripheralsSync, 1000);
+}
+
 // ================== Botão Liga/Desliga no Grid de Periféricos ==================
 const POWER_STATUS_TAG_GRID = 'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_01';
 const POWER_STATUS_BIT_GRID = 12; // bit 12
@@ -4378,14 +5024,15 @@ async function writeWordsGrid(payload) {
     }
 }
 
-// Atualiza o botão baseado no status do PLC
+// Atualiza o botão baseado no status do PLC (função mantida para compatibilidade, mas não usada mais)
 function updatePowerButtonsFromStatusGrid(rawStatus) {
     try {
         const powerBtn = document.getElementById('btn-power-toggle');
         if (!powerBtn) {
             return;
         }
-        const isOn = (((Number(rawStatus) >>> 0) >>> POWER_STATUS_BIT_GRID) & 1) === 1;
+        // Agora usa o valor direto da tag (1 = ligado, 0 = desligado)
+        const isOn = (Number(rawStatus) >>> 0) === 1;
         if (isOn) {
             powerBtn.classList.add('power-on');
         } else {
@@ -4396,19 +5043,422 @@ function updatePowerButtonsFromStatusGrid(rawStatus) {
     }
 }
 
+// Função auxiliar para validar se um bit foi realmente alterado no PLC (após delay)
+async function validateBitChangeDelayed(tagName, bit, expectedValue, delayMs = 10000) {
+    // Aguarda o delay antes de validar
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+    
+    try {
+        const readResponse = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { cache: 'no-store' });
+        const readData = await readResponse.json();
+        
+        if (readData && readData.ok && readData.values && readData.values[tagName] !== undefined) {
+            const wordValue = Number(readData.values[tagName]) >>> 0;
+            const bitValue = ((wordValue >>> bit) & 1) === 1;
+            const expectedBool = expectedValue === 1;
+            
+            if (bitValue === expectedBool) {
+                console.log(`[PERIPHERALS] ✅ Validação confirmada após ${delayMs}ms: Bit ${bit} da tag ${tagName} está ${expectedBool ? 'setado' : 'limpo'}`);
+                return true;
+            } else {
+                console.warn(`[PERIPHERALS] ⚠️ Validação falhou após ${delayMs}ms: Bit ${bit} não refletiu a mudança. Esperado: ${expectedBool ? 1 : 0}, Atual: ${bitValue ? 1 : 0}`);
+                return false;
+            }
+        }
+    } catch (e) {
+        console.warn(`[PERIPHERALS] ⚠️ Erro ao validar bit ${bit} após ${delayMs}ms:`, e);
+        return false;
+    }
+    
+    return false;
+}
+
+// Função auxiliar para validar se uma tag foi realmente alterada no PLC (após delay)
+async function validateTagChangeDelayed(tagName, expectedValue, delayMs = 10000) {
+    // Aguarda o delay antes de validar
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+    
+    try {
+        const readResponse = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { cache: 'no-store' });
+        const readData = await readResponse.json();
+        
+        if (readData && readData.ok && readData.values && readData.values[tagName] !== undefined) {
+            const currentValue = Number(readData.values[tagName]) || 0;
+            
+            if (currentValue === expectedValue) {
+                console.log(`[PERIPHERALS] ✅ Validação confirmada após ${delayMs}ms: Tag ${tagName} está ${expectedValue}`);
+                return true;
+            } else {
+                console.warn(`[PERIPHERALS] ⚠️ Validação falhou após ${delayMs}ms: Tag ${tagName} não refletiu a mudança. Esperado: ${expectedValue}, Atual: ${currentValue}`);
+                return false;
+            }
+        }
+    } catch (e) {
+        console.warn(`[PERIPHERALS] ⚠️ Erro ao validar tag ${tagName} após ${delayMs}ms:`, e);
+        return false;
+    }
+    
+    return false;
+}
+
+// Função auxiliar para escrever um bit específico em uma tag WORD
+async function writeWordBit(tagName, bit, value) {
+    try {
+        // ✅ PROTEÇÃO ROBUSTA: Aguarda até que o lock seja liberado (evita race conditions)
+        const maxWaitTime = 10000; // Máximo de 5 segundos esperando
+        const startWait = Date.now();
+        while (true) {
+        const nowTs = Date.now();
+        const lockTime = WRITE_LOCKS.get(tagName);
+            
+            if (!lockTime || (nowTs - lockTime) >= WRITE_LOCK_TIMEOUT_MS) {
+                // Lock não existe ou expirou, podemos adquirir
+                break;
+            }
+            
+            // Lock ainda está ativo, aguarda
+            if (nowTs - startWait >= maxWaitTime) {
+                console.warn(`[PERIPHERALS] ⚠️ Timeout aguardando lock da tag ${tagName}, cancelando escrita`);
+                return false;
+            }
+            
+            console.log(`[PERIPHERALS] ⏸️ Tag ${tagName} está bloqueada, aguardando liberação... (${Math.round((nowTs - lockTime) / 1000)}s/${WRITE_LOCK_TIMEOUT_MS / 1000}s)`);
+            await new Promise(resolve => setTimeout(resolve, 200));
+        }
+        
+        // ✅ Adquire lock na tag (CRÍTICO: garante exclusividade)
+        const lockTimestamp = Date.now();
+        WRITE_LOCKS.set(tagName, lockTimestamp);
+        console.log(`[PERIPHERALS] 🔒 Lock adquirido para tag ${tagName} - ESCREVENDO APENAS BIT ${bit} = ${value ? 1 : 0}`);
+        
+        // ✅ CORREÇÃO: Aguarda um delay maior após adquirir o lock para garantir que outras escritas terminaram
+        // Este delay é crítico para evitar que requisições simultâneas cheguem ao backend
+        await new Promise(resolve => setTimeout(resolve, 600));
+        
+        // ✅ CORREÇÃO CRÍTICA: Re-lê o valor atual ANTES de escrever (pode ter mudado enquanto aguardava)
+        console.log(`[PERIPHERALS] 📖 Lendo valor atual da tag ${tagName} antes de escrever bit ${bit}`);
+        const readResponse = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { cache: 'no-store' });
+        const readData = await readResponse.json();
+        
+        let currentWordValue = null;
+        if (readData && readData.ok && readData.values && readData.values[tagName] !== undefined) {
+            currentWordValue = Number(readData.values[tagName]) >>> 0;
+            console.log(`[PERIPHERALS] 📖 Valor atual da tag ${tagName}: ${currentWordValue} (0x${currentWordValue.toString(16).toUpperCase()})`);
+            const currentBitValue = ((currentWordValue >>> bit) & 1) === 1;
+            console.log(`[PERIPHERALS] 📖 Bit ${bit} atual: ${currentBitValue ? 1 : 0}, desejado: ${value ? 1 : 0}`);
+            
+            // Se o bit já está no valor desejado, não precisa escrever
+            if (currentBitValue === (value === 1)) {
+                console.log(`[PERIPHERALS] ✅ Bit ${bit} já está no valor desejado (${value ? 1 : 0}), não precisa escrever`);
+                WRITE_LOCKS.delete(tagName);
+                return true;
+            }
+            
+            // ✅ Verifica se outros bits estão setados e loga para debug
+            const otherBitsSet = [];
+            for (let i = 0; i < 16; i++) {
+                if (i !== bit && ((currentWordValue >>> i) & 1) === 1) {
+                    otherBitsSet.push(i);
+                }
+            }
+            if (otherBitsSet.length > 0) {
+                console.log(`[PERIPHERALS] 📖 Outros bits setados na WORD: ${otherBitsSet.join(', ')} (serão preservados)`);
+            }
+        } else {
+            console.warn(`[PERIPHERALS] ⚠️ Não foi possível ler valor atual da tag ${tagName}, backend fará read-modify-write`);
+        }
+        
+        console.log(`[PERIPHERALS] 🔵 ESCREVENDO APENAS BIT ${bit} da tag ${tagName} = ${value ? 1 : 0}`);
+        console.log(`[PERIPHERALS] 🔵 VALOR ATUAL DA WORD: ${currentWordValue !== null ? '0x' + currentWordValue.toString(16).toUpperCase().padStart(4, '0') : 'desconhecido'}`);
+        console.log(`[PERIPHERALS] 🔵 BITS SETADOS ANTES: ${currentWordValue !== null ? Array.from({length: 16}, (_, i) => ((currentWordValue >>> i) & 1) === 1 ? i : null).filter(x => x !== null).join(', ') : 'desconhecido'}`);
+        
+        // ✅ VERIFICAÇÃO CRÍTICA: Garante que apenas este bit será alterado
+        if (currentWordValue !== null) {
+            const expectedNewValue = value === 1 
+                ? (currentWordValue | (1 << bit)) & 0xFFFF
+                : (currentWordValue & ~(1 << bit)) & 0xFFFF;
+            console.log(`[PERIPHERALS] 🔵 VALOR ESPERADO APÓS ESCRITA: 0x${expectedNewValue.toString(16).toUpperCase().padStart(4, '0')}`);
+            console.log(`[PERIPHERALS] 🔵 BITS QUE DEVEM ESTAR SETADOS APÓS: ${Array.from({length: 16}, (_, i) => ((expectedNewValue >>> i) & 1) === 1 ? i : null).filter(x => x !== null).join(', ')}`);
+        }
+        
+        const payload = {
+            name: tagName,
+            bit: bit,
+            mode: 'state',
+            value: value ? 1 : 0,
+            pure: false // ✅ CRÍTICO: Garante read-modify-write para preservar outros bits
+        };
+        console.log(`[PERIPHERALS] 📤 Payload enviado:`, JSON.stringify(payload));
+        
+        const response = await fetch('/api/write_word_bit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        console.log(`[PERIPHERALS] 📥 Status da resposta:`, response.status, response.statusText);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[PERIPHERALS] ❌ Erro HTTP ${response.status}:`, errorText);
+            WRITE_LOCKS.delete(tagName);
+            return false;
+        }
+        
+        const data = await response.json();
+        console.log(`[PERIPHERALS] 📥 Resposta completa:`, data);
+        
+        if (data.ok) {
+            const writtenValue = data.written !== undefined ? Number(data.written) >>> 0 : null;
+            console.log(`[PERIPHERALS] ✅ Resposta do backend: Bit ${bit} da tag ${tagName} escrito. Valor retornado: ${writtenValue !== null ? writtenValue.toString(16) : 'null'}`);
+            
+            // ✅ VERIFICAÇÃO CRÍTICA: Aguarda um pouco e re-lê para confirmar que APENAS o bit desejado mudou
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const verifyResponse = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { cache: 'no-store' });
+            const verifyData = await verifyResponse.json();
+            
+            if (verifyData && verifyData.ok && verifyData.values && verifyData.values[tagName] !== undefined) {
+                const verifiedValue = Number(verifyData.values[tagName]) >>> 0;
+                const verifiedBitValue = ((verifiedValue >>> bit) & 1) === 1;
+                const expectedBitValue = value === 1;
+                
+                console.log(`[PERIPHERALS] 🔍 Verificação pós-escrita: WORD=${verifiedValue.toString(16)}, Bit ${bit}=${verifiedBitValue ? 1 : 0}, Esperado=${expectedBitValue ? 1 : 0}`);
+                
+                // Verifica se o bit está correto
+                if (verifiedBitValue !== expectedBitValue) {
+                    console.error(`[PERIPHERALS] ❌ ERRO CRÍTICO: Bit ${bit} não está no valor esperado após escrita! Esperado: ${expectedBitValue ? 1 : 0}, Atual: ${verifiedBitValue ? 1 : 0}`);
+                    WRITE_LOCKS.delete(tagName);
+                    return false;
+                }
+                
+                // ✅ Verifica se outros bits foram preservados (comparando com o valor que lemos antes)
+                if (currentWordValue !== null) {
+                    const preservedBits = [];
+                    const changedBits = [];
+                    const unexpectedBits = [];
+                    
+                    for (let i = 0; i < 16; i++) {
+                        const wasSet = ((currentWordValue >>> i) & 1) === 1;
+                        const isSet = ((verifiedValue >>> i) & 1) === 1;
+                        
+                        if (i !== bit) {
+                            if (wasSet && isSet) {
+                                preservedBits.push(i);
+                            } else if (wasSet && !isSet) {
+                                changedBits.push(i); // ⚠️ Bit foi limpo quando não deveria
+                            } else if (!wasSet && isSet) {
+                                unexpectedBits.push(i); // ⚠️ Bit foi setado quando não deveria
+                            }
+                        }
+                    }
+                    
+                    if (preservedBits.length > 0) {
+                        console.log(`[PERIPHERALS] ✅ Bits preservados: ${preservedBits.join(', ')}`);
+                    }
+                    
+                    // Se algum bit foi alterado incorretamente, tenta corrigir
+                    if (changedBits.length > 0 || unexpectedBits.length > 0) {
+                        console.error(`[PERIPHERALS] ❌ ERRO CRÍTICO: Bits alterados incorretamente durante escrita do bit ${bit}!`);
+                        console.error(`[PERIPHERALS] ❌ Valor antes: 0x${currentWordValue.toString(16)}, Valor depois: 0x${verifiedValue.toString(16)}`);
+                        if (changedBits.length > 0) {
+                            console.error(`[PERIPHERALS] ❌ Bits que foram limpos incorretamente: ${changedBits.join(', ')}`);
+                        }
+                        if (unexpectedBits.length > 0) {
+                            console.error(`[PERIPHERALS] ❌ Bits que foram setados incorretamente: ${unexpectedBits.join(', ')}`);
+                        }
+                        console.error(`[PERIPHERALS] ❌ ATENÇÃO: Apenas o bit ${bit} deveria ter sido alterado!`);
+                        
+                        // Tenta restaurar o valor correto: restaura bits que foram alterados incorretamente
+                        // Usa o valor original que lemos antes da escrita como base
+                        let correctedValue = currentWordValue;
+                        
+                        // Aplica apenas a mudança do bit desejado
+                        if (value === 1) {
+                            correctedValue = (correctedValue | (1 << bit)) & 0xFFFF;
+                        } else {
+                            correctedValue = (correctedValue & ~(1 << bit)) & 0xFFFF;
+                        }
+                        
+                        console.log(`[PERIPHERALS] 🔧 Tentando corrigir WORD: ${verifiedValue.toString(16)} -> ${correctedValue.toString(16)}`);
+                        console.log(`[PERIPHERALS] 🔧 Valor original era: ${currentWordValue.toString(16)}, corrigindo para preservar outros bits`);
+                        
+                        // Aguarda um pouco antes de corrigir (para garantir que outras escritas terminaram)
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                        
+                        // Escreve o valor corrigido diretamente na WORD
+                        const correctResponse = await fetch('/api/write_tags', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ [tagName]: correctedValue })
+                        });
+                        
+                        if (correctResponse.ok) {
+                            const correctData = await correctResponse.json();
+                            if (correctData.ok) {
+                                console.log(`[PERIPHERALS] ✅ WORD corrigida com sucesso`);
+                                
+                                // Verifica novamente após correção
+                                await new Promise(resolve => setTimeout(resolve, 200));
+                                const finalVerifyResponse = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { cache: 'no-store' });
+                                const finalVerifyData = await finalVerifyResponse.json();
+                                if (finalVerifyData && finalVerifyData.ok && finalVerifyData.values) {
+                                    const finalValue = Number(finalVerifyData.values[tagName]) >>> 0;
+                                    const finalBitValue = ((finalValue >>> bit) & 1) === 1;
+                                    if (finalBitValue === (value === 1)) {
+                                        console.log(`[PERIPHERALS] ✅ Correção confirmada: bit ${bit} está correto`);
+                                    } else {
+                                        console.error(`[PERIPHERALS] ❌ Correção falhou: bit ${bit} ainda incorreto`);
+                                    }
+                                }
+                            } else {
+                                console.error(`[PERIPHERALS] ❌ Falha ao corrigir WORD:`, correctData.error);
+                            }
+                        } else {
+                            console.error(`[PERIPHERALS] ❌ Erro HTTP ao corrigir WORD:`, correctResponse.status);
+                        }
+                    }
+                }
+            }
+            
+            // ✅ Remove lock após escrita bem-sucedida (após delay maior para garantir que o PLC processou)
+            // Delay aumentado para garantir que não há requisições pendentes
+            setTimeout(() => {
+                WRITE_LOCKS.delete(tagName);
+                console.log(`[PERIPHERALS] 🔓 Lock liberado para tag ${tagName} (bit ${bit})`);
+            }, 1500);
+            return true;
+        } else {
+            console.error(`[PERIPHERALS] ❌ Erro ao escrever bit ${bit} da tag ${tagName}:`, data.error);
+            // ✅ Remove lock em caso de erro
+            WRITE_LOCKS.delete(tagName);
+            return false;
+        }
+    } catch (e) {
+        console.error(`[PERIPHERALS] ❌ Exceção ao escrever bit ${bit} da tag ${tagName}:`, e);
+        // ✅ Remove lock em caso de exceção
+        WRITE_LOCKS.delete(tagName);
+        return false;
+    }
+}
+
+// Função auxiliar para escrever um valor completo em uma tag
+async function writeTagValue(tagName, value) {
+    try {
+        console.log(`[PERIPHERALS] 🔵 Tentando escrever tag ${tagName} = ${value}`);
+        const payload = { [tagName]: value };
+        console.log(`[PERIPHERALS] 📤 Payload:`, payload);
+        
+        const response = await fetch('/api/write_tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        console.log(`[PERIPHERALS] 📥 Status da resposta:`, response.status, response.statusText);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[PERIPHERALS] ❌ Erro HTTP ${response.status}:`, errorText);
+            return false;
+        }
+        
+        const data = await response.json();
+        console.log(`[PERIPHERALS] 📥 Resposta completa:`, data);
+        
+        if (data.ok) {
+            console.log(`[PERIPHERALS] ✅ Tag ${tagName} escrita com sucesso: ${value}`);
+        } else {
+            console.error(`[PERIPHERALS] ❌ Erro ao escrever tag ${tagName}:`, data.error);
+        }
+        return data.ok;
+    } catch (e) {
+        console.error(`[PERIPHERALS] ❌ Exceção ao escrever tag ${tagName}:`, e);
+        return false;
+    }
+}
+
 // Alterna o bit de liga/desliga
 async function togglePowerBitGrid() {
     try {
-        const current = await readWordsGrid([POWER_STATUS_TAG_GRID]);
-        const v = Number(current[POWER_STATUS_TAG_GRID] ?? 0) >>> 0;
-        const isOn = (((v >>> POWER_STATUS_BIT_GRID) & 1) === 1);
-        const next = setBit(v, POWER_STATUS_BIT_GRID, !isOn) >>> 0;
-        const ok = await writeWordsGrid({ [POWER_STATUS_TAG_GRID]: next });
-        if (!ok) console.warn('[POWER-GRID] Falha ao escrever bit de liga/desliga');
-        // Atualiza UI imediatamente
-        updatePowerButtonsFromStatusGrid(next);
+        // Escreve no PLC: XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS
+        // Ligado = 1, Desligado = 0
+        const powerBtn = document.getElementById('btn-power-toggle');
+        if (!powerBtn) return;
+        
+        const isOn = powerBtn.classList.contains('power-on');
+        const wasOn = isOn;
+        const newValue = isOn ? 0 : 1;
+        
+        // ✅ CRÍTICO: Marca como aguardando confirmação ANTES de atualizar UI
+        // Isso garante que a sincronização não interfira
+        PENDING_CONFIRMATION.set('power-switch', Date.now());
+        console.log(`[POWER-GRID] 🔒 PENDING_CONFIRMATION setado para power-switch - sincronização bloqueada`);
+        
+        // Marca timestamp da escrita
+        LAST_WRITE_PERIPHERALS_TS = Date.now();
+        
+        // ✅ Atualiza UI IMEDIATAMENTE (feedback visual instantâneo)
+        if (newValue === 1) {
+            powerBtn.classList.add('power-on');
+        } else {
+            powerBtn.classList.remove('power-on');
+        }
+        
+        console.log(`[POWER-GRID] 🖱️ Botão Ligado clicado! Estado: ${newValue === 1 ? 'Ligado (1)' : 'Desligado (0)'}`);
+        
+        // ✅ CRÍTICO: Escreve no PLC de forma síncrona (aguarda conclusão antes de continuar)
+        // Isso garante que apenas uma escrita aconteça por vez
+        (async () => {
+            try {
+                const ok = await writeTagValue('XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS', newValue);
+                if (!ok) {
+                    console.warn('[POWER-GRID] ⚠️ Falha ao escrever no PLC, revertendo estado');
+                    // Reverte imediatamente se falhou a escrita
+                    if (wasOn) {
+                        powerBtn.classList.add('power-on');
+                    } else {
+                        powerBtn.classList.remove('power-on');
+                    }
+                    PENDING_CONFIRMATION.delete('power-switch');
+                    return;
+                }
+                
+                // ✅ Valida após 10 segundos (PENDING_CONFIRMATION mantido durante todo este período)
+                console.log(`[POWER-GRID] ⏳ Iniciando validação de 10s para power-switch - PENDING_CONFIRMATION ativo`);
+                const validated = await validateTagChangeDelayed('XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS', newValue, 10000);
+                console.log(`[POWER-GRID] ⏳ Validação concluída para power-switch - resultado: ${validated}`);
+                
+                if (!validated) {
+                    console.warn('[POWER-GRID] ⚠️ Mudança não foi validada no PLC após 10s, revertendo estado');
+                    // Reverte o estado visual
+                    if (wasOn) {
+                        powerBtn.classList.add('power-on');
+                    } else {
+                        powerBtn.classList.remove('power-on');
+                    }
+                } else {
+                    console.log('[POWER-GRID] ✅ Mudança validada no PLC após 10s');
+                }
+                
+                // ✅ Remove do mapa de pendentes APENAS após validação completa
+                await new Promise(resolve => setTimeout(resolve, 500));
+                console.log(`[POWER-GRID] 🔓 Removendo power-switch do PENDING_CONFIRMATION após validação`);
+                PENDING_CONFIRMATION.delete('power-switch');
+                // Agenda sincronização para confirmar o estado (agora pode sincronizar)
+                setTimeout(syncPeripheralsFromPLC, 200);
+            } catch (error) {
+                console.error('[POWER-GRID] ❌ Erro ao processar escrita:', error);
+                if (wasOn) {
+                    powerBtn.classList.add('power-on');
+                } else {
+                    powerBtn.classList.remove('power-on');
+                }
+                PENDING_CONFIRMATION.delete('power-switch');
+            }
+        })();
     } catch (e) {
         console.error('[POWER-GRID] Erro ao alternar liga/desliga:', e);
+        PENDING_CONFIRMATION.delete('power-switch');
     }
 }
 
@@ -4463,8 +5513,10 @@ function initPowerSwitchGrid() {
 // Sincroniza o estado do botão com o PLC
 async function syncPowerSwitchFromPLC() {
     try {
-        const current = await readWordsGrid([POWER_STATUS_TAG_GRID]);
-        const rawStatus = Number(current[POWER_STATUS_TAG_GRID] ?? 0) >>> 0;
+        // Lê o valor da tag XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS
+        const current = await readWordsGrid(['XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS']);
+        const rawStatus = Number(current['XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS'] ?? 0) >>> 0;
+        // Se o valor for 1, está ligado; se for 0, está desligado
         updatePowerButtonsFromStatusGrid(rawStatus);
     } catch (e) {
         console.error('[POWER-GRID] Erro ao sincronizar estado do PLC:', e);

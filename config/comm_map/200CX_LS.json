@@ -1,0 +1,9 @@
+{
+  "_format": "grouped_by_db",
+  "_version": "1.0",
+  "_plc_ip": "100.20.110.10",
+  "_plc_type": "block_reader",
+  "_rack": 0,
+  "_slot": 1,
+  "_sections": {}
+}

@@ -96,16 +96,52 @@
       </button>
     </div>
 
-    <!-- Modal de seleção de máquina -->
+    <!-- Modal de parâmetros -->
     <div id="machine-modal" class="modal hidden" style="z-index:20001">
       <div class="modal-content">
-        <h3>Selecione a máquina</h3>
-        <select id="machine-select" style="width:100%; padding:8px; margin:8px 0"></select>
-        <div style="display:flex; gap:8px; justify-content:flex-end;">
-          <button id="btn-confirm-machine" style="padding:8px 12px">Confirmar</button>
-          <button id="btn-cancel-machine" style="padding:8px 12px">Cancelar</button>
+        <h3>Parâmetros</h3>
+        <label for="machine-select" style="display:block; margin-bottom:8px; font-weight:600; color:#495057;">Seleção de máquina:</label>
+        <select id="machine-select" style="width:100%; padding:12px 16px; margin:8px 0 20px 0; border:2px solid #dee2e6; border-radius:8px; font-size:16px; background:white; color:#495057; transition:border-color 0.3s ease;"></select>
+        
+        <label for="embaladora-quantity" style="display:block; margin-bottom:8px; font-weight:600; color:#495057;">Quantidade de embaladora:</label>
+        <select id="embaladora-quantity">
+          <option value="6">6</option>
+          <option value="14">14</option>
+          <option value="16">16</option>
+          <option value="24">24</option>
+        </select>
+        
+        <div style="margin:20px 0; padding-top:20px; border-top:2px solid #dee2e6;">
+          <label style="display:block; margin-bottom:12px; font-weight:600; color:#495057;">Visibilidade de campos no supervisório:</label>
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <label style="display:flex; align-items:center; cursor:pointer; padding:8px; border-radius:6px; transition:background-color 0.2s ease;" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+              <input type="checkbox" id="checkbox-magna-ovoscopia" style="margin-right:10px; width:20px; height:20px; cursor:pointer; accent-color:#007bff;">
+              <span style="font-size:15px; color:#343a40;">Magna Visio/Ovoscopia</span>
+            </label>
+            <label style="display:flex; align-items:center; cursor:pointer; padding:8px; border-radius:6px; transition:background-color 0.2s ease;" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+              <input type="checkbox" id="checkbox-crack" style="margin-right:10px; width:20px; height:20px; cursor:pointer; accent-color:#007bff;">
+              <span style="font-size:15px; color:#343a40;">Crack</span>
+            </label>
+            <label style="display:flex; align-items:center; cursor:pointer; padding:8px; border-radius:6px; transition:background-color 0.2s ease;" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+              <input type="checkbox" id="checkbox-nebulizador" style="margin-right:10px; width:20px; height:20px; cursor:pointer; accent-color:#007bff;">
+              <span style="font-size:15px; color:#343a40;">Nebulizador Óleo</span>
+            </label>
+            <label style="display:flex; align-items:center; cursor:pointer; padding:8px; border-radius:6px; transition:background-color 0.2s ease;" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+              <input type="checkbox" id="checkbox-lampada-uv" style="margin-right:10px; width:20px; height:20px; cursor:pointer; accent-color:#007bff;">
+              <span style="font-size:15px; color:#343a40;">Lâmpada UV</span>
+            </label>
+            <label style="display:flex; align-items:center; cursor:pointer; padding:8px; border-radius:6px; transition:background-color 0.2s ease;" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+              <input type="checkbox" id="checkbox-escova" style="margin-right:10px; width:20px; height:20px; cursor:pointer; accent-color:#007bff;">
+              <span style="font-size:15px; color:#343a40;">Escova Manual/Auto</span>
+            </label>
+          </div>
         </div>
-        <div id="machine-modal-status" style="margin-top:8px; font-size:0.9em; color:#666"></div>
+        
+        <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:24px; padding-top:20px; border-top:2px solid #dee2e6;">
+          <button id="btn-confirm-machine" style="padding:12px 24px; background:linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color:white; border:none; border-radius:8px; font-size:16px; font-weight:600; cursor:pointer; transition:all 0.3s ease; min-width:120px; box-shadow:0 2px 8px rgba(40,167,69,0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(40,167,69,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(40,167,69,0.3)'">Confirmar</button>
+          <button id="btn-cancel-machine" style="padding:12px 24px; background:linear-gradient(135deg, #6c757d 0%, #495057 100%); color:white; border:none; border-radius:8px; font-size:16px; font-weight:600; cursor:pointer; transition:all 0.3s ease; min-width:120px; box-shadow:0 2px 8px rgba(108,117,125,0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(108,117,125,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(108,117,125,0.3)'">Cancelar</button>
+        </div>
+        <div id="machine-modal-status" style="margin-top:12px; font-size:0.9em; color:#666; text-align:center;"></div>
       </div>
     </div>
 

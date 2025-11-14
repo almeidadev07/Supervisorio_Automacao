@@ -7,7 +7,7 @@
     "4": "XLCLASS - DB4 - PRINCIPAL EMERGENCIA",
     "6": "XLCLASS - DB6 - AUXILIAR INDEXAÇÃO",
     "7": "XLCLASS - DB7 - INDEX CAP JANELAS",
-    "10": "LS400 - DB10 - VENTILADORES (PLC 100.70.110.10)",
+    "10": "XLCLASS - DB10 - PARTIDA DIRETA",
     "101": "XLCLASS - DB101 - NAO HABILITADA",
     "103": "XLCLASS - DB103 - DRIVES CLASS",
     "104": "XLCLASS - DB104 - INFO DISPOSITIVOS",
@@ -50,12 +50,7 @@
     "3003": "XLCLASS - DB3003 - ESCOVAS ALARMES",
     "3004": "XLCLASS - DB3004 - OVOSCOPIA ALARMES",
     "3005": "XLCLASS - DB3005 - CLASSIFICADORA ALARMES",
-    "3006": "XLCLASS - DB3006 - ESTEIRA DE SAIDA ALARMES",
-    "20": "LS400 - DB20 - ESCOVAS (PLC 100.70.110.10)",
-    "31": "LS400 - DB31 - AQUECEDOR 1 (PLC 100.70.110.10)",
-    "32": "LS400 - DB32 - AQUECEDOR 2 (PLC 100.70.110.10)",
-    "40": "LS400 - DB40 - AUTO LIMPEZA (PLC 100.70.110.10)",
-    "50": "LS400 - DB50 - SUGADOR GOTAS (PLC 100.70.110.10)"
+    "3006": "XLCLASS - DB3006 - ESTEIRA DE SAIDA ALARMES"
   },
   "1": [
     {
@@ -147,6 +142,12 @@
     }
   ],
   "3": [
+    {
+      "name": "XLCLASS_DB03_PERIFERICOS_ALARMES_CMD",
+      "offset": 2,
+      "type": "WORD",
+      "description": "XLCLASS_DB03_PERIFERICOS_ALARMES_CMD"
+    },
     {
       "name": "XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_REAL_IND",
       "offset": 48,
@@ -714,22 +715,10 @@
       "description": "XLCLASS_DB10_PARTIDA_DIRETA_ALARMES_TERMICOS"
     },
     {
-      "name": "LS400_DB10_VENTILADORES_ALARMES_BAIXO",
+      "name": "XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS",
       "offset": 2,
       "type": "WORD",
-      "description": "LS400_DB10_VENTILADORES_ALARMES_BAIXO"
-    },
-    {
-      "name": "LS400_DB10_VENTILADORES_CMD",
-      "offset": 4,
-      "type": "WORD",
-      "description": "LS400_DB10_VENTILADORES_CMD"
-    },
-    {
-      "name": "LS400_DB10_VENTILADORES_TEMPO_DESL",
-      "offset": 14,
-      "type": "REAL",
-      "description": "LS400_DB10_VENTILADORES_TEMPO_DESL"
+      "description": "XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS"
     }
   ],
   "101": [
@@ -4908,82 +4897,6 @@
       "offset": 16,
       "type": "WORD",
       "description": "XLCLASS_DB3006_ESTEIRA_DE_SAIDA_ALARMES_W16"
-    }
-  ],
-  "20": [
-    {
-      "name": "LS400_DB20_ESCOVAS_ALARME",
-      "offset": 0,
-      "type": "WORD",
-      "description": "LS400_DB20_ESCOVAS_ALARME"
-    },
-    {
-      "name": "LS400_DB20_ESCOVAS_CMD",
-      "offset": 2,
-      "type": "WORD",
-      "description": "LS400_DB20_ESCOVAS_CMD"
-    },
-    {
-      "name": "LS400_DB20_ESCOVAS_PORCENTAGEM_PROG",
-      "offset": 6,
-      "type": "WORD",
-      "description": "LS400_DB20_ESCOVAS_PORCENTAGEM_PROG"
-    }
-  ],
-  "31": [
-    {
-      "name": "LS400_DB31_AQUECEDOR_1_ALARMES_BAIXO",
-      "offset": 2,
-      "type": "WORD",
-      "description": "LS400_DB31_AQUECEDOR_1_ALARMES_BAIXO"
-    },
-    {
-      "name": "LS400_DB31_AQUECEDOR_1_CMD",
-      "offset": 4,
-      "type": "WORD",
-      "description": "LS400_DB31_AQUECEDOR_1_CMD"
-    }
-  ],
-  "32": [
-    {
-      "name": "LS400_DB32_AQUECEDOR_2_ALARMES_BAIXO",
-      "offset": 2,
-      "type": "WORD",
-      "description": "LS400_DB32_AQUECEDOR_2_ALARMES_BAIXO"
-    },
-    {
-      "name": "LS400_DB32_AQUECEDOR_2_CMD",
-      "offset": 4,
-      "type": "WORD",
-      "description": "LS400_DB32_AQUECEDOR_2_CMD"
-    }
-  ],
-  "40": [
-    {
-      "name": "LS400_DB40_AUTO_LIMPEZA_ALARMES_BAIXO",
-      "offset": 2,
-      "type": "WORD",
-      "description": "LS400_DB40_AUTO_LIMPEZA_ALARMES_BAIXO"
-    },
-    {
-      "name": "LS400_DB40_AUTO_LIMPEZA_CMD",
-      "offset": 4,
-      "type": "WORD",
-      "description": "LS400_DB40_AUTO_LIMPEZA_CMD"
-    }
-  ],
-  "50": [
-    {
-      "name": "LS400_DB50_SUGADOR_GOTAS_ALARMES_BAIXO",
-      "offset": 2,
-      "type": "WORD",
-      "description": "LS400_DB50_SUGADOR_GOTAS_ALARMES_BAIXO"
-    },
-    {
-      "name": "LS400_DB50_SUGADOR_GOTAS_CMD",
-      "offset": 4,
-      "type": "WORD",
-      "description": "LS400_DB50_SUGADOR_GOTAS_CMD"
     }
   ]
 }
