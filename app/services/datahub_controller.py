@@ -79,21 +79,29 @@ class DataHubController:
                             data = json.load(f)
                         
                         # Converte formato agrupado para lista
-                        if isinstance(data, dict) and data.get('_format') == 'grouped_by_db':
-                            # Formato agrupado: {"1": [...], "3": [...]}
-                            tags_list = []
-                            for key, value in data.items():
-                                if key.startswith('_'):  # Pula metadados
-                                    continue
-                                if isinstance(value, list):
-                                    # IMPORTANTE: Adiciona o campo 'db' a cada tag
-                                    db_number = int(key)
-                                    for tag in value:
-                                        if 'db' not in tag:
-                                            tag['db'] = db_number
-                                    tags_list.extend(value)
-                            self._comm_map_by_machine[name] = tags_list
-                            print(f"[DATAHUB_CONTROLLER] Formato agrupado: adicionado campo 'db' a {len(tags_list)} tags")
+                        if isinstance(data, dict):
+                            if data.get('_format') == 'grouped_by_db' or any(key.isdigit() for key in data.keys() if not key.startswith('_')):
+                                # Formato agrupado: {"1": [...], "202": [...]} ou {"_format": "grouped_by_db", "1": [...]}
+                                tags_list = []
+                                for key, value in data.items():
+                                    if key.startswith('_'):  # Pula metadados
+                                        continue
+                                    try:
+                                        db_number = int(key)
+                                        if isinstance(value, list):
+                                            # IMPORTANTE: Adiciona o campo 'db' a cada tag
+                                            for tag in value:
+                                                if isinstance(tag, dict) and 'db' not in tag:
+                                                    tag['db'] = db_number
+                                            tags_list.extend(value)
+                                    except (ValueError, TypeError):
+                                        # Se não for um número, ignora
+                                        continue
+                                self._comm_map_by_machine[name] = tags_list
+                                print(f"[DATAHUB_CONTROLLER] Formato agrupado por DB: adicionado campo 'db' a {len(tags_list)} tags")
+                            else:
+                                # Formato desconhecido, tenta usar como está
+                                self._comm_map_by_machine[name] = data
                         elif isinstance(data, list):
                             # Formato lista direto
                             self._comm_map_by_machine[name] = data
@@ -427,6 +435,41 @@ class DataHubController:
                         value = struct.unpack('>f', bytes_data)[0]
                         result[tag_name] = value
                         converted_count += 1
+                
+                elif data_type == 'STRING':
+                    # STRING no S7-1200/1500: 
+                    # - Byte 0 (offset): tamanho máximo (geralmente 254 para STRING[254])
+                    # - Byte 1 (offset+1): tamanho atual (quantos caracteres estão sendo usados)
+                    # - Bytes 2+ (offset+2 até offset+1+current_length): os caracteres
+                    if offset + 1 < len(db_bytes):
+                        max_length = db_bytes[offset]
+                        current_length = min(db_bytes[offset + 1], max_length) if offset + 1 < len(db_bytes) else 0
+                        
+                        # Limita o tamanho para não ultrapassar os dados disponíveis
+                        available_bytes = len(db_bytes) - offset - 2
+                        read_length = min(current_length, available_bytes)
+                        
+                        if read_length > 0:
+                            # Lê os caracteres (a partir do offset + 2)
+                            string_bytes = db_bytes[offset + 2:offset + 2 + read_length]
+                            try:
+                                # Tenta decodificar como UTF-8, substituindo caracteres inválidos
+                                # Remove null terminators e espaços em branco
+                                value = bytes(string_bytes).decode('utf-8', errors='replace')
+                                # Remove null bytes e espaços em branco no início/fim
+                                value = value.replace('\x00', '').strip()
+                                result[tag_name] = value
+                                converted_count += 1
+                            except Exception as e:
+                                print(f"[DATAHUB_CONTROLLER] Erro ao decodificar STRING {tag_name}: {e}")
+                                result[tag_name] = ''  # Retorna string vazia em caso de erro
+                                converted_count += 1
+                        else:
+                            result[tag_name] = ''  # String vazia
+                            converted_count += 1
+                    else:
+                        result[tag_name] = ''  # String vazia se não há dados suficientes
+                        converted_count += 1
                         
             except Exception as e:
                 print(f"[DATAHUB_CONTROLLER] Erro ao converter tag {tag_name}: {e}")
@@ -624,6 +667,21 @@ class DataHubController:
             
             return result
     
+    def _extract_db_from_tag_name(self, tag_name):
+        """
+        Extrai o número da DB do nome da tag.
+        Exemplos:
+        - XLCLASS_DB200_CLASSIFICACAO_P1[0] -> 200
+        - XLCLASS_DB201_CLASSIFICACAO_P1[0] -> 201
+        - DB200_TAG_NAME -> 200
+        """
+        import re
+        # Procura padrões como DB200, DB201, etc.
+        match = re.search(r'DB(\d+)', tag_name, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+        return None
+    
     def write_tag(self, tag_name, value):
         """Escreve valor em uma tag via DataHub."""
         try:
@@ -640,7 +698,16 @@ class DataHubController:
                 print(f"[DATAHUB_CONTROLLER] Tag {tag_name} não encontrada no comm_map")
                 return False
             
+            # Tenta obter DB do campo 'db' ou extrai do nome da tag
             db_number = tag.get('db')
+            if db_number is None:
+                # Fallback: extrai do nome da tag (ex: XLCLASS_DB200_... -> 200)
+                db_number = self._extract_db_from_tag_name(tag_name)
+                if db_number is None:
+                    print(f"[DATAHUB_CONTROLLER] ❌ Não foi possível determinar DB para tag {tag_name}")
+                    return False
+                print(f"[DATAHUB_CONTROLLER] 💡 DB extraído do nome da tag: DB{db_number}")
+            
             offset = tag.get('offset')
             data_type = tag.get('type', 'INT')
             

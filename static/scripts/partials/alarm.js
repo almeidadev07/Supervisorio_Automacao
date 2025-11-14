@@ -658,6 +658,9 @@ function determinarPrioridade(name, description) {
 
 // ===== BOTÕES RÁPIDOS DE COMUNICAÇÃO COM PLC =====
 let quickButtonsInitialized = false;
+let syncInterval = null; // Intervalo de sincronização global
+let isWriting = false; // Lock para evitar escritas simultâneas
+let lastSyncTime = 0; // Timestamp da última sincronização
 
 function inicializarBotoesRapidos() {
     if (quickButtonsInitialized) {
@@ -713,7 +716,15 @@ function inicializarBotoesRapidos() {
             });
             const data = await res.json();
             console.log('[QUICK_BUTTONS] Resposta da escrita:', data);
-            return !!(data && data.ok);
+            
+            if (data && data.ok) {
+                // Aguarda um pouco antes de permitir próxima escrita
+                await new Promise(resolve => setTimeout(resolve, 100));
+                return true;
+            } else {
+                console.error('[QUICK_BUTTONS] Erro na resposta da escrita:', data);
+                return false;
+            }
         } catch (e) {
             console.error('[QUICK_BUTTONS] Erro na escrita:', e);
             return false;
@@ -749,43 +760,115 @@ function inicializarBotoesRapidos() {
         }
     }
 
-    async function toggleBitHandler(button, bit) {
+    async function clickBitHandler(button, bit) {
+        // Proteção: evita processamento simultâneo de múltiplos botões
+        if (isWriting) {
+            console.warn(`[QUICK_BUTTONS] Operação já em andamento, ignorando clique no bit ${bit}`);
+            return;
+        }
+        
+        // Desabilita ambos os botões durante a operação
+        const btnSolenoide = document.getElementById('btn-acionamento');
+        const btnBalanca = document.getElementById('btn-balanca');
+        
         try {
-            console.log(`[QUICK_BUTTONS] Toggle bit ${bit} (${button.id})`);
+            isWriting = true;
+            console.log(`[QUICK_BUTTONS] Clicado botão bit ${bit} (${button.id})`);
             
-            // Desabilita o botão temporariamente para evitar cliques múltiplos
-            button.disabled = true;
+            // Desabilita ambos os botões temporariamente
+            if (btnSolenoide) btnSolenoide.disabled = true;
+            if (btnBalanca) btnBalanca.disabled = true;
             
+            // Lê o valor atual do PLC
             const current = await readWord();
             if (current === null) {
                 console.error('[QUICK_BUTTONS] Falha na leitura - não é possível continuar');
-                button.disabled = false;
+                isWriting = false;
+                if (btnSolenoide) btnSolenoide.disabled = false;
+                if (btnBalanca) btnBalanca.disabled = false;
                 return;
             }
             
-            const shouldActivate = !bitIsSet(current, bit);
-            const nextValue = setBit(current, bit, shouldActivate);
+            // Verifica o estado atual do bit e faz toggle (alterna entre 0 e 1)
+            const isCurrentlySet = bitIsSet(current, bit);
+            const nextState = !isCurrentlySet; // Inverte o estado atual
+            
+            // Calcula o novo valor APENAS alterando o bit específico
+            const nextValue = setBit(current, bit, nextState);
             
             console.log(`[QUICK_BUTTONS] Valor atual: ${current} (0x${current.toString(16).toUpperCase()})`);
+            console.log(`[QUICK_BUTTONS] Bit ${bit} está: ${isCurrentlySet ? 'ATIVO (1)' : 'INATIVO (0)'}`);
             console.log(`[QUICK_BUTTONS] Próximo valor: ${nextValue} (0x${nextValue.toString(16).toUpperCase()})`);
-            console.log(`[QUICK_BUTTONS] Ação: ${shouldActivate ? 'ATIVAR' : 'DESATIVAR'} bit ${bit}`);
+            console.log(`[QUICK_BUTTONS] Ação: ${nextState ? 'ATIVAR' : 'DESATIVAR'} bit ${bit} (toggle)`);
             
+            // Escreve o novo valor no PLC
             const ok = await writeWord(nextValue);
             if (ok) {
-                setButtonVisual(button, shouldActivate);
-                console.log(`[QUICK_BUTTONS] ✅ Bit ${bit} ${shouldActivate ? 'ativado' : 'desativado'} com sucesso`);
+                // Atualiza visual APENAS do botão clicado imediatamente
+                setButtonVisual(button, nextState);
+                
+                console.log(`[QUICK_BUTTONS] ✅ Bit ${bit} ${nextState ? 'ativado' : 'desativado'} com sucesso (toggle)`);
+                
+                // Sincroniza o status de ambos os botões após escrita bem-sucedida (com delay para PLC processar)
+                setTimeout(async () => {
+                    await syncButtonStatus();
+                }, 300);
             } else {
-                console.error('[QUICK_BUTTONS] ❌ Falha na escrita do bit ${bit}');
+                console.error(`[QUICK_BUTTONS] ❌ Falha na escrita do bit ${bit}`);
+                
                 // Mostra feedback visual de erro
                 button.style.backgroundColor = '#dc3545';
                 setTimeout(() => {
                     button.style.backgroundColor = '';
+                    // Sincroniza novamente para garantir estado correto após erro
+                    syncButtonStatus();
                 }, 1000);
             }
         } catch (e) {
-            console.error('[QUICK_BUTTONS] Erro no toggle:', e);
+            console.error('[QUICK_BUTTONS] Erro no clique:', e);
+            // Em caso de erro, sincroniza para garantir estado correto
+            try {
+                await syncButtonStatus();
+            } catch (syncErr) {
+                console.error('[QUICK_BUTTONS] Erro na sincronização após erro:', syncErr);
+            }
         } finally {
-            button.disabled = false;
+            // Sempre libera o lock e reabilita os botões
+            isWriting = false;
+            if (btnSolenoide) btnSolenoide.disabled = false;
+            if (btnBalanca) btnBalanca.disabled = false;
+        }
+    }
+    
+    // Função para sincronizar o status dos botões lendo do PLC
+    async function syncButtonStatus() {
+        // Não sincroniza se estiver escrevendo (evita conflito)
+        if (isWriting) {
+            console.log('[QUICK_BUTTONS] Sincronização ignorada - escrita em andamento');
+            return;
+        }
+        
+        // Throttle: não sincroniza se foi sincronizado recentemente (menos de 500ms)
+        const now = Date.now();
+        if (now - lastSyncTime < 500) {
+            return;
+        }
+        
+        try {
+            const word = await readWord();
+            if (word !== null) {
+                // Atualiza status visual baseado na leitura do PLC
+                const solenoideActive = bitIsSet(word, 0);
+                const balancaActive = bitIsSet(word, 1);
+                
+                setButtonVisual(btnSolenoide, solenoideActive);
+                setButtonVisual(btnBalanca, balancaActive);
+                
+                lastSyncTime = now;
+                console.log(`[QUICK_BUTTONS] Status sincronizado: Solenoide=${solenoideActive}, Balança=${balancaActive}`);
+            }
+        } catch (e) {
+            console.error('[QUICK_BUTTONS] Erro na sincronização:', e);
         }
     }
 
@@ -793,29 +876,42 @@ function inicializarBotoesRapidos() {
     console.log('[QUICK_BUTTONS] Configurando event listeners...');
     btnSolenoide.addEventListener('click', (e) => {
         e.preventDefault();
-        toggleBitHandler(btnSolenoide, 0);
+        clickBitHandler(btnSolenoide, 0);
     });
     btnBalanca.addEventListener('click', (e) => {
         e.preventDefault();
-        toggleBitHandler(btnBalanca, 1);
+        clickBitHandler(btnBalanca, 1);
     });
 
     // Sincroniza estado inicial
     (async function init() {
         try {
             console.log('[QUICK_BUTTONS] Sincronizando estado inicial...');
-            const word = await readWord();
-            if (word !== null) {
-                setButtonVisual(btnSolenoide, bitIsSet(word, 0));
-                setButtonVisual(btnBalanca, bitIsSet(word, 1));
-                console.log('[QUICK_BUTTONS] ✅ Estado inicial sincronizado com sucesso');
-            } else {
-                console.error('[QUICK_BUTTONS] ❌ Falha na sincronização inicial');
-            }
+            await syncButtonStatus();
+            console.log('[QUICK_BUTTONS] ✅ Estado inicial sincronizado com sucesso');
         } catch (e) {
             console.error('[QUICK_BUTTONS] Erro na sincronização inicial:', e);
         }
     })();
+    
+    // Limpa intervalo anterior se existir
+    if (syncInterval) {
+        clearInterval(syncInterval);
+        syncInterval = null;
+    }
+    
+    // Sincroniza periodicamente o status dos botões (a cada 2 segundos)
+    syncInterval = setInterval(() => {
+        syncButtonStatus();
+    }, 2000);
+    
+    // Limpa o intervalo quando a página é fechada
+    window.addEventListener('beforeunload', () => {
+        if (syncInterval) {
+            clearInterval(syncInterval);
+            syncInterval = null;
+        }
+    });
 
     quickButtonsInitialized = true;
     console.log('[QUICK_BUTTONS] ✅ Botões rápidos inicializados com sucesso');

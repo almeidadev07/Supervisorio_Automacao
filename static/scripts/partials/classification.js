@@ -1,15 +1,49 @@
 function inicializarClassification() {
     console.log('Inicializando Classification...');
+    
+    // Função para obter quantidade de embaladoras do localStorage
+    function getEmbaladoraQuantity() {
+        const saved = localStorage.getItem('supervisor_embaladora_quantity');
+        return saved ? parseInt(saved, 10) : 24; // padrão: 24
+    }
+    
+    // Função para filtrar embaladoras baseado na quantidade
+    // IMPORTANTE: IND e SPJ sempre aparecem, apenas E01..E24 são filtradas pela quantidade
+    function filterEmbaladorasByQuantity(allEmbaladoras, quantity) {
+        const cols = [];
+        
+        // IND sempre aparece (primeira posição)
+        const ind = allEmbaladoras.find(e => e.id === 'IND');
+        if (ind) cols.push(ind);
+        
+        // Apenas E01 até E[quantity] aparecem (filtradas pela quantidade)
+        for (let i = 1; i <= quantity; i++) {
+            const num = String(i).padStart(2, '0');
+            const emb = allEmbaladoras.find(e => e.id === `E${num}`);
+            if (emb) cols.push(emb);
+        }
+        
+        // SPJ sempre aparece (última posição)
+        const spj = allEmbaladoras.find(e => e.id === 'SPJ');
+        if (spj) cols.push(spj);
+        
+        return cols;
+    }
+    
+    // Todas as embaladoras possíveis (IND + E01..E24 + SPJ)
+    const allEmbaladoras = (() => {
+        const cols = [{ id: 'IND', nome: 'IND', ativo: false, classes: [] }];
+        for (let i = 1; i <= 24; i++) {
+            const num = String(i).padStart(2, '0');
+            cols.push({ id: `E${num}`, nome: `E${num}`, ativo: false, classes: [] });
+        }
+        cols.push({ id: 'SPJ', nome: 'SPJ', ativo: false, classes: [] });
+        return cols;
+    })();
+    
     const state = {
-        embaladoras: (() => {
-            const cols = [{ id: 'IND', nome: 'IND', ativo: false, classes: [] }];
-            for (let i = 1; i <= 24; i++) {
-                const num = String(i).padStart(2, '0');
-                cols.push({ id: `E${num}`, nome: `E${num}`, ativo: false, classes: [] });
-            }
-            cols.push({ id: 'SPJ', nome: 'SPJ', ativo: false, classes: [] });
-            return cols;
-        })(),
+        allEmbaladoras: allEmbaladoras, // mantém todas para referência
+        embaladoras: filterEmbaladorasByQuantity(allEmbaladoras, getEmbaladoraQuantity()),
         classesOvos: [
             { id: 'C1', nome: 'C1', cor: '#FF3399' },
             { id: 'C2', nome: 'C2', cor: '#FFFF00' },
@@ -763,6 +797,72 @@ function inicializarClassification() {
 	}
 	// Expose helper globally to avoid scope issues
 	window.syncFullStateToPLC = syncFullStateToPLC;
+    // Função para atualizar quantidade de colunas no CSS
+    function updateGridColumns(quantity) {
+        // Total de colunas: 1 (IND - sempre) + quantity (E01..E[quantity] - filtradas) + 1 (SPJ - sempre) = quantity + 2
+        const totalColumns = quantity + 2;
+        const GAP = '15px'; // Gap deve ser o mesmo para todos os grids
+        
+        const grid = document.getElementById('embaladora-grid');
+        const statusRow = document.getElementById('status-row');
+        const headerRow = document.getElementById('header-row');
+        
+        // Atualiza o grid de embaladoras
+        if (grid) {
+            grid.style.gridTemplateColumns = `repeat(${totalColumns}, minmax(48px, 1fr))`;
+            grid.style.gap = GAP;
+            grid.style.width = 'fit-content';
+            grid.style.margin = '0 auto';
+        }
+        
+        // Atualiza a linha de status (deve ter o mesmo número de colunas e gap)
+        if (statusRow) {
+            statusRow.style.gridTemplateColumns = `repeat(${totalColumns}, minmax(48px, 1fr))`;
+            statusRow.style.gap = GAP;
+            statusRow.style.width = 'fit-content';
+            statusRow.style.margin = '0 auto';
+        }
+        
+        // Atualiza a linha de headers (deve ter o mesmo número de colunas e gap)
+        if (headerRow) {
+            headerRow.style.gridTemplateColumns = `repeat(${totalColumns}, minmax(48px, 1fr))`;
+            headerRow.style.gap = GAP;
+            headerRow.style.width = 'fit-content';
+            headerRow.style.margin = '0 auto';
+        }
+        
+        // Centraliza o container principal
+        const embaladoraGrid = document.querySelector('.embaladora-grid');
+        if (embaladoraGrid) {
+            embaladoraGrid.style.justifyContent = 'center';
+            embaladoraGrid.style.alignItems = 'center';
+        }
+    }
+    
+    // Função para atualizar embaladoras baseado na quantidade
+    function updateEmbaladorasQuantity() {
+        const quantity = getEmbaladoraQuantity();
+        console.log('Atualizando quantidade de embaladoras para:', quantity);
+        
+        // Preserva classes existentes ao filtrar
+        const filtered = filterEmbaladorasByQuantity(state.allEmbaladoras, quantity);
+        
+        // Mantém classes das embaladoras que ainda estão visíveis
+        filtered.forEach(emb => {
+            const existing = state.embaladoras.find(e => e.id === emb.id);
+            if (existing) {
+                emb.classes = existing.classes;
+                emb.ativo = existing.ativo;
+            }
+        });
+        
+        state.embaladoras = filtered;
+        updateGridColumns(quantity);
+        renderStatus();
+        renderHeaders();
+        renderGrid();
+    }
+    
     function renderStatus() {
         const statusRow = document.getElementById('status-row');
         if (!statusRow) return;
@@ -891,39 +991,55 @@ function inicializarClassification() {
     function renderClasses(classes) {
         console.log('Renderizando classes:', classes);
         
-        // Calcula posições garantindo que todos os círculos caibam dentro do card
-        const cardHeight = 400; // altura do card definida no CSS
-        const marginSafe = 10; // margem desejada no topo e na base
-        const maxHeight = cardHeight - marginSafe * 2; // área útil vertical exata (simétrica)
+        // Configurações fixas
+        const cardHeight = 450; // altura do card definida no CSS
+        const marginSafe = 20; // margem desejada no topo e na base (mesma distância)
         const circleSize = 30; // tamanho do círculo (mantém consistente com CSS)
-        const verticalGap = 8; // espaçamento entre círculos
-        const totalItems = state.classesOvos.length;
-        const totalNeeded = totalItems * circleSize + (totalItems - 1) * verticalGap;
-        const startTop = marginSafe + Math.max(0, Math.floor((maxHeight - totalNeeded) / 2)); // garante margem igual em cima e embaixo
-
-        const fixedPositions = state.classesOvos.map((classe, index) => ({
-            id: classe.id,
-            top: Math.max(10, Math.floor(startTop + index * (circleSize + verticalGap))),
-            cor: classe.cor
-        }));
-        return fixedPositions.map(position => {
-            const selectedClass = classes.find(c => c.id === position.id);
-            if (selectedClass) {
-                let extraStyle = '';
-                if (selectedClass.tipo === 'branco') {
-                    extraStyle = 'border: 4px solid white; box-shadow: 0 0 0 1px #ccc;';
-                } else if (selectedClass.tipo === 'vermelho') {
-                    extraStyle = 'border: 4px solid #ef4444;';
-                } // 'misto' usa CSS com pseudo-elemento
-                return `
-                    <div class="egg-class-item tipo-${selectedClass.tipo}" style="
-                        background-color: ${position.cor};
-                        top: ${position.top}px;
-                        height: ${circleSize}px; width: ${circleSize}px; ${extraStyle}
-                    "></div>
-                `;
+        const verticalGap = 15; // espaçamento fixo entre círculos
+        
+        // Calcula posições fixas considerando TODAS as classes possíveis (state.classesOvos)
+        // Isso garante que cada círculo sempre apareça na mesma posição, mesmo que outras classes não estejam selecionadas
+        const totalPossibleClasses = state.classesOvos.length; // Todas as classes possíveis (C1-C7, CRACK, VISIO)
+        const totalHeight = (totalPossibleClasses * circleSize) + ((totalPossibleClasses - 1) * verticalGap);
+        
+        // Centraliza verticalmente: calcula posição inicial para ter margens iguais em cima e embaixo
+        const availableHeight = cardHeight - (marginSafe * 2);
+        const startTop = marginSafe + Math.floor((availableHeight - totalHeight) / 2);
+        
+        // Cria um mapa das classes selecionadas para acesso rápido
+        const selectedClassesMap = new Map();
+        if (classes && classes.length > 0) {
+            classes.forEach(cls => {
+                selectedClassesMap.set(cls.id, cls);
+            });
+        }
+        
+        // Renderiza todas as posições possíveis, mas mostra apenas as classes selecionadas
+        return state.classesOvos.map((classObj, index) => {
+            const selectedClass = selectedClassesMap.get(classObj.id);
+            
+            // Se a classe não está selecionada, não renderiza nada nesta posição
+            if (!selectedClass) {
+                return '';
             }
-            return '';
+            
+            // Calcula posição fixa baseada no índice na lista completa de classes
+            const top = startTop + index * (circleSize + verticalGap);
+            
+            let extraStyle = '';
+            if (selectedClass.tipo === 'branco') {
+                extraStyle = 'border: 4px solid white; box-shadow: 0 0 0 1px #ccc;';
+            } else if (selectedClass.tipo === 'vermelho') {
+                extraStyle = 'border: 4px solid #ef4444;';
+            } // 'misto' usa CSS com pseudo-elemento
+            
+            return `
+                <div class="egg-class-item tipo-${selectedClass.tipo}" style="
+                    background-color: ${selectedClass.cor};
+                    top: ${top}px;
+                    height: ${circleSize}px; width: ${circleSize}px; ${extraStyle}
+                "></div>
+            `;
         }).join('');
     }
     function renderClassesList() {
@@ -1833,14 +1949,35 @@ function inicializarClassification() {
     // Initialization
     function initialize() {
         console.log('Inicializando sistema de classificação...');
-        renderStatus();
-        renderHeaders();
-        renderGrid();
+        
+        // Atualiza quantidade inicial
+        updateEmbaladorasQuantity();
+        
         renderClassesList();
         console.log('Chamando setupEventListeners...');
         setupEventListeners();
         console.log('Chamando renderPresets...');
         renderPresets();
+        
+        // Listener para mudanças na quantidade de embaladoras (storage event)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'supervisor_embaladora_quantity') {
+                console.log('Quantidade de embaladoras mudou no localStorage:', e.newValue);
+                updateEmbaladorasQuantity();
+            }
+        });
+        
+        // Polling para detectar mudanças no localStorage (mesma aba)
+        // O storage event só funciona entre abas, então usamos polling para mesma aba
+        let lastQuantity = getEmbaladoraQuantity();
+        setInterval(() => {
+            const currentQuantity = getEmbaladoraQuantity();
+            if (currentQuantity !== lastQuantity) {
+                console.log('Quantidade de embaladoras mudou:', lastQuantity, '->', currentQuantity);
+                lastQuantity = currentQuantity;
+                updateEmbaladorasQuantity();
+            }
+        }, 500); // verifica a cada 500ms
 
         // Subscrição quando a tela abre
         subscribeScreen();

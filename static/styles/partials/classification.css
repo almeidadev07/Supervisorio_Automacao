@@ -66,6 +66,7 @@
     flex: 1;
     display: flex;
     justify-content: center;
+    align-items: center; /* centraliza verticalmente */
     width: 100%;
     flex-direction: column;
     gap: 8px;
@@ -80,23 +81,35 @@
     box-sizing: border-box;
     align-self: center;
 }
+
+/* Garante que os grids filhos (status-row, header-row, embaladora-grid) fiquem centralizados */
+.embaladora-grid > .grid-row,
+.embaladora-grid > .grid-content {
+    width: fit-content;
+    margin: 0 auto;
+}
 /* Reserva de espaço fixa para alerta e garras, evitando deslocamento dos cards */
 .top-alert-area {
     width: 100%;
     height: 140px; /* espaço reservado fixo: banner 100px + área do texto ~40px */
     position: relative; /* para posicionar filhos sem afetar layout abaixo */
 }
-/* 1 IND + E01..E24 (24) + SPJ = 26 colunas */
+/* Quantidade dinâmica de colunas (será definida via JavaScript) */
+/* Padrão: 1 IND + E01..E24 (24) + SPJ = 26 colunas */
 #embaladora-grid {
     display: grid;
-    grid-template-columns: repeat(26, minmax(48px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(26, minmax(48px, 1fr)); /* valor padrão, será sobrescrito pelo JS */
+    gap: 15px; /* DEVE SER O MESMO GAP DO .grid-row */
     min-height: 450px;
-    margin: 0;
+    margin: 0 auto; /* centraliza horizontalmente */
     padding: 0;
     background-color: #f8fafc;
     position: relative;
     z-index: 3;
+    justify-content: center; /* centraliza o grid */
+    justify-items: stretch; /* estica as colunas */
+    width: fit-content; /* ajusta ao conteúdo */
+    max-width: 100%; /* não ultrapassa a largura disponível */
 }
 .embaladora-column:hover {
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
@@ -104,13 +117,16 @@
 }
 .grid-row {
     display: grid;
-    grid-template-columns: repeat(26, minmax(48px, 1fr));
-    gap: 12px;
-    width: 100%;
+    grid-template-columns: repeat(26, minmax(48px, 1fr)); /* valor padrão, será sobrescrito pelo JS */
+    gap: 12px; /* DEVE SER O MESMO GAP DO #embaladora-grid */
+    width: fit-content; /* ajusta ao conteúdo */
     align-items: stretch; /* cada célula ocupa a mesma largura da coluna abaixo */
+    justify-content: center; /* centraliza o grid */
+    justify-items: center; /* centraliza o conteúdo de cada célula */
+    margin: 0 auto; /* centraliza horizontalmente */
 }
 .grid-content {
-    min-height: 400px;
+    min-height: 450px;
     position: relative;
     z-index: 3;
 }
@@ -120,20 +136,37 @@
     width: 100%;
     text-align: center;
     padding: 5px;
-}
-.header-cell {
-    font-weight: bold;
-    padding: 0;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
+    min-width: 48px; /* mesma largura mínima das colunas */
+}
+
+.header-cell {
+    font-weight: bold;
+    padding: 8px 5px;
     text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     box-sizing: border-box;
+    width: 100%;
+    min-width: 48px; /* mesma largura mínima das colunas de embaladora */
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    /* Garante que o texto fique perfeitamente centralizado acima da coluna */
+    position: relative;
+    /* Força que a célula tenha exatamente a mesma largura da coluna abaixo */
+    margin: 0;
 }
 .embaladora-column {
     width: 100%;
-    height: 400px;
+    height: 450px;
     min-width: 48px;
+    max-width: 100%;
     margin: 0;
     background: rgba(255, 255, 255, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -144,6 +177,7 @@
     position: relative;
     z-index: 4;
     overflow: hidden; /* garante que os círculos não saiam do card */
+    box-sizing: border-box; /* inclui padding e border no cálculo da largura */
 }
 
 /* Marca d'água do card (imagem ao fundo) */
