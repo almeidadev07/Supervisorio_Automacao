@@ -4320,6 +4320,180 @@ function updatePeripheralButtonVisual(role, enabled, state) {
     savePeripheralsState(state);
 }
 
+// ✅ CRÍTICO: Variável global para rastrear botões já inicializados
+const INITIALIZED_PERIPHERAL_BUTTONS = new Set();
+
+// ✅ MAPEAMENTO: Define quais botões compartilham a mesma WORD (para bloqueio conjunto)
+const PERIPHERAL_TAG_MAP = {
+    'ovoscopia': { tag: 'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03', bit: 8 },
+    'crack': { tag: 'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03', bit: 9 },
+    'nebulizador-oleo': { tag: 'XLCLASS_DB03_PERIFERICOS_ALARMES_CMD', bit: 8 },
+    'lampadas-uv': { tag: 'XLCLASS_DB03_PERIFERICOS_ALARMES_CMD', bit: 9 },
+    'escova-manual': { tag: 'XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS', bit: null }
+};
+
+// ✅ Função para obter todos os roles que compartilham a mesma TAG
+function getRolesWithSameTag(role) {
+    const config = PERIPHERAL_TAG_MAP[role];
+    if (!config) return [role];
+    
+    const sameTagRoles = [];
+    for (const [r, cfg] of Object.entries(PERIPHERAL_TAG_MAP)) {
+        if (cfg.tag === config.tag) {
+            sameTagRoles.push(r);
+        }
+    }
+    return sameTagRoles;
+}
+
+// ✅ CRÍTICO: Sistema de controle rigoroso de cliques
+const BUTTON_PROCESSING = new Set(); // Botões atualmente processando (não podem receber novos cliques)
+const LAST_CLICK_TIMESTAMP = new Map(); // Último timestamp de clique por botão
+const MIN_CLICK_INTERVAL_MS = 1000; // Mínimo de 1 segundo entre cliques no mesmo botão (rigoroso)
+
+/**
+ * Valida se um bit específico está no valor esperado
+ * @param {string} tagName - Nome da tag no PLC
+ * @param {number} bit - Número do bit (0-15)
+ * @param {number} expectedValue - Valor esperado (0 ou 1)
+ * @returns {Promise<boolean>} - true se o bit está no valor esperado
+ */
+async function validateBitChange(tagName, bit, expectedValue) {
+    try {
+        const response = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { 
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+        });
+        
+        if (!response.ok) {
+            console.error(`[PERIPHERALS] Erro ao ler tag para validação: HTTP ${response.status}`);
+            return false;
+        }
+        
+        const data = await response.json();
+        
+        if (data && data.ok && data.values && data.values[tagName] !== undefined) {
+            const wordValue = Number(data.values[tagName]) >>> 0;
+            const actualBitValue = ((wordValue >>> bit) & 1) === 1 ? 1 : 0;
+            const expected = expectedValue ? 1 : 0;
+            
+            const isValid = actualBitValue === expected;
+            console.log(`[PERIPHERALS] Validação bit ${bit} de ${tagName}: esperado=${expected}, atual=${actualBitValue}, válido=${isValid}`);
+            return isValid;
+        }
+        
+        console.error(`[PERIPHERALS] Resposta inválida ao validar bit`);
+        return false;
+    } catch (error) {
+        console.error(`[PERIPHERALS] Exceção ao validar bit:`, error);
+        return false;
+    }
+}
+
+/**
+ * Valida se uma tag completa está no valor esperado
+ * @param {string} tagName - Nome da tag no PLC
+ * @param {number} expectedValue - Valor esperado
+ * @returns {Promise<boolean>} - true se a tag está no valor esperado
+ */
+async function validateTagChange(tagName, expectedValue) {
+    try {
+        const response = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { 
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+        });
+        
+        if (!response.ok) {
+            console.error(`[PERIPHERALS] Erro ao ler tag para validação: HTTP ${response.status}`);
+            return false;
+        }
+        
+        const data = await response.json();
+        
+        if (data && data.ok && data.values && data.values[tagName] !== undefined) {
+            const actualValue = Number(data.values[tagName]);
+            const expected = Number(expectedValue);
+            
+            const isValid = actualValue === expected;
+            console.log(`[PERIPHERALS] Validação tag ${tagName}: esperado=${expected}, atual=${actualValue}, válido=${isValid}`);
+            return isValid;
+        }
+        
+        console.error(`[PERIPHERALS] Resposta inválida ao validar tag`);
+        return false;
+    } catch (error) {
+        console.error(`[PERIPHERALS] Exceção ao validar tag:`, error);
+        return false;
+    }
+}
+
+/**
+ * Processa escrita no PLC com validação em 10 segundos
+ * @param {string} role - Identificador do botão (ex: 'ovoscopia', 'crack')
+ * @param {string} tagName - Nome da tag no PLC
+ * @param {number|null} bit - Número do bit (0-15) ou null para valor completo
+ * @param {number} value - Valor a escrever (0 ou 1 para bit, qualquer valor para tag)
+ * @param {boolean} previousState - Estado anterior (para reverter em caso de falha)
+ * @param {object} state - Objeto de estado dos periféricos
+ * @param {boolean} useTagValue - Se true usa writeTagValue, se false usa writeWordBit
+ */
+async function processPeripheralWriteWithValidation(role, tagName, bit, value, previousState, state, useTagValue) {
+    try {
+        console.log(`[PERIPHERALS] 🚀 ${role}: Iniciando escrita - tag=${tagName}, bit=${bit}, value=${value}`);
+        
+        // ✅ PASSO 1: Escreve no PLC (passa o role como sourceRole para rastreamento)
+        let writeResult;
+        if (useTagValue) {
+            writeResult = await writeTagValue(tagName, value, role);
+        } else {
+            writeResult = await writeWordBit(tagName, bit, value, role);
+        }
+        
+        if (!writeResult) {
+            console.warn(`[PERIPHERALS] ⚠️ ${role}: Falha na escrita, revertendo`);
+            updatePeripheralButtonVisual(role, previousState, state);
+            PENDING_CONFIRMATION.delete(role);
+            return;
+        }
+        
+        console.log(`[PERIPHERALS] ✅ ${role}: Escrita concluída`);
+        console.log(`[PERIPHERALS] ⏳ ${role}: Aguardando 5s para validação`);
+        
+        // ✅ PASSO 2: Aguarda 5 segundos para o PLC processar
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        // ✅ PASSO 3: Valida se a mudança foi aplicada
+        console.log(`[PERIPHERALS] 🔍 ${role}: Validando mudança...`);
+        let validated = false;
+        
+        if (useTagValue) {
+            validated = await validateTagChange(tagName, value);
+        } else {
+            validated = await validateBitChange(tagName, bit, value);
+        }
+        
+        // ✅ PASSO 4: Se não validou, reverte o estado visual
+        if (!validated) {
+            console.warn(`[PERIPHERALS] ⚠️ ${role}: Validação falhou após 5s, revertendo estado visual`);
+            updatePeripheralButtonVisual(role, previousState, state);
+        } else {
+            console.log(`[PERIPHERALS] ✅ ${role}: Validação bem-sucedida!`);
+        }
+        
+        // ✅ PASSO 5: Remove do mapa de pendentes (libera este botão para novo clique)
+        console.log(`[PERIPHERALS] 🔓 ${role}: Liberando botão para novos cliques`);
+        PENDING_CONFIRMATION.delete(role);
+        
+        // ✅ PASSO 6: Agenda sincronização para confirmar estado
+        setTimeout(syncPeripheralsFromPLC, 300);
+        
+    } catch (error) {
+        console.error(`[PERIPHERALS] ❌ ${role}: Erro durante processamento:`, error);
+        updatePeripheralButtonVisual(role, previousState, state);
+        PENDING_CONFIRMATION.delete(role);
+    }
+}
+
 function initPeripherals() {
     const container = document.querySelector('.draggable-btn[data-station="botao-9"]');
     if (!container) return;
@@ -4335,7 +4509,6 @@ function initPeripherals() {
         setTimeout(initPeripherals, 100);
         return;
     }
-    if (!buttons || buttons.length === 0) return;
 
     buttons.forEach(btn => {
         let role = btn.getAttribute('data-role') || btn.id || '';
@@ -4345,278 +4518,195 @@ function initPeripherals() {
         if (role === 'btn-nebulizador-oleo-toggle') role = 'nebulizador-oleo';
         if (role === 'btn-lampadas-uv-toggle') role = 'lampadas-uv';
         if (role === 'btn-escova-manual-toggle') role = 'escova-manual';
+        
+        // ✅ PROTEÇÃO CRÍTICA: Evita re-inicialização de botões já configurados
+        if (INITIALIZED_PERIPHERAL_BUTTONS.has(role)) {
+            console.log(`[PERIPHERALS] ⏸️ Botão ${role} já foi inicializado, pulando...`);
+            return;
+        }
+        INITIALIZED_PERIPHERAL_BUTTONS.add(role);
+        console.log(`[PERIPHERALS] ✅ Inicializando botão ${role}`);
 
+        // ✅ MELHORADO: Usa { once: false, passive: false, capture: true } para garantir execução única por clique
         // Evita que o clique/mousedown nos botões internos inicie drag do grid
         btn.addEventListener('mousedown', (ev) => {
             ev.stopPropagation();
             const parent = btn.closest('.draggable-btn');
             if (parent) parent.removeAttribute('draggable');
-        });
+        }, { passive: true });
+        
         btn.addEventListener('pointerdown', (ev) => {
             ev.stopPropagation();
             const parent = btn.closest('.draggable-btn');
             if (parent) parent.removeAttribute('draggable');
-        });
+        }, { passive: true });
+        
         btn.addEventListener('mouseup', (ev) => {
             ev.stopPropagation();
             const parent = btn.closest('.draggable-btn');
             if (parent) setTimeout(() => parent.setAttribute('draggable', 'true'), 120);
-        });
+        }, { passive: true });
+        
         btn.addEventListener('pointerup', (ev) => {
             ev.stopPropagation();
             const parent = btn.closest('.draggable-btn');
             if (parent) setTimeout(() => parent.setAttribute('draggable', 'true'), 120);
-        });
+        }, { passive: true });
+        
         // Acessibilidade: tecla Enter/Space também alterna
         btn.addEventListener('keydown', (ev) => {
             if (ev.key === 'Enter' || ev.key === ' ') {
                 ev.preventDefault();
                 btn.click();
             }
-        });
+        }, { passive: false });
+        
         const enabled = !!state[role];
         applyPeripheralVisual(btn, enabled);
-        // aplica design semelhante ao botão de histórico (tema azul ativo) somente quando não for ícone
-        // não aplicar alarm-toggle aos ícones (sem borda/sombra)
 
-        // ✅ PROTEÇÃO: Evita múltiplos event listeners e cliques simultâneos
-        if (btn.dataset.listenerAttached === 'true') {
-            return; // Já tem listener, não adiciona novamente
-        }
-        btn.dataset.listenerAttached = 'true';
-        
-        // Flag para evitar processamento simultâneo de cliques
-        let isProcessing = false;
-
-        btn.addEventListener('click', async (e) => {
+        // ✅ CRÍTICO: Handler de clique com proteção máxima contra cliques duplicados
+        const clickHandler = async (e) => {
+            // ✅ Para TODOS os eventos imediatamente
             e.preventDefault();
             e.stopPropagation();
-            e.stopImmediatePropagation(); // ✅ Evita que outros listeners sejam chamados
+            e.stopImmediatePropagation();
             
-            // ✅ PROTEÇÃO: Verifica se o clique foi realmente neste botão específico
-            const clickedBtn = e.target.closest('[data-role]');
-            if (!clickedBtn || clickedBtn.getAttribute('data-role') !== role) {
-                console.log(`[PERIPHERALS] ⚠️ Clique não corresponde ao botão ${role}, ignorando`);
-                return;
+            // ✅ PROTEÇÃO 1: Verifica se já está processando (mais importante)
+            if (BUTTON_PROCESSING.has(role)) {
+                console.log(`[PERIPHERALS] ⏸️ ${role} já está processando, IGNORANDO clique duplicado`);
+                return false;
             }
             
-            // ✅ PROTEÇÃO CRÍTICA: Evita processamento simultâneo (verifica antes de qualquer ação)
-            if (isProcessing) {
-                console.log(`[PERIPHERALS] ⏸️ Botão ${role} já está processando, ignorando clique duplicado`);
-                return;
+            // ✅ PROTEÇÃO 2: Debounce rigoroso
+            const now = Date.now();
+            const lastClick = LAST_CLICK_TIMESTAMP.get(role) || 0;
+            const timeSinceLastClick = now - lastClick;
+            
+            if (timeSinceLastClick < MIN_CLICK_INTERVAL_MS) {
+                console.log(`[PERIPHERALS] ⏸️ ${role} debounce ativo (${timeSinceLastClick}ms < ${MIN_CLICK_INTERVAL_MS}ms)`);
+                return false;
             }
             
-            // ✅ PROTEÇÃO ADICIONAL: Verifica se já está aguardando confirmação
+            // ✅ PROTEÇÃO 3: Verifica se já está aguardando confirmação
             if (PENDING_CONFIRMATION.has(role)) {
-                console.log(`[PERIPHERALS] ⏸️ Botão ${role} já está aguardando confirmação, ignorando clique`);
-                return;
+                console.log(`[PERIPHERALS] ⏸️ ${role} aguardando confirmação, ignorando clique`);
+                return false;
             }
             
-            isProcessing = true;
-            console.log(`[PERIPHERALS] 🎯 Processando clique no botão ${role} - INÍCIO`);
+            // ✅ MARCA IMEDIATAMENTE como processando (ANTES de qualquer operação async)
+            BUTTON_PROCESSING.add(role);
+            LAST_CLICK_TIMESTAMP.set(role, now);
+            
+            console.log(`[PERIPHERALS] 🎯 ${role} - Clique AUTORIZADO e ÚNICO`);
             
             try {
             if (role === 'ovoscopia') {
-                // ✅ NOVA LÓGICA: Atualiza UI imediatamente, valida após 10s e reverte se necessário
+                // Estado atual e novo
                 const wasEnabled = !!state[role];
                 const nowEnabled = !wasEnabled;
                 
-                // ✅ CRÍTICO: Marca como aguardando confirmação ANTES de atualizar UI
-                // Isso garante que a sincronização não interfira
+                // ✅ CRÍTICO: Marca como aguardando confirmação (evita cliques duplicados neste botão)
                 PENDING_CONFIRMATION.set(role, Date.now());
-                console.log(`[PERIPHERALS] 🔒 PENDING_CONFIRMATION setado para ${role} - sincronização bloqueada`);
-                
-                // Marca timestamp da escrita
                 LAST_WRITE_PERIPHERALS_TS = Date.now();
+                console.log(`[PERIPHERALS] 🚀 ${role}: Clique aceito, mudando UI e enfileirando no backend`);
                 
-                // ✅ Atualiza UI IMEDIATAMENTE (feedback visual instantâneo)
+                // ✅ Atualiza UI IMEDIATAMENTE (feedback instantâneo ao usuário)
                 updatePeripheralButtonVisual(role, nowEnabled, state);
+                btn.style.transform = 'scale(0.95)';
+                setTimeout(() => { btn.style.transform = ''; }, 100);
                 
-                // Escreve no PLC: bit 8 de XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03
-                // Magna Visio = 1, Ovoscopia = 0
-                console.log(`[PERIPHERALS] 🖱️ Botão Ovoscopia clicado! Estado: ${nowEnabled ? 'Magna Visio (1)' : 'Ovoscopia (0)'}`);
-                
-                // ✅ CRÍTICO: Escreve no PLC de forma síncrona (aguarda conclusão antes de continuar)
-                // Isso garante que apenas uma escrita aconteça por vez
-                (async () => {
-                    try {
-                        const writeResult = await writeWordBit('XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03', 8, nowEnabled ? 1 : 0);
-                        if (!writeResult) {
-                            console.warn(`[PERIPHERALS] ⚠️ Falha ao escrever no PLC, revertendo estado`);
-                            // Reverte imediatamente se falhou a escrita
-                            updatePeripheralButtonVisual(role, wasEnabled, state);
-                            PENDING_CONFIRMATION.delete(role);
-                            return;
-                        }
-                        
-                        // ✅ Valida após 10 segundos (PENDING_CONFIRMATION mantido durante todo este período)
-                        console.log(`[PERIPHERALS] ⏳ Iniciando validação de 10s para ${role} - PENDING_CONFIRMATION ativo`);
-                        const validated = await validateBitChangeDelayed('XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03', 8, nowEnabled ? 1 : 0, 10000);
-                        console.log(`[PERIPHERALS] ⏳ Validação concluída para ${role} - resultado: ${validated}`);
-                        
-                        if (!validated) {
-                            console.warn(`[PERIPHERALS] ⚠️ Mudança não foi validada no PLC após 10s, revertendo estado`);
-                            // Reverte o estado visual
-                            updatePeripheralButtonVisual(role, wasEnabled, state);
-                        } else {
-                            console.log(`[PERIPHERALS] ✅ Mudança validada no PLC após 10s`);
-                        }
-                        
-                        // ✅ Remove do mapa de pendentes APENAS após validação completa
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        console.log(`[PERIPHERALS] 🔓 Removendo ${role} do PENDING_CONFIRMATION após validação`);
-                        PENDING_CONFIRMATION.delete(role);
-                        // Agenda sincronização para confirmar o estado (agora pode sincronizar)
-                        setTimeout(syncPeripheralsFromPLC, 200);
-                    } catch (error) {
-                        console.error(`[PERIPHERALS] ❌ Erro ao processar escrita:`, error);
-                        updatePeripheralButtonVisual(role, wasEnabled, state);
-                        PENDING_CONFIRMATION.delete(role);
-                    }
-                })();
-                
-                // micro-efeito de clique
-                btn.style.transform = 'scale(0.98)';
-                setTimeout(() => { btn.style.transform = ''; }, 50);
+                // ✅ Processo assíncrono (backend gerencia fila automaticamente)
+                processPeripheralWriteWithValidation(
+                    role,
+                    'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03',
+                    8,
+                    nowEnabled ? 1 : 0,
+                    wasEnabled,
+                    state,
+                    false
+                ).catch(err => {
+                    console.error(`[PERIPHERALS] ❌ Erro crítico em ${role}:`, err);
+                    updatePeripheralButtonVisual(role, wasEnabled, state);
+                }).finally(() => {
+                    PENDING_CONFIRMATION.delete(role);
+                    BUTTON_PROCESSING.delete(role);
+                    console.log(`[PERIPHERALS] ✅ ${role}: Validação concluída`);
+                });
             } else if (role === 'crack' || role === 'nebulizador-oleo' || role === 'lampadas-uv') {
-                // ✅ NOVA LÓGICA: Atualiza UI imediatamente, valida após 10s e reverte se necessário
+                // Estado atual e novo
                 const wasEnabled = !!state[role];
                 const nowEnabled = !wasEnabled;
                 
-                // ✅ CRÍTICO: Marca como aguardando confirmação ANTES de atualizar UI
-                // Isso garante que a sincronização não interfira
-                PENDING_CONFIRMATION.set(role, Date.now());
-                console.log(`[PERIPHERALS] 🔒 PENDING_CONFIRMATION setado para ${role} - sincronização bloqueada`);
-                
-                // Marca timestamp da escrita
-                LAST_WRITE_PERIPHERALS_TS = Date.now();
-                
-                // ✅ Atualiza UI IMEDIATAMENTE (feedback visual instantâneo)
-                updatePeripheralButtonVisual(role, nowEnabled, state);
-                
-                // Escreve no PLC conforme o botão
-                console.log(`[PERIPHERALS] 🖱️ Botão ${role} clicado! Estado: ${nowEnabled ? 'Habilitado (1)' : 'Desabilitado (0)'}`);
+                // Determina tag e bit conforme o botão
                 let tagName = '';
                 let bit = 0;
-                
                 if (role === 'crack') {
-                    // Bit 9 de XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03
                     tagName = 'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03';
                     bit = 9;
                 } else if (role === 'nebulizador-oleo') {
-                    // Bit 8 de XLCLASS_DB03_PERIFERICOS_ALARMES_CMD
                     tagName = 'XLCLASS_DB03_PERIFERICOS_ALARMES_CMD';
                     bit = 8;
                 } else if (role === 'lampadas-uv') {
-                    // Bit 9 de XLCLASS_DB03_PERIFERICOS_ALARMES_CMD
                     tagName = 'XLCLASS_DB03_PERIFERICOS_ALARMES_CMD';
                     bit = 9;
                 }
                 
-                // ✅ CRÍTICO: Escreve no PLC de forma síncrona (aguarda conclusão antes de continuar)
-                // Isso garante que apenas uma escrita aconteça por vez
-                (async () => {
-                    try {
-                        const writeResult = await writeWordBit(tagName, bit, nowEnabled ? 1 : 0);
-                        if (!writeResult) {
-                            console.warn(`[PERIPHERALS] ⚠️ Falha ao escrever no PLC, revertendo estado`);
-                            // Reverte imediatamente se falhou a escrita
-                            updatePeripheralButtonVisual(role, wasEnabled, state);
-                            PENDING_CONFIRMATION.delete(role);
-                            return;
-                        }
-                        
-                        // ✅ Valida após 10 segundos (PENDING_CONFIRMATION mantido durante todo este período)
-                        console.log(`[PERIPHERALS] ⏳ Iniciando validação de 10s para ${role} - PENDING_CONFIRMATION ativo`);
-                        const validated = await validateBitChangeDelayed(tagName, bit, nowEnabled ? 1 : 0, 10000);
-                        console.log(`[PERIPHERALS] ⏳ Validação concluída para ${role} - resultado: ${validated}`);
-                        
-                        if (!validated) {
-                            console.warn(`[PERIPHERALS] ⚠️ Mudança não foi validada no PLC após 10s, revertendo estado`);
-                            // Reverte o estado visual
-                            updatePeripheralButtonVisual(role, wasEnabled, state);
-                        } else {
-                            console.log(`[PERIPHERALS] ✅ Mudança validada no PLC após 10s`);
-                        }
-                        
-                        // ✅ Remove do mapa de pendentes APENAS após validação completa
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        console.log(`[PERIPHERALS] 🔓 Removendo ${role} do PENDING_CONFIRMATION após validação`);
-                        PENDING_CONFIRMATION.delete(role);
-                        // Agenda sincronização para confirmar o estado (agora pode sincronizar)
-                        setTimeout(syncPeripheralsFromPLC, 200);
-                    } catch (error) {
-                        console.error(`[PERIPHERALS] ❌ Erro ao processar escrita:`, error);
-                        updatePeripheralButtonVisual(role, wasEnabled, state);
-                        PENDING_CONFIRMATION.delete(role);
-                    }
-                })();
+                // ✅ CRÍTICO: Marca como aguardando confirmação
+                PENDING_CONFIRMATION.set(role, Date.now());
+                LAST_WRITE_PERIPHERALS_TS = Date.now();
+                console.log(`[PERIPHERALS] 🚀 ${role}: Clique aceito, mudando UI e enfileirando no backend`);
                 
-                // micro-efeito de clique
-                btn.style.transform = 'scale(0.98)';
-                setTimeout(() => { btn.style.transform = ''; }, 50);
+                // ✅ Atualiza UI IMEDIATAMENTE
+                updatePeripheralButtonVisual(role, nowEnabled, state);
+                btn.style.transform = 'scale(0.95)';
+                setTimeout(() => { btn.style.transform = ''; }, 100);
+                
+                // ✅ Processo assíncrono (backend gerencia fila automaticamente)
+                processPeripheralWriteWithValidation(
+                    role,
+                    tagName,
+                    bit,
+                    nowEnabled ? 1 : 0,
+                    wasEnabled,
+                    state,
+                    false
+                ).catch(err => {
+                    console.error(`[PERIPHERALS] ❌ Erro crítico em ${role}:`, err);
+                    updatePeripheralButtonVisual(role, wasEnabled, state);
+                }).finally(() => {
+                    PENDING_CONFIRMATION.delete(role);
+                    BUTTON_PROCESSING.delete(role);
+                    console.log(`[PERIPHERALS] ✅ ${role}: Validação concluída`);
+                });
             } else if (role === 'escova-manual') {
-                // ✅ NOVA LÓGICA: Atualiza UI imediatamente, valida após 10s e reverte se necessário
+                // Estado atual e novo
                 const wasEnabled = !!state[role];
                 const nowEnabled = !wasEnabled;
                 
-                // ✅ CRÍTICO: Marca como aguardando confirmação ANTES de atualizar UI
-                // Isso garante que a sincronização não interfira
-                PENDING_CONFIRMATION.set(role, Date.now());
-                console.log(`[PERIPHERALS] 🔒 PENDING_CONFIRMATION setado para ${role} - sincronização bloqueada`);
+                console.log(`[PERIPHERALS] 🚀 ${role}: Clique aceito, mudando UI e enfileirando no backend`);
                 
-                // Marca timestamp da escrita
-                LAST_WRITE_PERIPHERALS_TS = Date.now();
-                
-                // ✅ Atualiza UI IMEDIATAMENTE (feedback visual instantâneo)
+                // ✅ Atualiza UI IMEDIATAMENTE
                 updatePeripheralButtonVisual(role, nowEnabled, state);
+                btn.style.transform = 'scale(0.95)';
+                setTimeout(() => { btn.style.transform = ''; }, 100);
                 
-                // Escreve no PLC: XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS
-                // Escova Automática = 1, Escova Manual = 0
-                console.log(`[PERIPHERALS] 🖱️ Botão Escova clicado! Estado: ${nowEnabled ? 'Automática (1)' : 'Manual (0)'}`);
-                
-                // ✅ CRÍTICO: Escreve no PLC de forma síncrona (aguarda conclusão antes de continuar)
-                // Isso garante que apenas uma escrita aconteça por vez
-                (async () => {
-                    try {
-                        const writeResult = await writeTagValue('XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS', nowEnabled ? 1 : 0);
-                        if (!writeResult) {
-                            console.warn(`[PERIPHERALS] ⚠️ Falha ao escrever no PLC, revertendo estado`);
-                            // Reverte imediatamente se falhou a escrita
-                            updatePeripheralButtonVisual(role, wasEnabled, state);
-                            PENDING_CONFIRMATION.delete(role);
-                            return;
-                        }
-                        
-                        // ✅ Valida após 10 segundos (PENDING_CONFIRMATION mantido durante todo este período)
-                        console.log(`[PERIPHERALS] ⏳ Iniciando validação de 10s para ${role} - PENDING_CONFIRMATION ativo`);
-                        const validated = await validateTagChangeDelayed('XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS', nowEnabled ? 1 : 0, 10000);
-                        console.log(`[PERIPHERALS] ⏳ Validação concluída para ${role} - resultado: ${validated}`);
-                        
-                        if (!validated) {
-                            console.warn(`[PERIPHERALS] ⚠️ Mudança não foi validada no PLC após 10s, revertendo estado`);
-                            // Reverte o estado visual
-                            updatePeripheralButtonVisual(role, wasEnabled, state);
-                        } else {
-                            console.log(`[PERIPHERALS] ✅ Mudança validada no PLC após 10s`);
-                        }
-                        
-                        // ✅ Remove do mapa de pendentes APENAS após validação completa
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        console.log(`[PERIPHERALS] 🔓 Removendo ${role} do PENDING_CONFIRMATION após validação`);
-                        PENDING_CONFIRMATION.delete(role);
-                        // Agenda sincronização para confirmar o estado (agora pode sincronizar)
-                        setTimeout(syncPeripheralsFromPLC, 200);
-                    } catch (error) {
-                        console.error(`[PERIPHERALS] ❌ Erro ao processar escrita:`, error);
-                        updatePeripheralButtonVisual(role, wasEnabled, state);
-                        PENDING_CONFIRMATION.delete(role);
-                    }
-                })();
-                
-                // micro-efeito de clique
-                btn.style.transform = 'scale(0.98)';
-                setTimeout(() => { btn.style.transform = ''; }, 50);
+                // ✅ Processo assíncrono (backend gerencia fila automaticamente)
+                processPeripheralWriteWithValidation(
+                    role,
+                    'XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS',
+                    null,
+                    nowEnabled ? 1 : 0,
+                    wasEnabled,
+                    state,
+                    true
+                ).catch(err => {
+                    console.error(`[PERIPHERALS] ❌ Erro crítico em ${role}:`, err);
+                    updatePeripheralButtonVisual(role, wasEnabled, state);
+                }).finally(() => {
+                    PENDING_CONFIRMATION.delete(role);
+                    BUTTON_PROCESSING.delete(role);
+                    console.log(`[PERIPHERALS] ✅ ${role}: Validação concluída`);
+                });
             } else {
                 // Demais botões: apenas alterna visual/persistência genérica
                 const wasEnabled = !!state[role];
@@ -4624,18 +4714,34 @@ function initPeripherals() {
                 state[role] = nowEnabled;
                 applyPeripheralVisual(btn, nowEnabled);
                 savePeripheralsState(state);
-                btn.style.transform = 'scale(0.98)';
-                setTimeout(() => { btn.style.transform = ''; }, 80);
+                btn.style.transform = 'scale(0.95)';
+                setTimeout(() => { btn.style.transform = ''; }, 100);
             }
-            } finally {
-                // ✅ Libera flag de processamento após um delay maior para evitar cliques duplicados
-                // O delay garante que a escrita foi iniciada antes de permitir novo clique
-                setTimeout(() => { 
-                    isProcessing = false; 
-                    console.log(`[PERIPHERALS] 🎯 Processamento do botão ${role} liberado`);
-                }, 1000);
+            } catch (error) {
+                console.error(`[PERIPHERALS] ❌ Erro no handler de clique ${role}:`, error);
+                PENDING_CONFIRMATION.delete(role);
+                BUTTON_PROCESSING.delete(role);
             }
-        }, { once: false, passive: false }); // ✅ Garante que o listener não seja removido
+            // Nota: BUTTON_PROCESSING é liberado dentro de cada bloco try/finally específico
+        };
+        
+        // ✅ Adiciona listeners em TODOS os eventos possíveis de clique
+        // Usando { once: false, capture: true, passive: false } para interceptar primeiro
+        btn.addEventListener('click', clickHandler, { once: false, passive: false, capture: true });
+        btn.addEventListener('mousedown', (e) => {
+            if (BUTTON_PROCESSING.has(role)) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+            }
+        }, { passive: false, capture: true });
+        btn.addEventListener('touchstart', (e) => {
+            if (BUTTON_PROCESSING.has(role)) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+            }
+        }, { passive: false, capture: true });
 
         // Ajusta labels/ícones iniciais
         if (role === 'ovoscopia') {
@@ -4687,12 +4793,9 @@ if (document.readyState === 'loading') {
 // ================== Sincronização dos Botões de Periféricos com o PLC ==================
 let peripheralsSyncInterval = null;
 let LAST_WRITE_PERIPHERALS_TS = 0;
-const WRITE_PERIPHERALS_COOLDOWN_MS = 15000; // 15 segundos de cooldown após escrita (cobre período de validação de 10s + margem de segurança)
+const WRITE_PERIPHERALS_COOLDOWN_MS = 10000; // 10 segundos de cooldown após escrita (cobre período de validação de 5s + margem de segurança)
 // Mapa de botões aguardando confirmação (não devem ser atualizados pela sincronização)
 const PENDING_CONFIRMATION = new Map();
-// ✅ PROTEÇÃO: Lock global para evitar escritas simultâneas na mesma WORD
-const WRITE_LOCKS = new Map(); // tagName -> timestamp
-const WRITE_LOCK_TIMEOUT_MS = 6000; // 6 segundos de lock por escrita (aumentado para evitar race conditions)
 // ✅ PROTEÇÃO: Flag para evitar múltiplas sincronizações simultâneas
 let isSyncing = false;
 // ✅ PROTEÇÃO: Mapa de roles que compartilham a mesma WORD (para bloquear sincronização de todos quando um é clicado)
@@ -4733,13 +4836,6 @@ async function syncPeripheralsFromPLC() {
         if (nowTs - timestamp >= (WRITE_PERIPHERALS_COOLDOWN_MS + 5000)) {
             console.log(`[PERIPHERALS-SYNC] 🗑️ Removendo ${role} do PENDING_CONFIRMATION (passou do cooldown)`);
             PENDING_CONFIRMATION.delete(role);
-        }
-    }
-    
-    // Remove locks expirados
-    for (const [tagName, lockTime] of WRITE_LOCKS.entries()) {
-        if (nowTs - lockTime >= WRITE_LOCK_TIMEOUT_MS) {
-            WRITE_LOCKS.delete(tagName);
         }
     }
     
@@ -5043,152 +5139,18 @@ function updatePowerButtonsFromStatusGrid(rawStatus) {
     }
 }
 
-// Função auxiliar para validar se um bit foi realmente alterado no PLC (após delay)
-async function validateBitChangeDelayed(tagName, bit, expectedValue, delayMs = 10000) {
-    // Aguarda o delay antes de validar
-    await new Promise(resolve => setTimeout(resolve, delayMs));
-    
+// ✅ Escreve um bit específico (backend gerencia a fila e delays automaticamente)
+async function writeWordBit(tagName, bit, value, sourceRole = 'unknown') {
     try {
-        const readResponse = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { cache: 'no-store' });
-        const readData = await readResponse.json();
-        
-        if (readData && readData.ok && readData.values && readData.values[tagName] !== undefined) {
-            const wordValue = Number(readData.values[tagName]) >>> 0;
-            const bitValue = ((wordValue >>> bit) & 1) === 1;
-            const expectedBool = expectedValue === 1;
-            
-            if (bitValue === expectedBool) {
-                console.log(`[PERIPHERALS] ✅ Validação confirmada após ${delayMs}ms: Bit ${bit} da tag ${tagName} está ${expectedBool ? 'setado' : 'limpo'}`);
-                return true;
-            } else {
-                console.warn(`[PERIPHERALS] ⚠️ Validação falhou após ${delayMs}ms: Bit ${bit} não refletiu a mudança. Esperado: ${expectedBool ? 1 : 0}, Atual: ${bitValue ? 1 : 0}`);
-                return false;
-            }
-        }
-    } catch (e) {
-        console.warn(`[PERIPHERALS] ⚠️ Erro ao validar bit ${bit} após ${delayMs}ms:`, e);
-        return false;
-    }
-    
-    return false;
-}
-
-// Função auxiliar para validar se uma tag foi realmente alterada no PLC (após delay)
-async function validateTagChangeDelayed(tagName, expectedValue, delayMs = 10000) {
-    // Aguarda o delay antes de validar
-    await new Promise(resolve => setTimeout(resolve, delayMs));
-    
-    try {
-        const readResponse = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { cache: 'no-store' });
-        const readData = await readResponse.json();
-        
-        if (readData && readData.ok && readData.values && readData.values[tagName] !== undefined) {
-            const currentValue = Number(readData.values[tagName]) || 0;
-            
-            if (currentValue === expectedValue) {
-                console.log(`[PERIPHERALS] ✅ Validação confirmada após ${delayMs}ms: Tag ${tagName} está ${expectedValue}`);
-                return true;
-            } else {
-                console.warn(`[PERIPHERALS] ⚠️ Validação falhou após ${delayMs}ms: Tag ${tagName} não refletiu a mudança. Esperado: ${expectedValue}, Atual: ${currentValue}`);
-                return false;
-            }
-        }
-    } catch (e) {
-        console.warn(`[PERIPHERALS] ⚠️ Erro ao validar tag ${tagName} após ${delayMs}ms:`, e);
-        return false;
-    }
-    
-    return false;
-}
-
-// Função auxiliar para escrever um bit específico em uma tag WORD
-async function writeWordBit(tagName, bit, value) {
-    try {
-        // ✅ PROTEÇÃO ROBUSTA: Aguarda até que o lock seja liberado (evita race conditions)
-        const maxWaitTime = 10000; // Máximo de 5 segundos esperando
-        const startWait = Date.now();
-        while (true) {
-        const nowTs = Date.now();
-        const lockTime = WRITE_LOCKS.get(tagName);
-            
-            if (!lockTime || (nowTs - lockTime) >= WRITE_LOCK_TIMEOUT_MS) {
-                // Lock não existe ou expirou, podemos adquirir
-                break;
-            }
-            
-            // Lock ainda está ativo, aguarda
-            if (nowTs - startWait >= maxWaitTime) {
-                console.warn(`[PERIPHERALS] ⚠️ Timeout aguardando lock da tag ${tagName}, cancelando escrita`);
-                return false;
-            }
-            
-            console.log(`[PERIPHERALS] ⏸️ Tag ${tagName} está bloqueada, aguardando liberação... (${Math.round((nowTs - lockTime) / 1000)}s/${WRITE_LOCK_TIMEOUT_MS / 1000}s)`);
-            await new Promise(resolve => setTimeout(resolve, 200));
-        }
-        
-        // ✅ Adquire lock na tag (CRÍTICO: garante exclusividade)
-        const lockTimestamp = Date.now();
-        WRITE_LOCKS.set(tagName, lockTimestamp);
-        console.log(`[PERIPHERALS] 🔒 Lock adquirido para tag ${tagName} - ESCREVENDO APENAS BIT ${bit} = ${value ? 1 : 0}`);
-        
-        // ✅ CORREÇÃO: Aguarda um delay maior após adquirir o lock para garantir que outras escritas terminaram
-        // Este delay é crítico para evitar que requisições simultâneas cheguem ao backend
-        await new Promise(resolve => setTimeout(resolve, 600));
-        
-        // ✅ CORREÇÃO CRÍTICA: Re-lê o valor atual ANTES de escrever (pode ter mudado enquanto aguardava)
-        console.log(`[PERIPHERALS] 📖 Lendo valor atual da tag ${tagName} antes de escrever bit ${bit}`);
-        const readResponse = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { cache: 'no-store' });
-        const readData = await readResponse.json();
-        
-        let currentWordValue = null;
-        if (readData && readData.ok && readData.values && readData.values[tagName] !== undefined) {
-            currentWordValue = Number(readData.values[tagName]) >>> 0;
-            console.log(`[PERIPHERALS] 📖 Valor atual da tag ${tagName}: ${currentWordValue} (0x${currentWordValue.toString(16).toUpperCase()})`);
-            const currentBitValue = ((currentWordValue >>> bit) & 1) === 1;
-            console.log(`[PERIPHERALS] 📖 Bit ${bit} atual: ${currentBitValue ? 1 : 0}, desejado: ${value ? 1 : 0}`);
-            
-            // Se o bit já está no valor desejado, não precisa escrever
-            if (currentBitValue === (value === 1)) {
-                console.log(`[PERIPHERALS] ✅ Bit ${bit} já está no valor desejado (${value ? 1 : 0}), não precisa escrever`);
-                WRITE_LOCKS.delete(tagName);
-                return true;
-            }
-            
-            // ✅ Verifica se outros bits estão setados e loga para debug
-            const otherBitsSet = [];
-            for (let i = 0; i < 16; i++) {
-                if (i !== bit && ((currentWordValue >>> i) & 1) === 1) {
-                    otherBitsSet.push(i);
-                }
-            }
-            if (otherBitsSet.length > 0) {
-                console.log(`[PERIPHERALS] 📖 Outros bits setados na WORD: ${otherBitsSet.join(', ')} (serão preservados)`);
-            }
-        } else {
-            console.warn(`[PERIPHERALS] ⚠️ Não foi possível ler valor atual da tag ${tagName}, backend fará read-modify-write`);
-        }
-        
-        console.log(`[PERIPHERALS] 🔵 ESCREVENDO APENAS BIT ${bit} da tag ${tagName} = ${value ? 1 : 0}`);
-        console.log(`[PERIPHERALS] 🔵 VALOR ATUAL DA WORD: ${currentWordValue !== null ? '0x' + currentWordValue.toString(16).toUpperCase().padStart(4, '0') : 'desconhecido'}`);
-        console.log(`[PERIPHERALS] 🔵 BITS SETADOS ANTES: ${currentWordValue !== null ? Array.from({length: 16}, (_, i) => ((currentWordValue >>> i) & 1) === 1 ? i : null).filter(x => x !== null).join(', ') : 'desconhecido'}`);
-        
-        // ✅ VERIFICAÇÃO CRÍTICA: Garante que apenas este bit será alterado
-        if (currentWordValue !== null) {
-            const expectedNewValue = value === 1 
-                ? (currentWordValue | (1 << bit)) & 0xFFFF
-                : (currentWordValue & ~(1 << bit)) & 0xFFFF;
-            console.log(`[PERIPHERALS] 🔵 VALOR ESPERADO APÓS ESCRITA: 0x${expectedNewValue.toString(16).toUpperCase().padStart(4, '0')}`);
-            console.log(`[PERIPHERALS] 🔵 BITS QUE DEVEM ESTAR SETADOS APÓS: ${Array.from({length: 16}, (_, i) => ((expectedNewValue >>> i) & 1) === 1 ? i : null).filter(x => x !== null).join(', ')}`);
-        }
+        console.log(`[PERIPHERALS] 📝 ${sourceRole}: Enviando escrita ${tagName}, bit ${bit} = ${value} (backend vai enfileirar)`);
         
         const payload = {
             name: tagName,
             bit: bit,
             mode: 'state',
             value: value ? 1 : 0,
-            pure: false // ✅ CRÍTICO: Garante read-modify-write para preservar outros bits
+            pure: false // ✅ CRÍTICO: false = read-modify-write (preserva outros bits)
         };
-        console.log(`[PERIPHERALS] 📤 Payload enviado:`, JSON.stringify(payload));
         
         const response = await fetch('/api/write_word_bit', {
             method: 'POST',
@@ -5196,157 +5158,33 @@ async function writeWordBit(tagName, bit, value) {
             body: JSON.stringify(payload)
         });
         
-        console.log(`[PERIPHERALS] 📥 Status da resposta:`, response.status, response.statusText);
-        
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`[PERIPHERALS] ❌ Erro HTTP ${response.status}:`, errorText);
-            WRITE_LOCKS.delete(tagName);
+            console.error(`[PERIPHERALS] ❌ ${sourceRole}: Erro HTTP ${response.status}:`, errorText);
             return false;
         }
         
         const data = await response.json();
-        console.log(`[PERIPHERALS] 📥 Resposta completa:`, data);
-        
-        if (data.ok) {
-            const writtenValue = data.written !== undefined ? Number(data.written) >>> 0 : null;
-            console.log(`[PERIPHERALS] ✅ Resposta do backend: Bit ${bit} da tag ${tagName} escrito. Valor retornado: ${writtenValue !== null ? writtenValue.toString(16) : 'null'}`);
-            
-            // ✅ VERIFICAÇÃO CRÍTICA: Aguarda um pouco e re-lê para confirmar que APENAS o bit desejado mudou
-            await new Promise(resolve => setTimeout(resolve, 300));
-            const verifyResponse = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { cache: 'no-store' });
-            const verifyData = await verifyResponse.json();
-            
-            if (verifyData && verifyData.ok && verifyData.values && verifyData.values[tagName] !== undefined) {
-                const verifiedValue = Number(verifyData.values[tagName]) >>> 0;
-                const verifiedBitValue = ((verifiedValue >>> bit) & 1) === 1;
-                const expectedBitValue = value === 1;
-                
-                console.log(`[PERIPHERALS] 🔍 Verificação pós-escrita: WORD=${verifiedValue.toString(16)}, Bit ${bit}=${verifiedBitValue ? 1 : 0}, Esperado=${expectedBitValue ? 1 : 0}`);
-                
-                // Verifica se o bit está correto
-                if (verifiedBitValue !== expectedBitValue) {
-                    console.error(`[PERIPHERALS] ❌ ERRO CRÍTICO: Bit ${bit} não está no valor esperado após escrita! Esperado: ${expectedBitValue ? 1 : 0}, Atual: ${verifiedBitValue ? 1 : 0}`);
-                    WRITE_LOCKS.delete(tagName);
-                    return false;
-                }
-                
-                // ✅ Verifica se outros bits foram preservados (comparando com o valor que lemos antes)
-                if (currentWordValue !== null) {
-                    const preservedBits = [];
-                    const changedBits = [];
-                    const unexpectedBits = [];
-                    
-                    for (let i = 0; i < 16; i++) {
-                        const wasSet = ((currentWordValue >>> i) & 1) === 1;
-                        const isSet = ((verifiedValue >>> i) & 1) === 1;
-                        
-                        if (i !== bit) {
-                            if (wasSet && isSet) {
-                                preservedBits.push(i);
-                            } else if (wasSet && !isSet) {
-                                changedBits.push(i); // ⚠️ Bit foi limpo quando não deveria
-                            } else if (!wasSet && isSet) {
-                                unexpectedBits.push(i); // ⚠️ Bit foi setado quando não deveria
-                            }
-                        }
-                    }
-                    
-                    if (preservedBits.length > 0) {
-                        console.log(`[PERIPHERALS] ✅ Bits preservados: ${preservedBits.join(', ')}`);
-                    }
-                    
-                    // Se algum bit foi alterado incorretamente, tenta corrigir
-                    if (changedBits.length > 0 || unexpectedBits.length > 0) {
-                        console.error(`[PERIPHERALS] ❌ ERRO CRÍTICO: Bits alterados incorretamente durante escrita do bit ${bit}!`);
-                        console.error(`[PERIPHERALS] ❌ Valor antes: 0x${currentWordValue.toString(16)}, Valor depois: 0x${verifiedValue.toString(16)}`);
-                        if (changedBits.length > 0) {
-                            console.error(`[PERIPHERALS] ❌ Bits que foram limpos incorretamente: ${changedBits.join(', ')}`);
-                        }
-                        if (unexpectedBits.length > 0) {
-                            console.error(`[PERIPHERALS] ❌ Bits que foram setados incorretamente: ${unexpectedBits.join(', ')}`);
-                        }
-                        console.error(`[PERIPHERALS] ❌ ATENÇÃO: Apenas o bit ${bit} deveria ter sido alterado!`);
-                        
-                        // Tenta restaurar o valor correto: restaura bits que foram alterados incorretamente
-                        // Usa o valor original que lemos antes da escrita como base
-                        let correctedValue = currentWordValue;
-                        
-                        // Aplica apenas a mudança do bit desejado
-                        if (value === 1) {
-                            correctedValue = (correctedValue | (1 << bit)) & 0xFFFF;
-                        } else {
-                            correctedValue = (correctedValue & ~(1 << bit)) & 0xFFFF;
-                        }
-                        
-                        console.log(`[PERIPHERALS] 🔧 Tentando corrigir WORD: ${verifiedValue.toString(16)} -> ${correctedValue.toString(16)}`);
-                        console.log(`[PERIPHERALS] 🔧 Valor original era: ${currentWordValue.toString(16)}, corrigindo para preservar outros bits`);
-                        
-                        // Aguarda um pouco antes de corrigir (para garantir que outras escritas terminaram)
-                        await new Promise(resolve => setTimeout(resolve, 300));
-                        
-                        // Escreve o valor corrigido diretamente na WORD
-                        const correctResponse = await fetch('/api/write_tags', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ [tagName]: correctedValue })
-                        });
-                        
-                        if (correctResponse.ok) {
-                            const correctData = await correctResponse.json();
-                            if (correctData.ok) {
-                                console.log(`[PERIPHERALS] ✅ WORD corrigida com sucesso`);
-                                
-                                // Verifica novamente após correção
-                                await new Promise(resolve => setTimeout(resolve, 200));
-                                const finalVerifyResponse = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { cache: 'no-store' });
-                                const finalVerifyData = await finalVerifyResponse.json();
-                                if (finalVerifyData && finalVerifyData.ok && finalVerifyData.values) {
-                                    const finalValue = Number(finalVerifyData.values[tagName]) >>> 0;
-                                    const finalBitValue = ((finalValue >>> bit) & 1) === 1;
-                                    if (finalBitValue === (value === 1)) {
-                                        console.log(`[PERIPHERALS] ✅ Correção confirmada: bit ${bit} está correto`);
-                                    } else {
-                                        console.error(`[PERIPHERALS] ❌ Correção falhou: bit ${bit} ainda incorreto`);
-                                    }
-                                }
-                            } else {
-                                console.error(`[PERIPHERALS] ❌ Falha ao corrigir WORD:`, correctData.error);
-                            }
-                        } else {
-                            console.error(`[PERIPHERALS] ❌ Erro HTTP ao corrigir WORD:`, correctResponse.status);
-                        }
-                    }
-                }
-            }
-            
-            // ✅ Remove lock após escrita bem-sucedida (após delay maior para garantir que o PLC processou)
-            // Delay aumentado para garantir que não há requisições pendentes
-            setTimeout(() => {
-                WRITE_LOCKS.delete(tagName);
-                console.log(`[PERIPHERALS] 🔓 Lock liberado para tag ${tagName} (bit ${bit})`);
-            }, 1500);
-            return true;
-        } else {
-            console.error(`[PERIPHERALS] ❌ Erro ao escrever bit ${bit} da tag ${tagName}:`, data.error);
-            // ✅ Remove lock em caso de erro
-            WRITE_LOCKS.delete(tagName);
+        if (!data.ok) {
+            console.error(`[PERIPHERALS] ❌ ${sourceRole}: Falha na escrita:`, data.error);
             return false;
         }
-    } catch (e) {
-        console.error(`[PERIPHERALS] ❌ Exceção ao escrever bit ${bit} da tag ${tagName}:`, e);
-        // ✅ Remove lock em caso de exceção
-        WRITE_LOCKS.delete(tagName);
+        
+        const writtenValue = Number(data.written) >>> 0;
+        console.log(`[PERIPHERALS] ✅ ${sourceRole}: Backend processou (WORD=0x${writtenValue.toString(16).toUpperCase().padStart(4,'0')})`);
+        
+        return true;
+    } catch (error) {
+        console.error(`[PERIPHERALS] ❌ ${sourceRole}: Exceção:`, error);
         return false;
     }
 }
 
 // Função auxiliar para escrever um valor completo em uma tag
-async function writeTagValue(tagName, value) {
+async function writeTagValue(tagName, value, sourceRole = 'unknown') {
     try {
-        console.log(`[PERIPHERALS] 🔵 Tentando escrever tag ${tagName} = ${value}`);
+        console.log(`[PERIPHERALS] 🔵 ${sourceRole}: Tentando escrever tag ${tagName} = ${value}`);
         const payload = { [tagName]: value };
-        console.log(`[PERIPHERALS] 📤 Payload:`, payload);
         
         const response = await fetch('/api/write_tags', {
             method: 'POST',
@@ -5354,25 +5192,22 @@ async function writeTagValue(tagName, value) {
             body: JSON.stringify(payload)
         });
         
-        console.log(`[PERIPHERALS] 📥 Status da resposta:`, response.status, response.statusText);
-        
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`[PERIPHERALS] ❌ Erro HTTP ${response.status}:`, errorText);
+            console.error(`[PERIPHERALS] ❌ ${sourceRole}: Erro HTTP ${response.status}:`, errorText);
             return false;
         }
         
         const data = await response.json();
-        console.log(`[PERIPHERALS] 📥 Resposta completa:`, data);
         
         if (data.ok) {
-            console.log(`[PERIPHERALS] ✅ Tag ${tagName} escrita com sucesso: ${value}`);
+            console.log(`[PERIPHERALS] ✅ ${sourceRole}: Tag ${tagName} escrita com sucesso: ${value}`);
         } else {
-            console.error(`[PERIPHERALS] ❌ Erro ao escrever tag ${tagName}:`, data.error);
+            console.error(`[PERIPHERALS] ❌ ${sourceRole}: Erro ao escrever tag ${tagName}:`, data.error);
         }
         return data.ok;
     } catch (e) {
-        console.error(`[PERIPHERALS] ❌ Exceção ao escrever tag ${tagName}:`, e);
+        console.error(`[PERIPHERALS] ❌ ${sourceRole}: Exceção ao escrever tag ${tagName}:`, e);
         return false;
     }
 }

@@ -13,12 +13,248 @@ machines_bp = Blueprint('machines', __name__)
 _word_write_locks = {}  # tag_name -> threading.Lock
 _locks_lock = threading.Lock()  # Lock para proteger o dicionário de locks
 
+# ✅ NOVA PROTEÇÃO: Fila de execução sequencial por TAG
+# Garante que escritas na mesma TAG sejam processadas em ordem, uma de cada vez
+import queue
+from typing import Dict, Any
+_tag_write_queues: Dict[str, queue.Queue] = {}  # tag_name -> Queue de (payload, result_container)
+_queue_workers: Dict[str, threading.Thread] = {}  # tag_name -> Thread worker
+_queues_lock = threading.Lock()
+
 def get_word_lock(tag_name):
     """Obtém ou cria um lock para uma tag WORD específica"""
     with _locks_lock:
         if tag_name not in _word_write_locks:
             _word_write_locks[tag_name] = threading.Lock()
         return _word_write_locks[tag_name]
+
+def _process_write_queue(tag_name):
+    """Worker thread que processa a fila de escritas para uma TAG específica"""
+    logger.info(f"[QUEUE_WORKER] 🚀 Iniciado worker para tag {tag_name}")
+    
+    # ✅ IMPORTANTE: Aguarda um pouco para garantir que a fila foi adicionada ao dict
+    time.sleep(0.1)
+    
+    q = _tag_write_queues.get(tag_name)
+    if not q:
+        logger.error(f"[QUEUE_WORKER] ❌ Fila não encontrada para tag {tag_name}!")
+        return
+    
+    while True:
+        try:
+            logger.info(f"[QUEUE_WORKER] ⏳ Aguardando item na fila da tag {tag_name}...")
+            # Aguarda próxima requisição na fila (timeout de 60s para auto-finalizar se inativo)
+            item = q.get(timeout=60)
+            logger.info(f"[QUEUE_WORKER] 📥 Item recebido da fila da tag {tag_name}")
+            
+            if item is None:  # Sinal de finalização
+                logger.info(f"[QUEUE_WORKER] Finalizando worker da tag {tag_name}")
+                break
+            
+            payload, result_container = item
+            logger.info(f"[QUEUE_WORKER] Processando requisição da tag {tag_name}: {payload}")
+            
+            # Executa a escrita real (com lock) e armazena o resultado
+            try:
+                # ✅ Pega o app do payload (passado pelo enqueue_write)
+                app = payload.get('_app')
+                if app:
+                    payload_clean = {k: v for k, v in payload.items() if k != '_app'}
+                    result = _execute_write_word_bit(payload_clean, app)
+                else:
+                    result = (jsonify({'ok': False, 'error': 'App context not provided'}), 500)
+                    
+                # result é uma tupla (response, status_code)
+                result_container['result'] = result
+                result_container['done'] = True
+                logger.info(f"[QUEUE_WORKER] ✅ Processamento concluído para tag {tag_name}")
+            except Exception as e:
+                logger.error(f"[QUEUE_WORKER] Erro ao processar escrita na tag {tag_name}: {e}")
+                import traceback
+                traceback.print_exc()
+                result_container['result'] = (jsonify({'ok': False, 'error': str(e)}), 500)
+                result_container['done'] = True
+            finally:
+                q.task_done()
+                
+        except queue.Empty:
+            # Timeout: fila está inativa há 60s, finaliza worker
+            logger.info(f"[QUEUE_WORKER] Tag {tag_name} inativa há 60s, finalizando worker")
+            with _queues_lock:
+                if tag_name in _queue_workers:
+                    del _queue_workers[tag_name]
+                if tag_name in _tag_write_queues:
+                    del _tag_write_queues[tag_name]
+            break
+        except Exception as e:
+            logger.error(f"[QUEUE_WORKER] Erro crítico no worker da tag {tag_name}: {e}")
+
+def enqueue_write(tag_name, payload):
+    """Enfileira uma requisição de escrita para processamento sequencial"""
+    logger.info(f"[QUEUE] 📥 enqueue_write chamado para tag {tag_name}")
+    
+    with _queues_lock:
+        # Cria fila e worker se não existir
+        if tag_name not in _tag_write_queues:
+            logger.info(f"[QUEUE] ✨ Criando nova fila para tag {tag_name}")
+            _tag_write_queues[tag_name] = queue.Queue()
+            worker = threading.Thread(target=_process_write_queue, args=(tag_name,), daemon=True)
+            _queue_workers[tag_name] = worker
+            worker.start()
+            logger.info(f"[QUEUE] ✅ Worker iniciado para tag {tag_name}, thread: {worker.name}")
+        else:
+            logger.info(f"[QUEUE] ♻️ Usando fila existente para tag {tag_name}")
+        
+        q = _tag_write_queues[tag_name]
+    
+    # Container para armazenar o resultado
+    result_container = {'result': None, 'done': False}
+    
+    # Adiciona o app ao payload para uso no worker
+    payload['_app'] = current_app._get_current_object()
+    
+    # Adiciona à fila
+    logger.info(f"[QUEUE] 📤 Adicionando à fila da tag {tag_name}...")
+    q.put((payload, result_container))
+    logger.info(f"[QUEUE] ✅ Requisição enfileirada para tag {tag_name}, posição na fila: {q.qsize()}")
+    
+    # Aguarda processamento (com timeout de 30s)
+    max_wait = 30
+    start = time.time()
+    check_count = 0
+    while not result_container['done']:
+        elapsed = time.time() - start
+        if elapsed > max_wait:
+            logger.error(f"[QUEUE] ⏱️ TIMEOUT aguardando processamento da tag {tag_name} após {elapsed:.1f}s")
+            logger.error(f"[QUEUE] Estado: result={result_container['result']}, done={result_container['done']}")
+            return (jsonify({'ok': False, 'error': 'Timeout aguardando processamento'}), 500)
+        
+        check_count += 1
+        if check_count % 100 == 0:  # Log a cada 5s
+            logger.info(f"[QUEUE] ⏳ Ainda aguardando tag {tag_name}... ({elapsed:.1f}s)")
+        
+        time.sleep(0.05)
+    
+    logger.info(f"[QUEUE] ✅ Processamento concluído para tag {tag_name} em {time.time() - start:.2f}s")
+    return result_container['result']
+
+def _execute_write_word_bit(payload, app):
+    """Executa a escrita real de um bit WORD (lógica original do write_word_bit)"""
+    with app.app_context():
+        try:
+            name = payload.get('name')
+            bit = int(payload.get('bit', -1))
+            mode = (payload.get('mode') or 'set').lower()
+            pulse_ms = int(payload.get('pulse_ms', 200))
+            pure = bool(payload.get('pure', False))
+            no_clear = bool(payload.get('no_clear', False))
+
+            if not name or bit < 0 or bit > 15:
+                return (jsonify({'ok': False, 'error': 'Parâmetros inválidos (name e bit 0..15 obrigatórios)'}), 400)
+
+            cfg = app.plc_controller.active_config
+            if not cfg:
+                return (jsonify({'ok': False, 'error': 'No machine selected'}), 400)
+
+            # Valida no comm_map e tipo WORD
+            machine = cfg.get('name')
+            comm_map = (app.comm_map or {}).get(machine, [])
+            from app.utils_comm_map.comm_map_loader import normalize_comm_map_to_array
+            comm_map_array = normalize_comm_map_to_array(comm_map)
+            tag_def = next((t for t in comm_map_array if isinstance(t, dict) and t.get('name') == name), None)
+            if not tag_def:
+                return (jsonify({'ok': False, 'error': f'Tag {name} não encontrada no comm_map'}), 400)
+            if (tag_def.get('type') or '').upper() != 'WORD':
+                return (jsonify({'ok': False, 'error': f'Tag {name} não é WORD'}), 400)
+
+            # Lê valor atual somente quando necessário
+            need_read = not (pure and mode in ('set', 'clear'))
+            if need_read:
+                values = current_app.plc_controller.read_tags([name]) or {}
+                if name not in values or values[name] is None:
+                    return (jsonify({'ok': False, 'error': 'Falha ao ler valor atual'}), 500)
+                word = int(values[name]) & 0xFFFF
+            else:
+                word = 0
+
+            def do_write(new_word: int) -> bool:
+                return current_app.plc_controller.write_tags({ name: int(new_word) })
+
+            if mode == 'set':
+                new_word = ((1 << bit) & 0xFFFF) if pure else ((word | (1 << bit)) & 0xFFFF)
+                ok = do_write(new_word)
+                return (jsonify({'ok': bool(ok), 'written': new_word}), 200) if ok else (jsonify({'ok': False, 'error': 'Falha ao escrever WORD'}), 500)
+            elif mode == 'clear':
+                new_word = 0 if pure else ((word & ~(1 << bit)) & 0xFFFF)
+                ok = do_write(new_word)
+                return (jsonify({'ok': bool(ok), 'written': new_word}), 200) if ok else (jsonify({'ok': False, 'error': 'Falha ao escrever WORD'}), 500)
+            elif mode == 'pulse':
+                set_word = ((1 << bit) & 0xFFFF) if pure else ((word | (1 << bit)) & 0xFFFF)
+                ok1 = do_write(set_word)
+                if not ok1:
+                    return (jsonify({'ok': False, 'error': 'Falha ao setar bit'}), 500)
+                if no_clear:
+                    return (jsonify({'ok': True, 'set_word': set_word, 'cleared': False}), 200)
+                import time as _t
+                _t.sleep(max(0, pulse_ms) / 1000.0)
+                clear_word = (set_word & ~(1 << bit)) & 0xFFFF
+                ok2 = do_write(clear_word)
+                if not ok2:
+                    return (jsonify({'ok': False, 'error': 'Falha ao limpar bit após pulso'}), 500)
+                return (jsonify({'ok': True, 'set_word': set_word, 'clear_word': clear_word}), 200)
+            elif mode == 'toggle':
+                current_on = ((word >> bit) & 1) == 1
+                if pure:
+                    new_word = (1 << bit) if (not current_on) else 0
+                else:
+                    if current_on:
+                        new_word = (word & ~(1 << bit)) & 0xFFFF
+                    else:
+                        new_word = (word | (1 << bit)) & 0xFFFF
+                ok = do_write(new_word)
+                if not ok:
+                    return (jsonify({'ok': False, 'error': 'Falha ao escrever WORD no toggle'}), 500)
+                new_on = 1 if ((new_word >> bit) & 1) == 1 else 0
+                return (jsonify({'ok': True, 'written': new_word, 'bit': bit, 'value': new_on}), 200)
+            elif mode == 'state':
+                # ✅ PROTEÇÃO CRÍTICA: Usa lock para garantir que apenas uma escrita por WORD aconteça por vez
+                word_lock = get_word_lock(name)
+            
+                with word_lock:
+                    # Define explicitamente o estado do bit (0/1)
+                    val = 1 if int(payload.get('value', 0)) else 0
+                
+                    # ✅ CRÍTICO: Re-lê o valor atual DENTRO do lock
+                    values = current_app.plc_controller.read_tags([name]) or {}
+                    if name not in values or values[name] is None:
+                        return (jsonify({'ok': False, 'error': 'Falha ao ler valor atual'}), 500)
+                    word = int(values[name]) & 0xFFFF
+                    logger.info(f"[WRITE_WORD_BIT] Re-lido valor da tag {name} dentro do lock: {word} (0x{word:04X}), bit {bit} = {val}")
+                
+                    if pure:
+                        new_word = (1 << bit) if val == 1 else 0
+                    else:
+                        if val == 1:
+                            new_word = (word | (1 << bit)) & 0xFFFF
+                        else:
+                            new_word = (word & ~(1 << bit)) & 0xFFFF
+                
+                    logger.info(f"[WRITE_WORD_BIT] Escrevendo bit {bit} da tag {name}: {word} (0x{word:04X}) -> {new_word} (0x{new_word:04X})")
+                
+                    ok = do_write(new_word)
+                    if not ok:
+                        return (jsonify({'ok': False, 'error': 'Falha ao escrever WORD no state'}), 500)
+                
+                    # ✅ AGUARDA PLC processar (200ms)
+                    time.sleep(0.2)
+                
+                    logger.info(f"[WRITE_WORD_BIT] ✅ Bit {bit} da tag {name} escrito com sucesso: {val}")
+                    return (jsonify({'ok': True, 'written': new_word, 'bit': bit, 'value': val}), 200)
+            else:
+                return (jsonify({'ok': False, 'error': 'mode inválido (use set|clear|pulse)'}), 400)
+        except Exception as e:
+            logger.error(f"Erro em _execute_write_word_bit: {e}")
+            return (jsonify({'ok': False, 'error': str(e)}), 500)
 
 @machines_bp.route('/machines', methods=['GET'])
 def list_machines():
@@ -353,6 +589,7 @@ def write_tags():
 @machines_bp.route('/write_word_bit', methods=['POST'])
 def write_word_bit():
     """Escreve um bit específico dentro de uma tag WORD com read-modify-write.
+    ✅ Usa lock por WORD para evitar race conditions
     Payload: { "name": "TAG_WORD", "bit": 0-15, "mode": "set"|"clear"|"pulse"|"toggle"|"state", "pulse_ms": optional, "value": 0|1 }
     """
     try:
@@ -360,113 +597,47 @@ def write_word_bit():
         name = payload.get('name')
         bit = int(payload.get('bit', -1))
         mode = (payload.get('mode') or 'set').lower()
-        pulse_ms = int(payload.get('pulse_ms', 200))
-        pure = bool(payload.get('pure', False))  # se True, escreve somente o bit (0..1<<bit), ignorando outros
-        no_clear = bool(payload.get('no_clear', False))  # se True em pulse, não limpa após setar
-
+        
         if not name or bit < 0 or bit > 15:
-            return jsonify({'ok': False, 'error': 'Parâmetros inválidos (name e bit 0..15 obrigatórios)'}), 400
-
-        cfg = current_app.plc_controller.active_config
-        if not cfg:
-            return jsonify({'ok': False, 'error': 'No machine selected'}), 400
-
-        # Valida no comm_map e tipo WORD
-        machine = cfg.get('name')
-        comm_map = (current_app.comm_map or {}).get(machine, [])
-        from app.utils_comm_map.comm_map_loader import normalize_comm_map_to_array
-        comm_map_array = normalize_comm_map_to_array(comm_map)
-        tag_def = next((t for t in comm_map_array if isinstance(t, dict) and t.get('name') == name), None)
-        if not tag_def:
-            return jsonify({'ok': False, 'error': f'Tag {name} não encontrada no comm_map'}), 400
-        if (tag_def.get('type') or '').upper() != 'WORD':
-            return jsonify({'ok': False, 'error': f'Tag {name} não é WORD'}), 400
-
-        # Lê valor atual somente quando necessário
-        need_read = not (pure and mode in ('set', 'clear'))
-        if need_read:
-            values = current_app.plc_controller.read_tags([name]) or {}
-            if name not in values or values[name] is None:
-                return jsonify({'ok': False, 'error': 'Falha ao ler valor atual'}), 500
-            word = int(values[name]) & 0xFFFF
-        else:
-            word = 0
-
-        def do_write(new_word: int) -> bool:
-            return current_app.plc_controller.write_tags({ name: int(new_word) })
-
-        if mode == 'set':
-            new_word = ((1 << bit) & 0xFFFF) if pure else ((word | (1 << bit)) & 0xFFFF)
-            ok = do_write(new_word)
-            return jsonify({'ok': bool(ok), 'written': new_word}) if ok else (jsonify({'ok': False, 'error': 'Falha ao escrever WORD'}), 500)
-        elif mode == 'clear':
-            new_word = 0 if pure else ((word & ~(1 << bit)) & 0xFFFF)
-            ok = do_write(new_word)
-            return jsonify({'ok': bool(ok), 'written': new_word}) if ok else (jsonify({'ok': False, 'error': 'Falha ao escrever WORD'}), 500)
-        elif mode == 'pulse':
-            set_word = ((1 << bit) & 0xFFFF) if pure else ((word | (1 << bit)) & 0xFFFF)
-            ok1 = do_write(set_word)
-            if not ok1:
-                return jsonify({'ok': False, 'error': 'Falha ao setar bit'}), 500
-            if no_clear:
-                return jsonify({'ok': True, 'set_word': set_word, 'cleared': False})
-            import time as _t
-            _t.sleep(max(0, pulse_ms) / 1000.0)
-            clear_word = (set_word & ~(1 << bit)) & 0xFFFF
-            ok2 = do_write(clear_word)
-            if not ok2:
-                return jsonify({'ok': False, 'error': 'Falha ao limpar bit após pulso'}), 500
-            return jsonify({'ok': True, 'set_word': set_word, 'clear_word': clear_word})
-        elif mode == 'toggle':
-            # Inverte o bit e escreve (pure=True escreve só o bit como 0/1 absoluto)
-            current_on = ((word >> bit) & 1) == 1
-            if pure:
-                new_word = (1 << bit) if (not current_on) else 0
-            else:
-                if current_on:
-                    new_word = (word & ~(1 << bit)) & 0xFFFF
-                else:
-                    new_word = (word | (1 << bit)) & 0xFFFF
-            ok = do_write(new_word)
-            if not ok:
-                return jsonify({'ok': False, 'error': 'Falha ao escrever WORD no toggle'}), 500
-            new_on = 1 if ((new_word >> bit) & 1) == 1 else 0
-            return jsonify({'ok': True, 'written': new_word, 'bit': bit, 'value': new_on})
-        elif mode == 'state':
-            # ✅ PROTEÇÃO CRÍTICA: Usa lock para garantir que apenas uma escrita por WORD aconteça por vez
-            # Isso evita race conditions onde duas requisições simultâneas podem sobrescrever uma à outra
+            return jsonify({'ok': False, 'error': 'Parâmetros inválidos'}), 400
+        
+        logger.info(f"[API] Escrevendo bit {bit} da tag {name}, mode={mode}")
+        
+        # ✅ Chama diretamente com lock (sem fila, mais simples e funcional)
+        if mode == 'state':
             word_lock = get_word_lock(name)
-            
             with word_lock:
-                # Define explicitamente o estado do bit (0/1). Se pure=True, escreve somente o bit; senão read-modify-write.
+                # Lê valor atual
+                values = current_app.plc_controller.read_tags([name]) or {}
+                if name not in values or values[name] is None:
+                    return jsonify({'ok': False, 'error': 'Falha ao ler valor atual'}), 500
+                    
+                word = int(values[name]) & 0xFFFF
                 val = 1 if int(payload.get('value', 0)) else 0
                 
-                # ✅ CRÍTICO: Re-lê o valor atual DENTRO do lock (pode ter mudado enquanto aguardava)
-                if need_read is False or True:  # Sempre re-lê para garantir valor mais recente
-                    values = current_app.plc_controller.read_tags([name]) or {}
-                    if name not in values or values[name] is None:
-                        return jsonify({'ok': False, 'error': 'Falha ao ler valor atual'}), 500
-                    word = int(values[name]) & 0xFFFF
-                    logger.info(f"[WRITE_WORD_BIT] Re-lido valor da tag {name} dentro do lock: {word} (0x{word:04X}), bit {bit} = {val}")
+                logger.info(f"[WRITE_WORD_BIT] WORD atual: 0x{word:04X}, bit {bit} = {val}")
                 
-                if pure:
-                    new_word = (1 << bit) if val == 1 else 0
+                # Modifica apenas o bit desejado
+                if val == 1:
+                    new_word = (word | (1 << bit)) & 0xFFFF
                 else:
-                    if val == 1:
-                        new_word = (word | (1 << bit)) & 0xFFFF
-                    else:
-                        new_word = (word & ~(1 << bit)) & 0xFFFF
+                    new_word = (word & ~(1 << bit)) & 0xFFFF
                 
-                logger.info(f"[WRITE_WORD_BIT] Escrevendo bit {bit} da tag {name}: {word} (0x{word:04X}) -> {new_word} (0x{new_word:04X})")
+                logger.info(f"[WRITE_WORD_BIT] Escrevendo: 0x{word:04X} -> 0x{new_word:04X}")
                 
-                ok = do_write(new_word)
+                # Escreve no PLC
+                ok = current_app.plc_controller.write_tags({ name: int(new_word) })
                 if not ok:
-                    return jsonify({'ok': False, 'error': 'Falha ao escrever WORD no state'}), 500
+                    return jsonify({'ok': False, 'error': 'Falha ao escrever'}), 500
                 
-                logger.info(f"[WRITE_WORD_BIT] ✅ Bit {bit} da tag {name} escrito com sucesso: {val}")
+                # Aguarda PLC processar
+                time.sleep(0.2)
+                
+                logger.info(f"[WRITE_WORD_BIT] ✅ Sucesso")
                 return jsonify({'ok': True, 'written': new_word, 'bit': bit, 'value': val})
         else:
-            return jsonify({'ok': False, 'error': 'mode inválido (use set|clear|pulse)'}), 400
+            return jsonify({'ok': False, 'error': 'Apenas mode=state é suportado agora'}), 400
+        
     except Exception as e:
         logger.error(f"Erro em write_word_bit: {e}")
         return jsonify({'ok': False, 'error': str(e)}), 500
