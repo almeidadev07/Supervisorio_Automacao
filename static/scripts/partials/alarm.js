@@ -662,6 +662,93 @@ let syncInterval = null; // Intervalo de sincronização global
 let isWriting = false; // Lock para evitar escritas simultâneas
 let lastSyncTime = 0; // Timestamp da última sincronização
 
+// ✅ NOVA PROTEÇÃO: Sistema de fila e bloqueio para evitar conflitos
+const QUICK_BUTTON_PROCESSING = new Set(); // Botões atualmente processando
+const QUICK_BUTTON_LAST_CLICK = new Map(); // Último timestamp de clique por botão
+const QUICK_BUTTON_MIN_INTERVAL = 2000; // Mínimo de 2 segundos entre cliques
+const QUICK_TAG_WRITE_QUEUE = new Map(); // Fila de escritas por TAG
+const QUICK_TAG_WRITE_LOCK = new Map(); // Lock por TAG
+const QUICK_TAG_LAST_WRITE = new Map(); // Timestamp da última escrita por TAG
+const QUICK_MIN_DELAY_BETWEEN_WRITES = 5000; // 5 segundos entre escritas na mesma TAG
+
+// ✅ Função para mostrar toast nos botões rápidos
+function showQuickButtonToast(message, duration = 3000) {
+    // Remove toast anterior se existir
+    const existingToast = document.getElementById('quick-button-toast');
+    if (existingToast) {
+        existingToast.remove();
+    }
+    
+    // Cria novo toast
+    const toast = document.createElement('div');
+    toast.id = 'quick-button-toast';
+    toast.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        text-align: center;
+        min-width: 300px;
+        animation: fadeInOut 0.3s ease-in-out;
+    `;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    // Remove após o tempo especificado
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
+// ✅ Função para enfileirar escritas na mesma TAG (serializadas)
+async function enqueueQuickTagWrite(tagName, writeOperation) {
+    const previousPromise = QUICK_TAG_WRITE_QUEUE.get(tagName) || Promise.resolve();
+    
+    const newPromise = previousPromise
+        .catch(() => {})
+        .then(async () => {
+            // Calcula delay necessário desde a última escrita
+            const lastWriteTime = QUICK_TAG_LAST_WRITE.get(tagName) || 0;
+            const timeSinceLastWrite = Date.now() - lastWriteTime;
+            const delayNeeded = Math.max(0, QUICK_MIN_DELAY_BETWEEN_WRITES - timeSinceLastWrite);
+            
+            if (delayNeeded > 0) {
+                console.log(`[QUICK_BUTTONS] ⏳ ${tagName}: Aguardando ${delayNeeded}ms antes de escrever`);
+                await new Promise(resolve => setTimeout(resolve, delayNeeded));
+            }
+            
+            console.log(`[QUICK_BUTTONS] 🔒 ${tagName}: Iniciando escrita serializada`);
+            QUICK_TAG_WRITE_LOCK.set(tagName, true);
+            try {
+                const result = await writeOperation();
+                QUICK_TAG_LAST_WRITE.set(tagName, Date.now());
+                return result;
+            } finally {
+                QUICK_TAG_WRITE_LOCK.set(tagName, false);
+                console.log(`[QUICK_BUTTONS] 🔓 ${tagName}: Escrita concluída`);
+            }
+        });
+    
+    QUICK_TAG_WRITE_QUEUE.set(tagName, newPromise);
+    return newPromise;
+}
+
+// ✅ Função para verificar se TAG está sendo escrita
+function isQuickTagWriting(tagName) {
+    return QUICK_TAG_WRITE_LOCK.get(tagName) === true;
+}
+
 function inicializarBotoesRapidos() {
     if (quickButtonsInitialized) {
         console.log('[QUICK_BUTTONS] Botões já inicializados');
@@ -706,29 +793,47 @@ function inicializarBotoesRapidos() {
         }
     }
 
-    async function writeWord(newValue) {
-        try {
-            console.log(`[QUICK_BUTTONS] Escrevendo valor: ${newValue} (0x${newValue.toString(16).toUpperCase()})`);
-            const res = await fetch('/api/write_tags', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ [TAG_NAME]: newValue })
-            });
-            const data = await res.json();
-            console.log('[QUICK_BUTTONS] Resposta da escrita:', data);
-            
-            if (data && data.ok) {
-                // Aguarda um pouco antes de permitir próxima escrita
-                await new Promise(resolve => setTimeout(resolve, 100));
+    // ✅ NOVA FUNÇÃO: Usa write_word_bit para escrita serializada (igual ao grid)
+    async function writeWordBit(tagName, bit, value) {
+        return enqueueQuickTagWrite(tagName, async () => {
+            try {
+                console.log(`[QUICK_BUTTONS] 📝 Enviando escrita ${tagName}, bit ${bit} = ${value}`);
+                
+                const payload = {
+                    name: tagName,
+                    bit: bit,
+                    mode: 'state',
+                    value: value ? 1 : 0,
+                    pure: false
+                };
+                
+                const response = await fetch('/api/write_word_bit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error(`[QUICK_BUTTONS] ❌ Erro HTTP ${response.status}:`, errorText);
+                    return false;
+                }
+                
+                const data = await response.json();
+                if (!data.ok) {
+                    console.error(`[QUICK_BUTTONS] ❌ Falha na escrita:`, data.error);
+                    return false;
+                }
+                
+                const writtenValue = Number(data.written) >>> 0;
+                console.log(`[QUICK_BUTTONS] ✅ Backend processou (WORD=0x${writtenValue.toString(16).toUpperCase().padStart(4,'0')})`);
+                
                 return true;
-            } else {
-                console.error('[QUICK_BUTTONS] Erro na resposta da escrita:', data);
+            } catch (error) {
+                console.error(`[QUICK_BUTTONS] ❌ Exceção:`, error);
                 return false;
             }
-        } catch (e) {
-            console.error('[QUICK_BUTTONS] Erro na escrita:', e);
-            return false;
-        }
+        });
     }
 
     function setButtonVisual(button, active) {
@@ -761,82 +866,113 @@ function inicializarBotoesRapidos() {
     }
 
     async function clickBitHandler(button, bit) {
-        // Proteção: evita processamento simultâneo de múltiplos botões
-        if (isWriting) {
-            console.warn(`[QUICK_BUTTONS] Operação já em andamento, ignorando clique no bit ${bit}`);
+        const buttonRole = bit === 0 ? 'solenoide' : 'balanca';
+        
+        // ✅ PROTEÇÃO 1: Verifica se este botão já está processando
+        if (QUICK_BUTTON_PROCESSING.has(buttonRole)) {
+            console.log(`[QUICK_BUTTONS] ⏸️ ${buttonRole} já está processando`);
+            showQuickButtonToast('⏳ Aguarde o comando anterior ser processado!', 2500);
             return;
         }
         
-        // Desabilita ambos os botões durante a operação
-        const btnSolenoide = document.getElementById('btn-acionamento');
-        const btnBalanca = document.getElementById('btn-balanca');
+        // ✅ PROTEÇÃO 2: Verifica se OUTRO botão da mesma WORD está processando
+        const allRoles = ['solenoide', 'balanca'];
+        const isAnyProcessing = allRoles.some(r => QUICK_BUTTON_PROCESSING.has(r));
+        if (isAnyProcessing) {
+            console.log(`[QUICK_BUTTONS] 🚫 ${buttonRole}: Outro botão está processando`);
+            showQuickButtonToast('⏳ Aguarde! Outro comando está sendo processado.\nTente novamente em alguns segundos.', 3000);
+            return;
+        }
+        
+        // ✅ PROTEÇÃO 3: Verifica se a TAG está sendo escrita
+        if (isQuickTagWriting(TAG_NAME)) {
+            console.log(`[QUICK_BUTTONS] 🚫 ${buttonRole}: TAG está sendo escrita`);
+            showQuickButtonToast('⏳ Aguarde! Escrita em andamento.\nTente novamente em alguns segundos.', 3000);
+            return;
+        }
+        
+        // ✅ PROTEÇÃO 4: Debounce
+        const now = Date.now();
+        const lastClick = QUICK_BUTTON_LAST_CLICK.get(buttonRole) || 0;
+        const timeSinceLastClick = now - lastClick;
+        
+        if (timeSinceLastClick < QUICK_BUTTON_MIN_INTERVAL) {
+            const remainingSeconds = Math.ceil((QUICK_BUTTON_MIN_INTERVAL - timeSinceLastClick) / 1000);
+            console.log(`[QUICK_BUTTONS] ⏸️ ${buttonRole} debounce ativo`);
+            showQuickButtonToast(`⏳ Aguarde ${remainingSeconds} segundo${remainingSeconds > 1 ? 's' : ''} e clique novamente!`, 2500);
+            return;
+        }
+        
+        // ✅ MARCA como processando
+        QUICK_BUTTON_PROCESSING.add(buttonRole);
+        QUICK_BUTTON_LAST_CLICK.set(buttonRole, now);
+        
+        console.log(`[QUICK_BUTTONS] 🎯 ${buttonRole} - Clique AUTORIZADO`);
         
         try {
-            isWriting = true;
             console.log(`[QUICK_BUTTONS] Clicado botão bit ${bit} (${button.id})`);
             
-            // Desabilita ambos os botões temporariamente
-            if (btnSolenoide) btnSolenoide.disabled = true;
-            if (btnBalanca) btnBalanca.disabled = true;
-            
-            // Lê o valor atual do PLC
+            // ✅ Lê estado atual para fazer toggle
             const current = await readWord();
             if (current === null) {
-                console.error('[QUICK_BUTTONS] Falha na leitura - não é possível continuar');
-                isWriting = false;
-                if (btnSolenoide) btnSolenoide.disabled = false;
-                if (btnBalanca) btnBalanca.disabled = false;
+                console.error('[QUICK_BUTTONS] Falha na leitura');
+                QUICK_BUTTON_PROCESSING.delete(buttonRole);
                 return;
             }
             
-            // Verifica o estado atual do bit e faz toggle (alterna entre 0 e 1)
             const isCurrentlySet = bitIsSet(current, bit);
-            const nextState = !isCurrentlySet; // Inverte o estado atual
+            const nextState = !isCurrentlySet;
             
-            // Calcula o novo valor APENAS alterando o bit específico
-            const nextValue = setBit(current, bit, nextState);
+            console.log(`[QUICK_BUTTONS] 🚀 ${buttonRole}: Bit ${bit}: ${isCurrentlySet} → ${nextState}`);
             
-            console.log(`[QUICK_BUTTONS] Valor atual: ${current} (0x${current.toString(16).toUpperCase()})`);
-            console.log(`[QUICK_BUTTONS] Bit ${bit} está: ${isCurrentlySet ? 'ATIVO (1)' : 'INATIVO (0)'}`);
-            console.log(`[QUICK_BUTTONS] Próximo valor: ${nextValue} (0x${nextValue.toString(16).toUpperCase()})`);
-            console.log(`[QUICK_BUTTONS] Ação: ${nextState ? 'ATIVAR' : 'DESATIVAR'} bit ${bit} (toggle)`);
+            // ✅ ATUALIZA UI IMEDIATAMENTE (feedback instantâneo)
+            setButtonVisual(button, nextState);
+            button.style.transform = 'scale(0.95)';
+            setTimeout(() => { button.style.transform = ''; }, 100);
             
-            // Escreve o novo valor no PLC
-            const ok = await writeWord(nextValue);
-            if (ok) {
-                // Atualiza visual APENAS do botão clicado imediatamente
-                setButtonVisual(button, nextState);
-                
-                console.log(`[QUICK_BUTTONS] ✅ Bit ${bit} ${nextState ? 'ativado' : 'desativado'} com sucesso (toggle)`);
-                
-                // Sincroniza o status de ambos os botões após escrita bem-sucedida (com delay para PLC processar)
-                setTimeout(async () => {
-                    await syncButtonStatus();
-                }, 300);
-            } else {
-                console.error(`[QUICK_BUTTONS] ❌ Falha na escrita do bit ${bit}`);
-                
-                // Mostra feedback visual de erro
-                button.style.backgroundColor = '#dc3545';
-                setTimeout(() => {
-                    button.style.backgroundColor = '';
-                    // Sincroniza novamente para garantir estado correto após erro
+            // ✅ Escreve usando write_word_bit (SERIALIZADO no backend)
+            // A função writeWordBit já gerencia a fila e delays
+            writeWordBit(TAG_NAME, bit, nextState ? 1 : 0)
+                .then(ok => {
+                    if (ok) {
+                        console.log(`[QUICK_BUTTONS] ✅ Bit ${bit} ${nextState ? 'ativado' : 'desativado'}`);
+                        // Sincroniza após 7 segundos (tempo de validação)
+                        setTimeout(async () => {
+                            await syncButtonStatus();
+                        }, 7000);
+                    } else {
+                        console.error(`[QUICK_BUTTONS] ❌ Falha na escrita do bit ${bit}`);
+                        // Reverte o visual em caso de erro
+                        setButtonVisual(button, isCurrentlySet);
+                        button.style.backgroundColor = '#dc3545';
+                        setTimeout(() => {
+                            button.style.backgroundColor = '';
+                            syncButtonStatus();
+                        }, 1000);
+                    }
+                })
+                .catch(e => {
+                    console.error('[QUICK_BUTTONS] Erro na escrita:', e);
+                    // Reverte o visual em caso de erro
+                    setButtonVisual(button, isCurrentlySet);
                     syncButtonStatus();
-                }, 1000);
-            }
+                })
+                .finally(() => {
+                    // Libera após 7 segundos (tempo de validação completo)
+                    setTimeout(() => {
+                        QUICK_BUTTON_PROCESSING.delete(buttonRole);
+                        console.log(`[QUICK_BUTTONS] 🔓 ${buttonRole}: Liberado para novo clique`);
+                    }, 7000);
+                });
+            
         } catch (e) {
             console.error('[QUICK_BUTTONS] Erro no clique:', e);
-            // Em caso de erro, sincroniza para garantir estado correto
+            QUICK_BUTTON_PROCESSING.delete(buttonRole);
             try {
                 await syncButtonStatus();
             } catch (syncErr) {
-                console.error('[QUICK_BUTTONS] Erro na sincronização após erro:', syncErr);
+                console.error('[QUICK_BUTTONS] Erro na sincronização:', syncErr);
             }
-        } finally {
-            // Sempre libera o lock e reabilita os botões
-            isWriting = false;
-            if (btnSolenoide) btnSolenoide.disabled = false;
-            if (btnBalanca) btnBalanca.disabled = false;
         }
     }
     

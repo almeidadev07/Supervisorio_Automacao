@@ -4323,6 +4323,59 @@ function updatePeripheralButtonVisual(role, enabled, state) {
 // ✅ CRÍTICO: Variável global para rastrear botões já inicializados
 const INITIALIZED_PERIPHERAL_BUTTONS = new Set();
 
+// ✅ Função para mostrar mensagem toast ao usuário
+function showPeripheralToast(message, duration = 3000) {
+    // Remove toast anterior se existir
+    const existingToast = document.getElementById('peripheral-toast');
+    if (existingToast) {
+        existingToast.remove();
+    }
+    
+    // Cria novo toast
+    const toast = document.createElement('div');
+    toast.id = 'peripheral-toast';
+    toast.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        text-align: center;
+        min-width: 300px;
+        animation: fadeInOut 0.3s ease-in-out;
+    `;
+    toast.textContent = message;
+    
+    // Adiciona animação CSS
+    if (!document.getElementById('peripheral-toast-style')) {
+        const style = document.createElement('style');
+        style.id = 'peripheral-toast-style';
+        style.textContent = `
+            @keyframes fadeInOut {
+                0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+                100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(toast);
+    
+    // Remove após o tempo especificado
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
 // ✅ MAPEAMENTO: Define quais botões compartilham a mesma WORD (para bloqueio conjunto)
 const PERIPHERAL_TAG_MAP = {
     'ovoscopia': { tag: 'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_03', bit: 8 },
@@ -4349,7 +4402,67 @@ function getRolesWithSameTag(role) {
 // ✅ CRÍTICO: Sistema de controle rigoroso de cliques
 const BUTTON_PROCESSING = new Set(); // Botões atualmente processando (não podem receber novos cliques)
 const LAST_CLICK_TIMESTAMP = new Map(); // Último timestamp de clique por botão
-const MIN_CLICK_INTERVAL_MS = 1000; // Mínimo de 1 segundo entre cliques no mesmo botão (rigoroso)
+const MIN_CLICK_INTERVAL_MS = 2000; // Mínimo de 1 segundo entre cliques no mesmo botão (rigoroso)
+
+// ✅ NOVA FILA DE ESCRITAS POR TAG: Garante que escritas na mesma WORD sejam serializadas
+// Isso evita que duas escritas simultâneas na mesma TAG sobrescrevam uma à outra
+const TAG_WRITE_QUEUES = new Map(); // tagName -> Promise (última operação em andamento)
+const TAG_WRITE_LOCKS = new Map(); // tagName -> boolean (se está processando)
+const TAG_LAST_WRITE_TIME = new Map(); // tagName -> timestamp da última escrita
+const MIN_DELAY_BETWEEN_WRITES_MS = 5000; // ✅ Mínimo de 2 segundos entre escritas na mesma TAG
+
+/**
+ * Serializa escritas na mesma TAG usando uma fila de Promises
+ * Adiciona delay mínimo entre escritas sequenciais para evitar conflitos
+ * @param {string} tagName - Nome da tag
+ * @param {Function} writeOperation - Função async que executa a escrita
+ * @returns {Promise} - Promise que resolve quando a escrita for concluída
+ */
+async function enqueueTagWrite(tagName, writeOperation) {
+    // Obtém a Promise anterior (se houver)
+    const previousPromise = TAG_WRITE_QUEUES.get(tagName) || Promise.resolve();
+    
+    // Cria uma nova Promise que aguarda a anterior e então executa
+    const newPromise = previousPromise
+        .catch(() => {}) // Ignora erros da Promise anterior
+        .then(async () => {
+            // ✅ CRÍTICO: Calcula delay necessário desde a última escrita
+            const lastWriteTime = TAG_LAST_WRITE_TIME.get(tagName) || 0;
+            const timeSinceLastWrite = Date.now() - lastWriteTime;
+            const delayNeeded = Math.max(0, MIN_DELAY_BETWEEN_WRITES_MS - timeSinceLastWrite);
+            
+            if (delayNeeded > 0) {
+                console.log(`[TAG_QUEUE] ⏳ ${tagName}: Aguardando ${delayNeeded}ms antes de escrever (evitando conflito)`);
+                await new Promise(resolve => setTimeout(resolve, delayNeeded));
+            }
+            
+            console.log(`[TAG_QUEUE] 🔒 ${tagName}: Iniciando escrita serializada`);
+            TAG_WRITE_LOCKS.set(tagName, true);
+            try {
+                const result = await writeOperation();
+                // ✅ Registra o timestamp APÓS a escrita bem-sucedida
+                TAG_LAST_WRITE_TIME.set(tagName, Date.now());
+                return result;
+            } finally {
+                TAG_WRITE_LOCKS.set(tagName, false);
+                console.log(`[TAG_QUEUE] 🔓 ${tagName}: Escrita concluída, fila liberada`);
+            }
+        });
+    
+    // Atualiza a fila com a nova Promise
+    TAG_WRITE_QUEUES.set(tagName, newPromise);
+    
+    return newPromise;
+}
+
+/**
+ * Verifica se uma TAG está atualmente processando uma escrita
+ * @param {string} tagName - Nome da tag
+ * @returns {boolean} - true se está processando
+ */
+function isTagWriting(tagName) {
+    return TAG_WRITE_LOCKS.get(tagName) === true;
+}
 
 /**
  * Valida se um bit específico está no valor esperado
@@ -4457,10 +4570,10 @@ async function processPeripheralWriteWithValidation(role, tagName, bit, value, p
         }
         
         console.log(`[PERIPHERALS] ✅ ${role}: Escrita concluída`);
-        console.log(`[PERIPHERALS] ⏳ ${role}: Aguardando 5s para validação`);
+        console.log(`[PERIPHERALS] ⏳ ${role}: Aguardando 7s para validação`);
         
-        // ✅ PASSO 2: Aguarda 5 segundos para o PLC processar
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // ✅ PASSO 2: Aguarda 7 segundos para o PLC processar (aumentado para dar mais tempo)
+        await new Promise(resolve => setTimeout(resolve, 7000));
         
         // ✅ PASSO 3: Valida se a mudança foi aplicada
         console.log(`[PERIPHERALS] 🔍 ${role}: Validando mudança...`);
@@ -4574,7 +4687,27 @@ function initPeripherals() {
             // ✅ PROTEÇÃO 1: Verifica se já está processando (mais importante)
             if (BUTTON_PROCESSING.has(role)) {
                 console.log(`[PERIPHERALS] ⏸️ ${role} já está processando, IGNORANDO clique duplicado`);
+                showPeripheralToast('⏳ Aguarde o comando anterior ser processado!', 2500);
                 return false;
+            }
+            
+            // ✅ PROTEÇÃO 1.5: Verifica se ALGUM botão da mesma WORD está processando
+            const config = PERIPHERAL_TAG_MAP[role];
+            if (config && config.tag) {
+                const sameWordRoles = getRolesWithSameTag(role);
+                const isAnyProcessing = sameWordRoles.some(r => BUTTON_PROCESSING.has(r) || PENDING_CONFIRMATION.has(r));
+                if (isAnyProcessing) {
+                    console.log(`[PERIPHERALS] 🚫 ${role}: Outro botão da mesma WORD está processando, BLOQUEANDO clique`);
+                    showPeripheralToast('⏳ Aguarde! Outro comando está sendo processado.\nTente novamente em alguns segundos.', 3000);
+                    return false;
+                }
+                
+                // ✅ Verifica se a TAG está sendo escrita neste momento
+                if (isTagWriting(config.tag)) {
+                    console.log(`[PERIPHERALS] 🚫 ${role}: TAG ${config.tag} está sendo escrita, BLOQUEANDO clique`);
+                    showPeripheralToast('⏳ Aguarde! Escrita em andamento.\nTente novamente em alguns segundos.', 3000);
+                    return false;
+                }
             }
             
             // ✅ PROTEÇÃO 2: Debounce rigoroso
@@ -4583,13 +4716,16 @@ function initPeripherals() {
             const timeSinceLastClick = now - lastClick;
             
             if (timeSinceLastClick < MIN_CLICK_INTERVAL_MS) {
+                const remainingSeconds = Math.ceil((MIN_CLICK_INTERVAL_MS - timeSinceLastClick) / 1000);
                 console.log(`[PERIPHERALS] ⏸️ ${role} debounce ativo (${timeSinceLastClick}ms < ${MIN_CLICK_INTERVAL_MS}ms)`);
+                showPeripheralToast(`⏳ Aguarde ${remainingSeconds} segundo${remainingSeconds > 1 ? 's' : ''} e clique novamente!`, 2500);
                 return false;
             }
             
             // ✅ PROTEÇÃO 3: Verifica se já está aguardando confirmação
             if (PENDING_CONFIRMATION.has(role)) {
                 console.log(`[PERIPHERALS] ⏸️ ${role} aguardando confirmação, ignorando clique`);
+                showPeripheralToast('⏳ Aguarde a confirmação do comando anterior!', 2500);
                 return false;
             }
             
@@ -5139,45 +5275,48 @@ function updatePowerButtonsFromStatusGrid(rawStatus) {
     }
 }
 
-// ✅ Escreve um bit específico (backend gerencia a fila e delays automaticamente)
+// ✅ Escreve um bit específico (SERIALIZADO por TAG para evitar conflitos)
 async function writeWordBit(tagName, bit, value, sourceRole = 'unknown') {
-    try {
-        console.log(`[PERIPHERALS] 📝 ${sourceRole}: Enviando escrita ${tagName}, bit ${bit} = ${value} (backend vai enfileirar)`);
-        
-        const payload = {
-            name: tagName,
-            bit: bit,
-            mode: 'state',
-            value: value ? 1 : 0,
-            pure: false // ✅ CRÍTICO: false = read-modify-write (preserva outros bits)
-        };
-        
-        const response = await fetch('/api/write_word_bit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[PERIPHERALS] ❌ ${sourceRole}: Erro HTTP ${response.status}:`, errorText);
+    // ✅ CRÍTICO: Usa a fila para serializar escritas na mesma TAG
+    return enqueueTagWrite(tagName, async () => {
+        try {
+            console.log(`[PERIPHERALS] 📝 ${sourceRole}: Enviando escrita ${tagName}, bit ${bit} = ${value}`);
+            
+            const payload = {
+                name: tagName,
+                bit: bit,
+                mode: 'state',
+                value: value ? 1 : 0,
+                pure: false // ✅ CRÍTICO: false = read-modify-write (preserva outros bits)
+            };
+            
+            const response = await fetch('/api/write_word_bit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`[PERIPHERALS] ❌ ${sourceRole}: Erro HTTP ${response.status}:`, errorText);
+                return false;
+            }
+            
+            const data = await response.json();
+            if (!data.ok) {
+                console.error(`[PERIPHERALS] ❌ ${sourceRole}: Falha na escrita:`, data.error);
+                return false;
+            }
+            
+            const writtenValue = Number(data.written) >>> 0;
+            console.log(`[PERIPHERALS] ✅ ${sourceRole}: Backend processou (WORD=0x${writtenValue.toString(16).toUpperCase().padStart(4,'0')})`);
+            
+            return true;
+        } catch (error) {
+            console.error(`[PERIPHERALS] ❌ ${sourceRole}: Exceção:`, error);
             return false;
         }
-        
-        const data = await response.json();
-        if (!data.ok) {
-            console.error(`[PERIPHERALS] ❌ ${sourceRole}: Falha na escrita:`, data.error);
-            return false;
-        }
-        
-        const writtenValue = Number(data.written) >>> 0;
-        console.log(`[PERIPHERALS] ✅ ${sourceRole}: Backend processou (WORD=0x${writtenValue.toString(16).toUpperCase().padStart(4,'0')})`);
-        
-        return true;
-    } catch (error) {
-        console.error(`[PERIPHERALS] ❌ ${sourceRole}: Exceção:`, error);
-        return false;
-    }
+    });
 }
 
 // Função auxiliar para escrever um valor completo em uma tag

@@ -13,6 +13,13 @@ machines_bp = Blueprint('machines', __name__)
 _word_write_locks = {}  # tag_name -> threading.Lock
 _locks_lock = threading.Lock()  # Lock para proteger o dicionário de locks
 
+# ✅ NOVA PROTEÇÃO: Cache de escritas recentes para mitigar latência de leitura do PLC
+# Se escrevermos na WORD e lermos logo em seguida, o PLC pode retornar o valor antigo.
+# Usamos este cache para "lembrar" o que escrevemos nos últimos segundos.
+_word_write_cache = {}  # tag_name -> (timestamp, value)
+_cache_lock = threading.Lock()
+
+
 # ✅ NOVA PROTEÇÃO: Fila de execução sequencial por TAG
 # Garante que escritas na mesma TAG sejam processadas em ordem, uma de cada vez
 import queue
@@ -212,6 +219,9 @@ def _execute_write_word_bit(payload, app):
                     else:
                         new_word = (word | (1 << bit)) & 0xFFFF
                 ok = do_write(new_word)
+                if ok:
+                    with _cache_lock:
+                        _word_write_cache[name] = (time.time(), new_word)
                 if not ok:
                     return (jsonify({'ok': False, 'error': 'Falha ao escrever WORD no toggle'}), 500)
                 new_on = 1 if ((new_word >> bit) & 1) == 1 else 0
@@ -223,14 +233,26 @@ def _execute_write_word_bit(payload, app):
                 with word_lock:
                     # Define explicitamente o estado do bit (0/1)
                     val = 1 if int(payload.get('value', 0)) else 0
-                
+                    
                     # ✅ CRÍTICO: Re-lê o valor atual DENTRO do lock
                     values = current_app.plc_controller.read_tags([name]) or {}
                     if name not in values or values[name] is None:
                         return (jsonify({'ok': False, 'error': 'Falha ao ler valor atual'}), 500)
-                    word = int(values[name]) & 0xFFFF
+                    
+                    plc_val = int(values[name]) & 0xFFFF
+                    word = plc_val
+                    
+                    # ✅ CACHE CHECK: Usa cache se escrita for recente (< 3s)
+                    with _cache_lock:
+                        cached = _word_write_cache.get(name)
+                        if cached:
+                            ts, val_cached = cached
+                            if time.time() - ts < 3.0:
+                                logger.info(f"[WRITE_WORD_BIT] ⚠️ Usando CACHE para {name}: PLC=0x{plc_val:04X}, Cache=0x{val_cached:04X}")
+                                word = val_cached
+                    
                     logger.info(f"[WRITE_WORD_BIT] Re-lido valor da tag {name} dentro do lock: {word} (0x{word:04X}), bit {bit} = {val}")
-                
+                    
                     if pure:
                         new_word = (1 << bit) if val == 1 else 0
                     else:
@@ -238,16 +260,20 @@ def _execute_write_word_bit(payload, app):
                             new_word = (word | (1 << bit)) & 0xFFFF
                         else:
                             new_word = (word & ~(1 << bit)) & 0xFFFF
-                
+                    
                     logger.info(f"[WRITE_WORD_BIT] Escrevendo bit {bit} da tag {name}: {word} (0x{word:04X}) -> {new_word} (0x{new_word:04X})")
-                
+                    
                     ok = do_write(new_word)
+                    if ok:
+                        with _cache_lock:
+                            _word_write_cache[name] = (time.time(), new_word)
+                    
                     if not ok:
                         return (jsonify({'ok': False, 'error': 'Falha ao escrever WORD no state'}), 500)
-                
+                    
                     # ✅ AGUARDA PLC processar (200ms)
                     time.sleep(0.2)
-                
+                    
                     logger.info(f"[WRITE_WORD_BIT] ✅ Bit {bit} da tag {name} escrito com sucesso: {val}")
                     return (jsonify({'ok': True, 'written': new_word, 'bit': bit, 'value': val}), 200)
             else:
