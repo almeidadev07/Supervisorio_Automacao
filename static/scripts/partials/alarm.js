@@ -808,22 +808,22 @@ function inicializarBotoesRapidos() {
                 };
                 
                 const response = await fetch('/api/write_word_bit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
-                });
+            });
                 
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error(`[QUICK_BUTTONS] ❌ Erro HTTP ${response.status}:`, errorText);
-                    return false;
-                }
+                return false;
+            }
                 
                 const data = await response.json();
                 if (!data.ok) {
                     console.error(`[QUICK_BUTTONS] ❌ Falha na escrita:`, data.error);
-                    return false;
-                }
+            return false;
+        }
                 
                 const writtenValue = Number(data.written) >>> 0;
                 console.log(`[QUICK_BUTTONS] ✅ Backend processou (WORD=0x${writtenValue.toString(16).toUpperCase().padStart(4,'0')})`);
@@ -926,7 +926,7 @@ function inicializarBotoesRapidos() {
             console.log(`[QUICK_BUTTONS] 🚀 ${buttonRole}: Bit ${bit}: ${isCurrentlySet} → ${nextState}`);
             
             // ✅ ATUALIZA UI IMEDIATAMENTE (feedback instantâneo)
-            setButtonVisual(button, nextState);
+                setButtonVisual(button, nextState);
             button.style.transform = 'scale(0.95)';
             setTimeout(() => { button.style.transform = ''; }, 100);
             
@@ -937,19 +937,19 @@ function inicializarBotoesRapidos() {
                     if (ok) {
                         console.log(`[QUICK_BUTTONS] ✅ Bit ${bit} ${nextState ? 'ativado' : 'desativado'}`);
                         // Sincroniza após 7 segundos (tempo de validação)
-                        setTimeout(async () => {
-                            await syncButtonStatus();
+                setTimeout(async () => {
+                    await syncButtonStatus();
                         }, 7000);
-                    } else {
-                        console.error(`[QUICK_BUTTONS] ❌ Falha na escrita do bit ${bit}`);
+            } else {
+                console.error(`[QUICK_BUTTONS] ❌ Falha na escrita do bit ${bit}`);
                         // Reverte o visual em caso de erro
                         setButtonVisual(button, isCurrentlySet);
-                        button.style.backgroundColor = '#dc3545';
-                        setTimeout(() => {
-                            button.style.backgroundColor = '';
-                            syncButtonStatus();
-                        }, 1000);
-                    }
+                button.style.backgroundColor = '#dc3545';
+                setTimeout(() => {
+                    button.style.backgroundColor = '';
+                    syncButtonStatus();
+                }, 1000);
+            }
                 })
                 .catch(e => {
                     console.error('[QUICK_BUTTONS] Erro na escrita:', e);

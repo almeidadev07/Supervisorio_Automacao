@@ -65,6 +65,17 @@ function inicializarClassification() {
 
     // API helpers (reutiliza a lógica da tela de faixa de peso para nomes dinâmicos)
     const api = {
+        async checkPLCConnection() {
+            try {
+                const res = await fetch('http://localhost:8000/api/status', { cache: 'no-store' });
+                if (!res.ok) return false;
+                const data = await res.json();
+                return data.connected === true;
+            } catch (e) {
+                console.error('[CLASSIFICATION] Erro ao verificar conexão PLC:', e);
+                return false;
+            }
+        },
         async getLabels() {
             const names = Array.from({ length: 7 }, (_, i) => `XLCLASS_DB202_NOME_DINAMICO[${i}]`).join(',');
             const url = `/api/read_tags?names=${encodeURIComponent(names)}`;
@@ -1996,19 +2007,69 @@ function inicializarClassification() {
         // Força leitura do PLC ao abrir a tela para preencher os cards
         setTimeout(() => { refreshSelectionsFromPLC(true); }, 150);
 
-        // Polling periódico para atualizar nomes das faixas do PLC automaticamente
+        // ✅ Polling periódico para monitorar conexão PLC ↔ DataHub
         const LABEL_REFRESH_MS = 2000; // 2s (ajuste se necessário)
+        let plcConnected = true;
+        let consecutiveFailures = 0;
+        
         let labelTimer = setInterval(async () => {
             try {
+                // ✅ VERIFICA STATUS DA CONEXÃO PLC ↔ DataHub
+                const isConnected = await api.checkPLCConnection();
+                
+                // ✅ Detecta DESCONEXÃO (PLC ↔ DataHub)
+                if (!isConnected) {
+                    consecutiveFailures++;
+                    if (consecutiveFailures >= 2) {  // 2 falhas = ~4 segundos
+                        if (plcConnected) {
+                            // ✅ ACABOU DE DESCONECTAR
+                            console.log('[CLASSIFICATION] ❌ Conexão PLC perdida - mostrando ###');
+                            plcConnected = false;
+                            
+                            // Limpa nomes das classes
+                            state.dynamicLabels = Array(7).fill(null);
+                            renderClassesList();
+                        }
+                    }
+                    return; // Para aqui, não tenta ler dados
+                }
+                
+                // ✅ Detecta RECONEXÃO (PLC ↔ DataHub)
+                if (!plcConnected && isConnected) {
+                    console.log('[CLASSIFICATION] 🔄 Conexão PLC restaurada - recarregando dados');
+                    plcConnected = true;
+                    consecutiveFailures = 0;
+                    
+                    // Força reload completo da seleção do PLC
+                    setTimeout(() => { refreshSelectionsFromPLC(true); }, 100);
+                } else {
+                    // Conexão OK
+                    consecutiveFailures = 0;
+                    plcConnected = true;
+                }
+                
+                // ✅ Lê labels do PLC (só se conectado)
                 const labels = await api.getLabels();
                 if (Array.isArray(labels) && labels.length === 7) {
                     const normalized = labels.map(v => (v && v.trim() !== '' ? v.trim() : null));
+                    
+                    // Atualiza labels se mudaram
                     if (!arraysEqual(state.dynamicLabels, normalized)) {
                         state.dynamicLabels = normalized;
                         renderClassesList();
                     }
                 }
-            } catch (_) { /* ignora erros transitórios */ }
+            } catch (_) { 
+                /* ignora erros transitórios */
+                consecutiveFailures++;
+                if (consecutiveFailures >= 2) {
+                    if (plcConnected) {
+                        plcConnected = false;
+                        state.dynamicLabels = Array(7).fill(null);
+                        renderClassesList();
+                    }
+                }
+            }
         }, LABEL_REFRESH_MS);
 
         // Polling apenas do alerta de parada (SEM sincronização automática)

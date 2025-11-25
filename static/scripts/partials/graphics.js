@@ -28,10 +28,25 @@ let CLASS_NAMES = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'];
 // ============================================================================
 const graphicsApi = {
     /**
+     * Verifica conexão PLC ↔ DataHub
+     * @returns {Promise<boolean>} true se conectado
+     */
+    async checkPLCConnection() {
+        try {
+            const res = await fetch('http://localhost:8000/api/status', { cache: 'no-store' });
+            if (!res.ok) return false;
+            const data = await res.json();
+            return data.connected === true;
+        } catch (e) {
+            console.error('[GRAPHICS] Erro ao verificar conexão PLC:', e);
+            return false;
+        }
+    },
+    /**
      * Busca os nomes dinâmicos das classes C1-C7 do PLC via DataHub
      * @returns {Promise<string[]>} Array com os nomes das 7 classes
      */
-    async getClassLabels() {
+async getClassLabels() {
         try {
             const tagNames = Array.from({ length: 7 }, (_, i) => `XLCLASS_DB202_NOME_DINAMICO[${i}]`).join(',');
             const url = `/api/read_tags?names=${encodeURIComponent(tagNames)}`;
@@ -526,9 +541,65 @@ window.getGraphicsSummary = function getGraphicsSummary() {
             try { updateChartData(); } catch (_) {}
         }, 5000);
         
-        // Atualiza os nomes das classes a cada 30 segundos
+        // ✅ Atualiza os nomes a cada 30s + monitora conexão PLC ↔ DataHub
+        let plcConnected = true;
+        let consecutiveFailures = 0;
+        
         setInterval(async () => {
-            try { await refreshClassLabelsFromPLC(); } catch (_) {}
+            try {
+                // ✅ VERIFICA STATUS DA CONEXÃO PLC ↔ DataHub
+                const isConnected = await graphicsApi.checkPLCConnection();
+                
+                // ✅ Detecta DESCONEXÃO (PLC ↔ DataHub)
+                if (!isConnected) {
+                    consecutiveFailures++;
+                    if (consecutiveFailures >= 2) {
+                        if (plcConnected) {
+                            console.log('[GRAPHICS] ❌ Conexão PLC perdida');
+                            plcConnected = false;
+                            
+                            // Volta para nomes padrão C1-C7
+                            CLASS_NAMES = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'];
+                            if (classesChart && classesChart.data) {
+                                classesChart.data.labels = CLASS_NAMES;
+                                classesChart.update('none');
+                            }
+                            try { renderClassesLegend(); } catch(_) {}
+                        }
+                    }
+                    return;
+                }
+                
+                // ✅ Detecta RECONEXÃO (PLC ↔ DataHub)
+                if (!plcConnected && isConnected) {
+                    console.log('[GRAPHICS] 🔄 Conexão PLC restaurada - recarregando nomes');
+                    plcConnected = true;
+                    consecutiveFailures = 0;
+                    
+                    // Força atualização dos dados do gráfico
+                    try { 
+                        await refreshClassLabelsFromPLC();
+                        updateChartData(); 
+                    } catch (_) {}
+                } else {
+                    // Conexão OK - atualiza normalmente
+                    consecutiveFailures = 0;
+                    plcConnected = true;
+                    try { await refreshClassLabelsFromPLC(); } catch (_) {}
+                }
+            } catch (_) {
+                consecutiveFailures++;
+                if (consecutiveFailures >= 2) {
+                    if (plcConnected) {
+                        plcConnected = false;
+                        CLASS_NAMES = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'];
+                        if (classesChart && classesChart.data) {
+                            classesChart.data.labels = CLASS_NAMES;
+                            classesChart.update('none');
+                        }
+                    }
+                }
+            }
         }, 30000);
     }
 

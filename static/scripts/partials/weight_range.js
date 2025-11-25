@@ -27,6 +27,17 @@ function inicializarWeightRange() {
 
     // Helpers de API
     const api = {
+        async checkPLCConnection() {
+            try {
+                const res = await fetch('http://localhost:8000/api/status', { cache: 'no-store' });
+                if (!res.ok) return false;
+                const data = await res.json();
+                return data.connected === true;
+            } catch (e) {
+                console.error('[WEIGHT_RANGE] Erro ao verificar conexão PLC:', e);
+                return false;
+            }
+        },
         async getPresetValues(presetIdx) {
             // presetIdx é 0..3; API espera 1..4
             const preset = Number(presetIdx) + 1;
@@ -369,19 +380,26 @@ function inicializarWeightRange() {
         }
     }
 
-    function updateDisplay() {
+    function updateDisplay(showDisconnected = false) {
         const values = setups[activeSetup];
         values.forEach((value, index) => {
             if (segments[index]) {
-                const percentage = (value / MAX_TOTAL) * 100;
+                const percentage = showDisconnected ? 0 : (value / MAX_TOTAL) * 100;
                 segments[index].style.width = `${percentage}%`;
-                updateSegmentValue(segments[index], value);
+                updateSegmentValue(segments[index], value, showDisconnected);
             }
             if (inputs[index]) {
-                inputs[index].value = value;
+                // ✅ Mostra ### quando desconectado
+                if (showDisconnected) {
+                    inputs[index].value = '###';
+                    inputs[index].setAttribute('placeholder', '###');
+                } else {
+                    inputs[index].value = value;
+                    inputs[index].removeAttribute('placeholder');
+                }
             }
         });
-        updateTotal();
+        updateTotal(showDisconnected);
     }
 
 
@@ -443,14 +461,15 @@ function inicializarWeightRange() {
     }
 
     // Atualiza valor mostrado na barra
-    function updateSegmentValue(segment, value) {
+    function updateSegmentValue(segment, value, showDisconnected = false) {
         let valueDisplay = segment.querySelector('.segment-value');
         if (!valueDisplay) {
             valueDisplay = document.createElement('span');
             valueDisplay.className = 'segment-value';
             segment.appendChild(valueDisplay);
         }
-        valueDisplay.textContent = `${value}g`;
+        // ✅ Mostra ### quando desconectado
+        valueDisplay.textContent = showDisconnected ? '###' : `${value}g`;
     }
 
     // Atualiza valor do input e recalcula barras
@@ -482,26 +501,13 @@ function inicializarWeightRange() {
     })
 
     // Removido fluxo de salvar/exportar/importar via servidor; uso localStorage
-    // Atualiza display
-    function updateDisplay() {
-        const values = setups[activeSetup];
-        values.forEach((value, index) => {
-            if (segments[index]) {
-                const percentage = (value / MAX_TOTAL) * 100;
-                segments[index].style.width = `${percentage}%`;
-                segments[index].style.left = `0`; // Agora sempre parte do zero
-                updateSegmentValue(segments[index], value);
-            }
-            if (inputs[index]) {
-                inputs[index].value = value;
-            }
-        });
-        updateTotal();
-    }
+    // Atualiza display (função duplicada removida - usa a primeira definição)
+    // A função updateDisplay já foi definida acima com suporte a showDisconnected
 
     // Atualiza total
-    function updateTotal() {
+    function updateTotal(showDisconnected = false) {
         // total removido da UI
+        // Parâmetro showDisconnected adicionado para compatibilidade
     }
 
     // Inicialização
@@ -590,13 +596,61 @@ function inicializarWeightRange() {
         }
     });
 
+    // ✅ Rastreamento de conexão PLC (DataHub ↔ PLC)
+    let plcConnected = true;
+    let consecutiveFailures = 0;
+    
     async function refreshLabelsFromPLC() {
         if (labelsRefreshPaused) return;
+        
+        // ✅ VERIFICA STATUS DA CONEXÃO PLC ↔ DataHub
+        const isConnected = await api.checkPLCConnection();
+        
+        // ✅ Detecta DESCONEXÃO (PLC ↔ DataHub)
+        if (!isConnected) {
+            consecutiveFailures++;
+            if (consecutiveFailures >= 2) {  // 2 falhas = ~4 segundos
+                if (plcConnected) {
+                    // ✅ ACABOU DE DESCONECTAR
+                    console.log('[WEIGHT_RANGE] ❌ Conexão PLC perdida - mostrando ###');
+                    plcConnected = false;
+                    
+                    // Mostra ### em todos os valores
+                    updateDisplay(true);
+                    
+                    // Limpa nomes das classes
+                    labels.forEach(label => {
+                        if (label) label.textContent = '';
+                    });
+                }
+            }
+            return; // Para aqui, não tenta ler dados
+        }
+        
+        // ✅ Detecta RECONEXÃO (PLC ↔ DataHub)
+        if (!plcConnected && isConnected) {
+            console.log('[WEIGHT_RANGE] 🔄 Conexão PLC restaurada - recarregando dados');
+            plcConnected = true;
+            consecutiveFailures = 0;
+            
+            // Força reload completo do preset ativo
+            const plcValues = await api.getPresetValues(activeSetup);
+            if (plcValues) {
+                setups[activeSetup] = plcValues;
+                persistSetups();
+                updateDisplay(false); // ✅ Mostra valores normais
+            }
+        } else {
+            // Conexão OK
+            consecutiveFailures = 0;
+            plcConnected = true;
+        }
+        
+        // ✅ Lê labels do PLC (só se conectado)
         const plcLabels = await api.getLabels();
         plcLabels.forEach((txt, i) => {
             if (!labels[i]) return;
-            const val = (txt === null || typeof txt === 'undefined') ? '' : String(txt);
-            // Mostra vazio (e CSS mantém espaço fixo). Opcionalmente mostre ######## visualmente:
+            const val = (txt === null || typeof txt === 'undefined' || txt === '########') ? '' : String(txt);
             labels[i].textContent = val;
         });
     }
