@@ -16,7 +16,7 @@ Características:
 
 import snap7
 from snap7.util import *
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import asyncio
@@ -786,21 +786,36 @@ async def get_db_data(db_id: int):
 
 
 @app.post("/api/write/{db_id}")
-async def write_data(db_id: int, offset: int, value: float, data_type: str = "INT"):
+async def write_data(db_id: int, offset: int, data_type: str = "INT", request: Request = None, value: str = Query(None)):
     """
     Escreve dados em uma DB específica.
     
     Args:
         db_id: Número da DB
         offset: Offset na DB  
-        value: Valor a escrever (int ou float)
-        data_type: Tipo de dado (BOOL, BYTE, INT, WORD, DINT, DWORD, REAL)
+        value: Valor a escrever (int, float ou string para STRING) - pode vir via query param ou JSON body
+        data_type: Tipo de dado (BOOL, BYTE, INT, WORD, DINT, DWORD, REAL, STRING)
     
     Exemplo: POST /api/write/1?offset=124&value=500.5&data_type=REAL
+    Exemplo: POST /api/write/202?offset=0&data_type=STRING com JSON body {"value": "Classe1"}
     """
     import struct
     
     try:
+        # ✅ Tenta obter valor do JSON body primeiro (para STRING), senão usa query param
+        if request and request.headers.get("content-type", "").startswith("application/json"):
+            try:
+                body = await request.json()
+                if "value" in body:
+                    value = body["value"]
+            except:
+                pass  # Se não conseguir ler JSON, usa query param
+        
+        if value is None:
+            return {
+                "success": False,
+                "error": "Valor não fornecido (use query param 'value' ou JSON body {'value': ...})"
+            }
         # Converte valor para bytearray conforme tipo
         if data_type == "BOOL":
             # Para BOOL, value deve ser o bit number
@@ -839,6 +854,33 @@ async def write_data(db_id: int, offset: int, value: float, data_type: str = "IN
         elif data_type == "REAL":
             # 32-bit float, big-endian
             data = bytearray(struct.pack('>f', float(value)))
+        
+        elif data_type == "STRING":
+            # STRING no S7-1200/1500:
+            # - Byte 0 (offset): tamanho máximo (geralmente 254 para STRING[254])
+            # - Byte 1 (offset+1): tamanho atual (quantos caracteres estão sendo usados)
+            # - Bytes 2+ (offset+2 até offset+1+current_length): os caracteres
+            str_value = str(value) if value is not None else ""
+            str_bytes = str_value.encode('utf-8')
+            current_length = min(len(str_bytes), 254)  # Limita a 254 bytes
+            
+            # Lê o tamanho máximo atual da DB (se disponível)
+            current_db_data = datahub.cache.get(f"db{db_id}", {}).get("data", bytearray())
+            max_length = 254  # Default
+            if offset < len(current_db_data):
+                max_length = current_db_data[offset]
+                if max_length == 0:
+                    max_length = 254  # Fallback
+            
+            # Limita o tamanho atual ao máximo permitido
+            current_length = min(current_length, max_length)
+            
+            # Monta o bytearray: [max_length, current_length, ...bytes...]
+            data = bytearray([max_length, current_length]) + str_bytes[:current_length]
+            # Preenche com zeros até o tamanho máximo + 2 (max_length + current_length + dados)
+            total_size = max_length + 2
+            if len(data) < total_size:
+                data.extend(bytearray(total_size - len(data)))
         
         else:
             # Default: trata como byte

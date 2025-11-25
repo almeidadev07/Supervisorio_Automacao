@@ -862,11 +862,11 @@ def set_weight_range():
         valid_tags = {tag['name'] for tag in comm_map_array if isinstance(tag, dict) and 'name' in tag}
 
         # Garante driver conectado (tenta reconectar se necessário)
-        driver = current_app.plc_controller.driver
-        if not driver or not driver.is_connected():
-            ok, msg = current_app.plc_controller.force_reconnect()
-            if not ok:
-                return jsonify({'ok': False, 'error': f'PLC desconectado: {msg}'}), 500
+        # Verifica se está conectado (DataHub gerencia conexão automaticamente)
+        if not current_app.plc_controller.is_connected():
+            current_app.plc_controller.force_reconnect()
+            if not current_app.plc_controller.is_connected():
+                return jsonify({'ok': False, 'error': 'PLC desconectado'}), 500
 
         # Monta payload de escrita
         tag_values = {}
@@ -894,12 +894,15 @@ def set_weight_range():
         try:
             read_back_names = [selecao_tag] + [f"XLCLASS_DB229_PESAGEM_MAPA_{mapa_idx}_TIPO_P{i}" for i in range(1, 8)]
             read_values = current_app.plc_controller.read_tags(read_back_names) or {}
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Erro ao ler valores de volta: {e}")
             read_values = {}
 
         return jsonify({'ok': True, 'written': tag_values, 'read_back': read_values})
     except Exception as e:
         logger.error(f"Erro em set_weight_range: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 

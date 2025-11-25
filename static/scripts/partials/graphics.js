@@ -23,14 +23,103 @@ const CLASS_COLORS = {
 
 let CLASS_NAMES = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'];
 
-function initGraphics() {
+// ============================================================================
+// API para buscar nomes das classes do PLC via DataHub
+// ============================================================================
+const graphicsApi = {
+    /**
+     * Busca os nomes dinâmicos das classes C1-C7 do PLC via DataHub
+     * @returns {Promise<string[]>} Array com os nomes das 7 classes
+     */
+    async getClassLabels() {
+        try {
+            const tagNames = Array.from({ length: 7 }, (_, i) => `XLCLASS_DB202_NOME_DINAMICO[${i}]`).join(',');
+            const url = `/api/read_tags?names=${encodeURIComponent(tagNames)}`;
+            const response = await fetch(url, { cache: 'no-store' });
+            
+            if (!response.ok) {
+                console.warn('[graphics] Falha ao buscar nomes das classes:', response.status);
+                return null;
+            }
+            
+            const data = await response.json();
+            if (!data || !data.ok || !data.values) {
+                console.warn('[graphics] Resposta inválida da API de tags');
+                return null;
+            }
+            
+            const values = data.values;
+            const labels = Array.from({ length: 7 }, (_, i) => {
+                const key = `XLCLASS_DB202_NOME_DINAMICO[${i}]`;
+                const value = values[key];
+                // Se o valor for nulo, undefined ou vazio, usa o nome padrão Cx
+                if (value === null || typeof value === 'undefined' || String(value).trim() === '') {
+                    return `C${i + 1}`;
+                }
+                return String(value).trim();
+            });
+            
+            console.log('[graphics] Nomes das classes carregados do PLC:', labels);
+            return labels;
+        } catch (error) {
+            console.error('[graphics] Erro ao buscar nomes das classes:', error);
+            return null;
+        }
+    }
+};
+
+/**
+ * Atualiza os nomes das classes buscando do PLC
+ * @returns {Promise<boolean>} true se atualizou com sucesso
+ */
+async function refreshClassLabelsFromPLC() {
+    try {
+        const labels = await graphicsApi.getClassLabels();
+        if (labels && labels.length === 7) {
+            CLASS_NAMES = labels;
+            
+            // Atualiza o gráfico se existir
+            if (classesChart && classesChart.data) {
+                classesChart.data.labels = CLASS_NAMES;
+                classesChart.update('none');
+            }
+            
+            // Atualiza a legenda
+            try { renderClassesLegend(); } catch(_) {}
+            
+            // Também atualiza window.classificationLabels para compatibilidade
+            try {
+                window.classificationLabels = CLASS_NAMES.map((name, i) => ({
+                    id: `C${i + 1}`,
+                    name: name,
+                    color: CLASS_COLORS[`C${i + 1}`]
+                }));
+                window.dispatchEvent(new CustomEvent('classification-labels-updated', { 
+                    detail: window.classificationLabels 
+                }));
+            } catch(_) {}
+            
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('[graphics] Erro ao atualizar nomes das classes:', error);
+        return false;
+    }
+}
+
+async function initGraphics() {
     const container = document.getElementById('graphics-container');
     if (!container) return;
     // Evita inicializar enquanto oculto (display: none)
     if (container.style.display === 'none') return;
 
-    const doInit = () => {
+    const doInit = async () => {
         console.log('[graphics] initGraphics: iniciando criação do gráfico');
+        
+        // ✅ Busca os nomes das classes do PLC via DataHub ANTES de criar o gráfico
+        await refreshClassLabelsFromPLC();
+        
         createChart();
         setupEventListeners();
         startDataUpdate();
@@ -50,7 +139,7 @@ function initGraphics() {
     if (typeof Chart === 'undefined') {
         loadChartJS().then(doInit).catch(err => console.error('Erro ao carregar Chart.js', err));
     } else {
-        doInit();
+        await doInit();
     }
 }
 
@@ -97,13 +186,17 @@ function createChart() {
         classesChart.destroy();
     }
 
-    // Atualiza labels das classes com nomes vindos da classificação, se disponíveis
+    // Os nomes das classes já devem ter sido carregados do PLC via refreshClassLabelsFromPLC()
+    // Fallback para window.classificationLabels se disponível
     try {
-        if (Array.isArray(window.classificationLabels) && window.classificationLabels.length >= 7) {
-            CLASS_NAMES = window.classificationLabels
-                .filter(l => /^C[1-7]$/.test(l.id))
-                .sort((a,b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))
-                .map(l => l.name || l.id);
+        if (CLASS_NAMES.every((n, i) => n === `C${i+1}`)) {
+            // Se ainda são os nomes padrão, tenta usar classificationLabels como fallback
+            if (Array.isArray(window.classificationLabels) && window.classificationLabels.length >= 7) {
+                CLASS_NAMES = window.classificationLabels
+                    .filter(l => /^C[1-7]$/.test(l.id))
+                    .sort((a,b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))
+                    .map(l => l.name || l.id);
+            }
         }
     } catch(_) {}
 
@@ -301,19 +394,18 @@ function setupEventListeners() {
 function renderClassesLegend() {
     const legendRoot = document.getElementById('classes-legend');
     if (!legendRoot) return;
-    const ids = ['C1','C2','C3','C4','C5','C6','C7'];
-    const labels = (Array.isArray(window.classificationLabels) ? window.classificationLabels : ids.map(id => ({ id, name: id })));
-    const items = labels
-        .filter(l => /^C[1-7]$/.test(l.id))
-        .sort((a,b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))
-        .map((l, i) => {
-            const key = 'C' + (i+1);
-            const color = CLASS_COLORS[key] || '#999';
-            return `<span class="legend-chip">
-                <i class="legend-dot" style="background:${color};"></i>
-                <b class="legend-label">${(l.name && l.name !== l.id) ? l.name : l.id}</b>
-            </span>`;
-        }).join('');
+    
+    // Usa CLASS_NAMES que foi carregado do PLC via DataHub
+    const items = CLASS_NAMES.map((name, i) => {
+        const key = 'C' + (i + 1);
+        const color = CLASS_COLORS[key] || '#999';
+        // Mostra o nome do PLC, ou o ID padrão se o nome for igual ao ID
+        const displayName = (name && name !== key) ? name : key;
+        return `<span class="legend-chip">
+            <i class="legend-dot" style="background:${color};"></i>
+            <b class="legend-label">${displayName}</b>
+        </span>`;
+    }).join('');
     legendRoot.innerHTML = items;
 }
 
@@ -407,24 +499,37 @@ window.getGraphicsSummary = function getGraphicsSummary() {
 // mesmo que a tela de gráficos não tenha sido aberta ainda.
 (function startGraphicsBackgroundFeed() {
     let started = false;
-    function start() {
+    async function start() {
         if (started) return;
         started = true;
-        // Se existirem labels da classificação já carregados, sincroniza imediatamente os nomes
+        
+        // ✅ Busca os nomes das classes diretamente do PLC via DataHub
         try {
-            if (Array.isArray(window.classificationLabels) && window.classificationLabels.length >= 7) {
-                CLASS_NAMES = window.classificationLabels
-                    .filter(l => /^C[1-7]$/.test(l.id))
-                    .sort((a,b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))
-                    .map(l => l.name || l.id);
-            }
-        } catch(_) {}
+            await refreshClassLabelsFromPLC();
+        } catch(_) {
+            // Fallback: tenta usar classificationLabels se disponível
+            try {
+                if (Array.isArray(window.classificationLabels) && window.classificationLabels.length >= 7) {
+                    CLASS_NAMES = window.classificationLabels
+                        .filter(l => /^C[1-7]$/.test(l.id))
+                        .sort((a,b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))
+                        .map(l => l.name || l.id);
+                }
+            } catch(_) {}
+        }
+        
         // Atualização inicial imediata
         try { updateChartData(); } catch (_) {}
-        // Atualiza a cada 5 segundos
+        
+        // Atualiza a cada 5 segundos (dados do gráfico)
         setInterval(() => {
             try { updateChartData(); } catch (_) {}
         }, 5000);
+        
+        // Atualiza os nomes das classes a cada 30 segundos
+        setInterval(async () => {
+            try { await refreshClassLabelsFromPLC(); } catch (_) {}
+        }, 30000);
     }
 
     if (document.readyState === 'loading') {

@@ -1810,9 +1810,9 @@ function configurarBotaoPlassonFarm() {
 
             // Mapeia máquina para URL
             const urlMap = {
-                '200CX': 'https://100.20.0.200:3000',
-                '400CX': 'https://100.40.0.200:3000',
-                '700CX': 'https://100.70.0.200:3000'
+                '200CX': 'https://farm.plasson.local:3000',
+                '400CX': 'https://farm.plasson.local:3000',
+                '700CX': 'https://farm.plasson.local:3000'
             };
 
             const url = urlMap[machineName];
@@ -1921,9 +1921,9 @@ function configurarBotaoPlassonFarm() {
                     
                     const machineName = result.machine.toUpperCase();
                     const urlMap = {
-                        '200CX': 'https://100.20.0.200:3000',
-                        '400CX': 'https://100.40.0.200:3000',
-                        '700CX': 'https://100.70.0.200:3000'
+                        '200CX': 'https://farm.plasson.local:3000',
+                        '400CX': 'https://farm.plasson.local:3000',
+                        '700CX': 'https://farm.plasson.local:3000'
                     };
                     
                     const url = urlMap[machineName];

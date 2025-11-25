@@ -360,24 +360,29 @@ def weight_range():
         data = request.get_json(silent=True) or {}
         preset = int(data.get('preset', 0))
         values = data.get('values', [])
+        
         if preset < 1 or preset > 4:
             return jsonify({'ok': False, 'error': 'preset deve ser 1..4'}), 400
         if not isinstance(values, list) or len(values) != 7:
             return jsonify({'ok': False, 'error': 'values deve ser lista de 7 números'}), 400
         mapa = preset - 1  # 0..3
-        # Normaliza valores
+        
+        # Normaliza valores - mantém como float pois as tags são REAL
         norm_values = []
         for v in values:
             try:
-                n = int(v)
+                n = float(v)  # ✅ MUDANÇA: float ao invés de int (tags são REAL)
             except Exception:
-                n = 0
-            n = max(0, min(150, n))
+                n = 0.0
+            n = max(0.0, min(150.0, n))
             norm_values.append(n)
+        
         # Monta payload de escrita
         payload = {f'XLCLASS_DB229_PESAGEM_MAPA_{mapa}_TIPO_P{i+1}': norm_values[i] for i in range(7)}
         # Sincroniza seleção do preset no PLC
         payload['XLCLASS_DB229_PESAGEM_SELECAO'] = mapa
+        
+        # ✅ Escrita síncrona com bloqueio adequado no frontend
         success = current_app.plc_controller.write_tags(payload)
         return jsonify({'ok': bool(success)})
 

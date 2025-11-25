@@ -718,12 +718,23 @@ class DataHubController:
             
             print(f"[DATAHUB_CONTROLLER] Escrevendo {tag_name}: {value} (tipo: {data_type}, DB{db_number}.{offset})")
             
-            # Envia escrita para DataHub
-            response = requests.post(
-                f'{self._datahub_url}/api/write/{db_number}',
-                params={'offset': offset, 'value': value, 'data_type': data_type},
-                timeout=2
-            )
+            # ✅ Para STRING, usa JSON body para evitar problemas com encoding de query params
+            if data_type == 'STRING':
+                # Converte valor para string se necessário
+                str_value = str(value) if value is not None else ""
+                response = requests.post(
+                    f'{self._datahub_url}/api/write/{db_number}',
+                    params={'offset': offset, 'data_type': data_type},
+                    json={'value': str_value},  # Usa JSON body para strings
+                    timeout=5  # Timeout maior para strings que podem ser longas
+                )
+            else:
+                # Para outros tipos, usa query params
+                response = requests.post(
+                    f'{self._datahub_url}/api/write/{db_number}',
+                    params={'offset': offset, 'value': value, 'data_type': data_type},
+                    timeout=2
+                )
             
             if response.status_code == 200:
                 result = response.json()
@@ -750,7 +761,7 @@ class DataHubController:
     def write_tags(self, tag_values):
         """
         Escreve múltiplas tags.
-        Mantém compatibilidade com API antiga.
+        ✅ OTIMIZADO: Usa threading para paralelizar escritas
         
         Args:
             tag_values: Dicionário {tag_name: value}
@@ -758,11 +769,30 @@ class DataHubController:
         Returns:
             Bool indicando sucesso
         """
-        success = True
-        for tag_name, value in tag_values.items():
-            if not self.write_tag(tag_name, value):
-                success = False
-        return success
+        if not tag_values:
+            return True
+        
+        # ✅ OTIMIZAÇÃO: Escrita paralela usando threads
+        import concurrent.futures
+        
+        results = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+            future_to_tag = {
+                executor.submit(self.write_tag, tag_name, value): tag_name 
+                for tag_name, value in tag_values.items()
+            }
+            
+            for future in concurrent.futures.as_completed(future_to_tag):
+                tag_name = future_to_tag[future]
+                try:
+                    success = future.result(timeout=5)
+                    results.append(success)
+                except Exception as e:
+                    print(f"[DATAHUB_CONTROLLER] Erro ao escrever {tag_name}: {e}")
+                    results.append(False)
+        
+        # Retorna True se TODAS as escritas foram bem-sucedidas
+        return all(results)
     
     def get_active_machine(self):
         """Retorna máquina ativa."""

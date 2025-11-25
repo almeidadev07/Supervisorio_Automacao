@@ -49,21 +49,31 @@ function inicializarWeightRange() {
         },
         async setPresetValues(presetIdx, values) {
             const preset = Number(presetIdx) + 1; // 1..4
-            const body = { preset, values: values.map(v => Math.max(0, Math.min(150, Number(v) || 0))) };
+            const body = { 
+                preset, 
+                values: values.map(v => Math.max(0, Math.min(150, Number(v) || 0)))
+            };
+            
+            console.log(`[WEIGHT_RANGE API] Escrevendo Preset ${preset} (índice ${presetIdx}):`, body.values);
+            
             try {
                 const res = await fetch('/api/weight_range', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
                 });
+                
                 const data = await res.json().catch(() => ({}));
+                
                 if (!res.ok || !data.ok) {
-                    console.error('Falha ao escrever no PLC:', res.status, data);
+                    console.error(`[WEIGHT_RANGE API] ❌ Falha Preset ${preset}:`, res.status, data);
                     return false;
                 }
+                
+                console.log(`[WEIGHT_RANGE API] ✅ Preset ${preset} escrito com sucesso`);
                 return true;
             } catch (e) {
-                console.error('Erro ao escrever no PLC:', e);
+                console.error(`[WEIGHT_RANGE API] ❌ Erro Preset ${preset}:`, e);
                 return false;
             }
         },
@@ -184,32 +194,167 @@ function inicializarWeightRange() {
             t = setTimeout(() => fn.apply(this, args), wait);
         };
     }
+    
+    // ✅ OTIMIZAÇÃO: Controle de escrita com bloqueio
+    let isWriting = false;  // Flag para bloquear troca de preset durante escrita
+    let writeStartTime = 0;  // Timestamp do início da escrita
+    
+    // ✅ Função para mostrar toast/popup (similar ao grid periféricos)
+    function showWeightRangeToast(message, duration = 3000) {
+        // Remove toast anterior se existir
+        const existingToast = document.querySelector('.weight-range-toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+        
+        // Cria novo toast
+        const toast = document.createElement('div');
+        toast.className = 'weight-range-toast';
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 20px 40px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.3s ease-in-out;
+        `;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 0.3s ease-in-out';
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
 
-    // Escreve valores atuais do preset ativo no PLC (com debounce)
+    // ✅ OTIMIZAÇÃO: Escrita otimizada com bloqueio inteligente
     const writeDebounced = debounce(async () => {
+        // Não escreve se estiver apenas carregando preset
+        if (isLoadingPreset) {
+            console.log('[WEIGHT_RANGE] Escrita cancelada - carregando preset');
+            return;
+        }
+        
         const current = setups[activeSetup] || [];
         if (!Array.isArray(current) || current.length !== 7) return;
-        await api.setPresetValues(activeSetup, current);
-    }, 400);
+        
+        // ✅ BLOQUEIA troca de preset durante escrita
+        isWriting = true;
+        writeStartTime = Date.now();
+        updatePresetButtonsState();  // ✅ Atualiza visual
+        
+        console.log(`[WEIGHT_RANGE] 🔒 Bloqueado - Escrevendo preset ${activeSetup + 1}:`, current);
+        
+        try {
+            // ✅ ESCRITA PARALELA NO BACKEND (mais rápida)
+            const success = await api.setPresetValues(activeSetup, current);
+            
+            if (success) {
+                const elapsed = Date.now() - writeStartTime;
+                console.log(`[WEIGHT_RANGE] ✅ Escrita completa em ${elapsed}ms`);
+                
+                // ✅ OTIMIZAÇÃO: Aguarda apenas 1.5s (tempo real de escrita paralela)
+                // Remove espera artificial de 3s - backend já é rápido agora
+                if (elapsed < 1500) {
+                    await new Promise(resolve => setTimeout(resolve, 1500 - elapsed));
+                }
+            } else {
+                console.error('[WEIGHT_RANGE] ❌ Falha na escrita');
+            }
+        } catch (e) {
+            console.error('[WEIGHT_RANGE] ❌ Erro na escrita:', e);
+        } finally {
+            // ✅ DESBLOQUEIA troca de preset
+            isWriting = false;
+            updatePresetButtonsState();  // ✅ Atualiza visual
+            console.log('[WEIGHT_RANGE] 🔓 Desbloqueado');
+        }
+    }, 300);  // ✅ Reduzido de 400ms para 300ms
 
     // Setup selection
     const setupInputs = document.querySelectorAll('input[name="setup"]');
     
+    // Flag para evitar escrita ao trocar de preset (apenas leitura)
+    let isLoadingPreset = false;
+    
+    // ✅ OTIMIZAÇÃO: Adiciona indicador visual de bloqueio
+    function updatePresetButtonsState() {
+        setupInputs.forEach(inp => {
+            const label = inp.closest('.setup-label');
+            if (label) {
+                if (isWriting) {
+                    label.style.opacity = '0.5';
+                    label.style.cursor = 'not-allowed';
+                    label.style.pointerEvents = Number(inp.value) === activeSetup ? 'auto' : 'none';
+                } else {
+                    label.style.opacity = '1';
+                    label.style.cursor = 'pointer';
+                    label.style.pointerEvents = 'auto';
+                }
+            }
+        });
+    }
+    
     // Seleciona visualmente o preset ativo salvo
     setupInputs.forEach(input => {
         if (Number(input.value) === activeSetup) input.checked = true;
-        input.addEventListener('change', async () => {
+        input.addEventListener('change', async (e) => {
+            // ✅ BLOQUEIO: Impede troca de preset durante escrita
+            if (isWriting) {
+                e.preventDefault();
+                e.stopPropagation();
+                input.checked = false;
+                
+                // Restaura seleção visual para o preset atual
+                setupInputs.forEach(inp => {
+                    inp.checked = (Number(inp.value) === activeSetup);
+                });
+                
+                // ✅ Calcula tempo restante baseado no novo tempo otimizado (1.5s)
+                const elapsed = Date.now() - writeStartTime;
+                const minWriteTime = 1500;  // 1.5 segundos
+                const remaining = Math.ceil((minWriteTime - elapsed) / 1000);
+                const seconds = remaining > 0 ? remaining : 1;
+                
+                showWeightRangeToast(`⏳ Aguarde ${seconds} segundo${seconds > 1 ? 's' : ''}. Aplicando valores no PLC...`);
+                console.log('[WEIGHT_RANGE] Troca de preset bloqueada - escrita em andamento');
+                return;
+            }
+            
+            // ✅ OTIMIZAÇÃO: Marca que está carregando preset para não escrever
+            isLoadingPreset = true;
+            
             activeSetup = parseInt(input.value);
             localStorage.setItem('weight_active_setup', String(activeSetup));
-            // Carrega valores do PLC para o preset selecionado
+            
+            // ✅ FEEDBACK VISUAL: Mostra loading
+            const allInputs = document.querySelectorAll('.range-input');
+            allInputs.forEach(inp => inp.disabled = true);
+            
+            // ✅ LEITURA RÁPIDA: Carrega valores do PLC para o preset selecionado
             const plcValues = await api.getPresetValues(activeSetup);
             if (plcValues) {
                 setups[activeSetup] = plcValues;
                 persistSetups();
             }
             updateDisplay();
-            // Garante que SELECAO no PLC está setada e valores escritos (sincronização)
-            writeDebounced();
+            
+            // ✅ OTIMIZAÇÃO: Não escreve de volta ao trocar preset (apenas leitura)
+            
+            // ✅ FEEDBACK VISUAL: Remove loading
+            allInputs.forEach(inp => inp.disabled = false);
+            isLoadingPreset = false;
+            
+            console.log(`[WEIGHT_RANGE] Preset ${activeSetup + 1} carregado - pronto para edição`);
+            
             // Atualiza subscrição para MAPA correto
             subscribeScreen(activeSetup);
         });
