@@ -616,6 +616,7 @@ def write_tags():
 def write_word_bit():
     """Escreve um bit específico dentro de uma tag WORD com read-modify-write.
     ✅ Usa lock por WORD para evitar race conditions
+    ✅ Delay de 1 segundo DENTRO do lock para garantir que o PLC processou
     Payload: { "name": "TAG_WORD", "bit": 0-15, "mode": "set"|"clear"|"pulse"|"toggle"|"state", "pulse_ms": optional, "value": 0|1 }
     """
     try:
@@ -627,12 +628,16 @@ def write_word_bit():
         if not name or bit < 0 or bit > 15:
             return jsonify({'ok': False, 'error': 'Parâmetros inválidos'}), 400
         
-        logger.info(f"[API] Escrevendo bit {bit} da tag {name}, mode={mode}")
+        logger.info(f"[API] 🔒 Escrevendo bit {bit} da tag {name}, mode={mode}")
         
         # ✅ Chama diretamente com lock (sem fila, mais simples e funcional)
         if mode == 'state':
             word_lock = get_word_lock(name)
+            
+            # ✅ O LOCK BLOQUEIA OUTRAS REQUISIÇÕES PARA A MESMA WORD
             with word_lock:
+                logger.info(f"[WRITE_WORD_BIT] 🔐 Lock adquirido para {name}")
+                
                 # Lê valor atual
                 values = current_app.plc_controller.read_tags([name]) or {}
                 if name not in values or values[name] is None:
@@ -641,7 +646,7 @@ def write_word_bit():
                 word = int(values[name]) & 0xFFFF
                 val = 1 if int(payload.get('value', 0)) else 0
                 
-                logger.info(f"[WRITE_WORD_BIT] WORD atual: 0x{word:04X}, bit {bit} = {val}")
+                logger.info(f"[WRITE_WORD_BIT] WORD atual: 0x{word:04X}, setando bit {bit} = {val}")
                 
                 # Modifica apenas o bit desejado
                 if val == 1:
@@ -656,10 +661,12 @@ def write_word_bit():
                 if not ok:
                     return jsonify({'ok': False, 'error': 'Falha ao escrever'}), 500
                 
-                # Aguarda PLC processar
-                time.sleep(0.2)
+                # ✅ CRÍTICO: Aguarda 2 segundos DENTRO DO LOCK para garantir que o PLC processou
+                # Isso impede que outra requisição leia o valor antigo antes do PLC atualizar
+                logger.info(f"[WRITE_WORD_BIT] ⏳ Aguardando 2s para PLC processar (dentro do lock)...")
+                time.sleep(2.0)
                 
-                logger.info(f"[WRITE_WORD_BIT] ✅ Sucesso")
+                logger.info(f"[WRITE_WORD_BIT] ✅ Sucesso - liberando lock")
                 return jsonify({'ok': True, 'written': new_word, 'bit': bit, 'value': val})
         else:
             return jsonify({'ok': False, 'error': 'Apenas mode=state é suportado agora'}), 400

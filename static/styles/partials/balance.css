@@ -178,6 +178,10 @@
     margin-top: 10px;
     align-items: center;
     justify-items: center;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
 }
 
 .btn {
@@ -187,6 +191,7 @@
     border: none;
     box-shadow: none;
     background: transparent;
+    background-color: transparent;
 }
 .btn-icon { display:flex; align-items:center; justify-content:center; padding: 0; width: 60px; height: 50px; }
 .btn-icon img { display: block; width: 100%; height: 100%; object-fit: contain; }
@@ -280,6 +285,10 @@
     margin-top: 12px !important;
     align-items: center !important;
     justify-items: center !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
 }
 
 .btn-icon { 
@@ -289,6 +298,24 @@
     padding: 0 !important; 
     width: 90px !important; 
     height: 80px !important; 
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Estilos específicos para botões dentro dos modais de balance */
+#weight-modal .modal-buttons .btn,
+#weight-modal .modal-buttons .btn-icon,
+#confirmation-modal .modal-buttons .btn,
+#confirmation-modal .modal-buttons .btn-icon,
+.modal-content .modal-buttons .btn,
+.modal-content .modal-buttons .btn-icon {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 .modal-close {
@@ -346,6 +373,30 @@
     text-shadow: 0 0 10px rgba(0, 255, 0, 0.5) !important; /* Efeito neon */
     display: inline-block !important;
     margin: 0 5px !important;
+}
+
+/* Remover qualquer fundo escuro dos botões nos modais de balance */
+#weight-modal .modal-content .modal-buttons,
+#confirmation-modal .modal-content .modal-buttons,
+#weight-modal .modal-content .modal-buttons *,
+#confirmation-modal .modal-content .modal-buttons * {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+#weight-modal button.btn,
+#weight-modal button.btn-icon,
+#confirmation-modal button.btn,
+#confirmation-modal button.btn-icon,
+#weight-modal #min-weight-btn,
+#weight-modal #max-weight-btn,
+#confirmation-modal #confirm-calibration,
+#confirmation-modal #cancel-calibration {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
 }
 
 /* Estilo para a unidade "g" (verde neon como o valor) */

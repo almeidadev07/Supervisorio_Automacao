@@ -10,6 +10,41 @@ function inicializarBalance() {
     let lastToggleTime = 0; // Timestamp do último toggle manual
     let isToggling = false; // Flag para evitar múltiplos cliques
     let pollingInterval = null; // Referência do intervalo de polling
+    let calibrationPollingInterval = null; // Referência do intervalo de polling da calibração
+    
+    // ✅ Sistema de bloqueio baseado em TIMESTAMP (não depende de timers)
+    let calibrationBlockedUntil = 0; // Timestamp até quando está bloqueado
+    const CALIBRATION_BLOCK_MS = 6000; // 6 segundos de bloqueio após cada escrita
+    let lastWaitPopupTime = 0; // Timestamp da última vez que o popup de espera foi mostrado
+    const WAIT_POPUP_COOLDOWN = 4000; // Mostra popup de espera no máximo a cada 4 segundos
+    
+    // ✅ Função para verificar se está bloqueado (baseado em timestamp, não em flag)
+    function isCalibrationBusy() {
+        return Date.now() < calibrationBlockedUntil;
+    }
+    
+    // ✅ Função para verificar se pode mostrar popup de espera (evita spam)
+    function canShowWaitPopup() {
+        const now = Date.now();
+        if (now - lastWaitPopupTime > WAIT_POPUP_COOLDOWN) {
+            lastWaitPopupTime = now;
+            return true;
+        }
+        return false;
+    }
+    
+    // ✅ Função para bloquear (seta timestamp futuro)
+    function startCalibrationBlock() {
+        // Durante a escrita, bloqueia por tempo maior (escrita pode demorar)
+        calibrationBlockedUntil = Date.now() + 15000; // 15s de margem durante escrita
+        console.log(`[BALANCE] 🔒 Calibração BLOQUEADA (escrita em andamento)`);
+    }
+    
+    // ✅ Função para finalizar (ajusta timestamp para cooldown restante)
+    function endCalibrationBlock() {
+        calibrationBlockedUntil = Date.now() + CALIBRATION_BLOCK_MS;
+        console.log(`[BALANCE] ⏳ Escrita concluída - cooldown de ${CALIBRATION_BLOCK_MS/1000}s`);
+    }
     let lines = Array.from({ length: 18 }, (_, i) => ({
         number: i + 1,
         weight: 0,
@@ -84,7 +119,12 @@ function inicializarBalance() {
 
     // Abre modal para escolher peso (mínimo ou máximo)
     function showWeightModal(line) {
+        if (!line) {
+            console.warn('[BALANCE] showWeightModal chamado com line null');
+            return;
+        }
         selectedLine = line;
+        console.log(`[BALANCE] selectedLine definido para linha ${line.number}`);
         document.getElementById('modal-line-number').textContent = line.number;
         
         if (plcConnected) {
@@ -99,6 +139,10 @@ function inicializarBalance() {
 
     // Abre modal de confirmação para o peso escolhido (mín ou máx)
     function showConfirmationModal(weightType) {
+        if (!selectedLine) {
+            console.warn('[BALANCE] selectedLine é null - ignorando showConfirmationModal');
+            return;
+        }
         document.getElementById('confirm-line-number').textContent = selectedLine.number;
         document.getElementById('weight-type').textContent =
             weightType === 'min' ? 'mínimo' : 'máximo';
@@ -107,9 +151,21 @@ function inicializarBalance() {
 
     // Fecha todos os modais abertos
     function hideModals() {
-        weightModal.style.display = 'none';
-        confirmationModal.style.display = 'none';
+        if (weightModal) weightModal.style.display = 'none';
+        if (confirmationModal) confirmationModal.style.display = 'none';
+        hideBalanceToast(); // Remove qualquer toast pendente
     }
+    
+    // ✅ Função de emergência para fechar TUDO (pode ser chamada do console: window.closeAllBalanceModals())
+    window.closeAllBalanceModals = function() {
+        if (weightModal) weightModal.style.display = 'none';
+        if (confirmationModal) confirmationModal.style.display = 'none';
+        const lm = document.getElementById('loading-modal');
+        if (lm) lm.style.display = 'none';
+        hideBalanceToast();
+        calibrationBlockedUntil = 0; // Libera bloqueio
+        console.log('[BALANCE] 🔓 Todos os modais fechados e bloqueio liberado');
+    };
 
     // Alterna o estado da calibração (ativa/desativa)
     async function handleToggleCalibration() {
@@ -141,26 +197,39 @@ function inicializarBalance() {
         }
         
         // Escreve no PLC em background (não bloqueia a UI)
+        // ✅ Usa API atômica write_word_bit com lock no backend
         setTimeout(async () => {
             try {
                 const tagName = 'XLCLASS_DB229_PESAGEM_COMANDO_STATUS';
-                const res = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null);
-                let current = res && res.values ? Number(res.values[tagName] || 0) : 0;
-                if (!Number.isFinite(current)) current = 0;
+                const bitValue = calibrationEnabled ? 1 : 0;
                 
-                // Alterna bit 8 (0-based)
-                const toggled = (current ^ (1 << 8)) >>> 0;
-                console.log('Escrevendo no PLC:', { current, toggled });
-                
-                await fetch('/api/write_tags', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ [tagName]: toggled })
+                console.log('[BALANCE] Escrevendo no PLC:', { 
+                    estado: calibrationEnabled ? 'Habilitado' : 'Desabilitado',
+                    tag: tagName,
+                    bit: 8,
+                    value: bitValue
                 });
                 
-                console.log('Escrita no PLC concluída');
+                const writeRes = await fetch('/api/write_word_bit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: tagName,
+                        bit: 8,
+                        mode: 'state',
+                        value: bitValue
+                    })
+                });
+                
+                const result = await writeRes.json();
+                
+                if (!writeRes.ok || !result.ok) {
+                    throw new Error(result.error || 'Falha ao escrever no PLC');
+                }
+                
+                console.log('[BALANCE] ✅ Escrita no PLC concluída:', result);
             } catch(e) {
-                console.error('Erro ao escrever no PLC:', e);
+                console.error('[BALANCE] ❌ Erro ao escrever no PLC:', e);
             } finally {
                 isToggling = false;
             }
@@ -169,6 +238,7 @@ function inicializarBalance() {
 
     // Evento ao clicar no botão "Calibrar"
     function handleCalibrateClick(e) {
+        // Não bloqueia aqui - apenas abre o modal
         const datasetSource = e.currentTarget || e.target.closest('.calibrate-btn') || e.target;
         const lineNumber = parseInt(datasetSource.dataset.line, 10);
         const line = lines.find(l => l.number === lineNumber);
@@ -179,8 +249,20 @@ function inicializarBalance() {
 
     // Quando usuário escolhe peso mínimo ou máximo
     function handleWeightSelection(weightType) {
-        selectedWeightType = weightType; // Armazena o tipo selecionado
-        hideModals();
+        console.log(`[BALANCE] handleWeightSelection chamado: weightType=${weightType}, selectedLine=${selectedLine ? selectedLine.number : 'null'}`);
+        if (!selectedLine) {
+            console.warn('[BALANCE] selectedLine é null - ignorando handleWeightSelection');
+            hideModals();
+            return;
+        }
+        // Salva referência antes de fechar modais
+        const lineRef = selectedLine;
+        selectedWeightType = weightType;
+        
+        // Fecha apenas o modal de peso (não o de confirmação)
+        if (weightModal) weightModal.style.display = 'none';
+        
+        // Abre modal de confirmação
         showConfirmationModal(weightType);
     }
 
@@ -218,83 +300,181 @@ function inicializarBalance() {
     }
 
     // Função para escrever no PLC o comando de calibração
+    // ✅ Usa API write_word_bit_queued com fila no backend para garantir serialização
     async function writeCalibrationCommand(lineNumber, weightType) {
         try {
             const { tagName, bitIndex } = getCalibrationTagAndBit(lineNumber, weightType);
             
-            console.log(`Calibrando ${weightType === 'min' ? 'peso mínimo' : 'peso máximo'} da linha ${lineNumber}`);
-            console.log(`Tag: ${tagName}, Bit: ${bitIndex}`);
+            console.log(`[BALANCE] 🔒 Iniciando calibração: ${weightType === 'min' ? 'peso mínimo' : 'peso máximo'} da linha ${lineNumber}`);
+            console.log(`[BALANCE] Tag: ${tagName}, Bit: ${bitIndex}`);
+            console.log(`[BALANCE] 📡 Enviando requisição para /api/write_word_bit...`);
             
-            // Lê o valor atual da tag
-            const res = await fetch(`/api/read_tags?names=${encodeURIComponent(tagName)}`, { cache: 'no-store' }).then(r=>r.json());
-            if (!res || !res.values) {
-                throw new Error('Falha ao ler tag do PLC');
-            }
-            
-            let currentValue = Number(res.values[tagName] || 0) >>> 0;
-            console.log(`Valor atual da tag ${tagName}:`, currentValue);
-            
-            // Seta o bit correspondente para 1
-            const newValue = currentValue | (1 << bitIndex);
-            console.log(`Novo valor a ser escrito:`, newValue);
-            
-            // Escreve no PLC
-            const writeRes = await fetch('/api/write_tags', {
+            // ✅ Usa API atômica write_word_bit com lock no backend
+            const writeRes = await fetch('/api/write_word_bit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ [tagName]: newValue })
+                body: JSON.stringify({
+                    name: tagName,
+                    bit: bitIndex,
+                    mode: 'state',
+                    value: 1  // Seta o bit para 1
+                })
             });
             
-            if (!writeRes.ok) {
-                throw new Error('Falha ao escrever no PLC');
+            console.log(`[BALANCE] 📡 Status da resposta: ${writeRes.status} ${writeRes.statusText}`);
+            
+            const result = await writeRes.json();
+            console.log(`[BALANCE] 📡 Corpo da resposta:`, result);
+            
+            if (!writeRes.ok || !result.ok) {
+                console.error(`[BALANCE] ❌ Erro na resposta: writeRes.ok=${writeRes.ok}, result.ok=${result.ok}`);
+                throw new Error(result.error || 'Falha ao escrever no PLC');
             }
             
-            console.log(`✅ Comando de calibração enviado com sucesso para linha ${lineNumber}`);
+            console.log(`[BALANCE] ✅ Comando de calibração enviado com sucesso para linha ${lineNumber}`);
+            console.log(`[BALANCE] Bit ${bitIndex} da tag ${tagName} setado para 1 (valor escrito: 0x${result.written?.toString(16).toUpperCase() || '?'})`);
+            
+            // ✅ Aguarda mais um pouco após a escrita para garantir que o PLC processou
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             return true;
             
         } catch (error) {
-            console.error(`❌ Erro ao enviar comando de calibração para linha ${lineNumber}:`, error);
+            console.error(`[BALANCE] ❌ Erro ao enviar comando de calibração para linha ${lineNumber}:`, error);
+            console.error(`[BALANCE] ❌ Tipo do erro:`, error.constructor.name);
+            console.error(`[BALANCE] ❌ Mensagem:`, error.message);
             return false;
         }
     }
 
+    // ✅ Função para mostrar toast de feedback (SIMPLES E ROBUSTA)
+    let toastTimeoutId = null;
+    
+    function showBalanceToast(message, duration = 2000) {
+        // Cancela timeout anterior
+        if (toastTimeoutId) {
+            clearTimeout(toastTimeoutId);
+            toastTimeoutId = null;
+        }
+        
+        // Remove toast anterior se existir
+        const existingToast = document.getElementById('balance-toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+        
+        // Cria novo toast
+        const toast = document.createElement('div');
+        toast.id = 'balance-toast';
+        toast.style.cssText = `
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 10000;
+            text-align: center;
+        `;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        // Remove após o tempo especificado
+        toastTimeoutId = setTimeout(() => {
+            const t = document.getElementById('balance-toast');
+            if (t) t.remove();
+            toastTimeoutId = null;
+        }, duration);
+    }
+    
+    // ✅ Função para remover toast imediatamente
+    function hideBalanceToast() {
+        if (toastTimeoutId) {
+            clearTimeout(toastTimeoutId);
+            toastTimeoutId = null;
+        }
+        const t = document.getElementById('balance-toast');
+        if (t) t.remove();
+    }
+    
+
     // Confirma a calibração da linha selecionada
     async function handleConfirmCalibration() {
-        if (selectedLine && selectedWeightType) {
-            console.log(`Confirmando calibração: Linha ${selectedLine.number}, Tipo: ${selectedWeightType}`);
-            
-            // Envia comando para o PLC
-            const success = await writeCalibrationCommand(selectedLine.number, selectedWeightType);
-            
-            if (success) {
-                // Atualiza estado local
-                const index = lines.findIndex(l => l.number === selectedLine.number);
-                if (index !== -1) {
-                    lines[index].calibrated = true;
-                }
-                
-                console.log(`✅ Calibração de peso ${selectedWeightType === 'min' ? 'mínimo' : 'máximo'} da linha ${selectedLine.number} enviada com sucesso!`);
-            } else {
-                console.error(`❌ Erro ao enviar comando de calibração para linha ${selectedLine.number}. Tente novamente.`);
-            }
+        if (!selectedLine || !selectedWeightType) {
+            return;
         }
+        
+        const lineNumber = selectedLine.number;
+        const weightType = selectedWeightType;
+        
+        // ✅ Verifica se está bloqueado (escrita em andamento ou cooldown)
+        if (isCalibrationBusy()) {
+            console.log(`[BALANCE] ⏸️ Linha ${lineNumber} bloqueada`);
+            // Mostra popup de espera apenas se não foi mostrado recentemente (evita spam)
+            if (canShowWaitPopup()) {
+                showBalanceToast('⏳ Aguarde alguns segundos e tente novamente', 3000);
+            }
+            return;
+        }
+        
+        console.log(`[BALANCE] 🎯 Linha ${lineNumber} ${weightType} - Processando calibração`);
+        
+        // ✅ BLOQUEIA IMEDIATAMENTE (antes de qualquer operação async)
+        startCalibrationBlock();
+        
+        // Fecha modais
+        hideModals();
         
         // Limpa seleções
         selectedLine = null;
         selectedWeightType = null;
         
-        hideModals();
+        // ✅ Executa calibração
+        try {
+            const success = await writeCalibrationCommand(lineNumber, weightType);
+            
+            if (success) {
+                // Atualiza estado local
+                const index = lines.findIndex(l => l.number === lineNumber);
+                if (index !== -1) {
+                    lines[index].calibrated = true;
+                }
+                console.log(`✅ Calibração de peso ${weightType === 'min' ? 'mínimo' : 'máximo'} da linha ${lineNumber} enviada com sucesso!`);
+                // Não mostra popup de sucesso conforme solicitado
+            } else {
+                console.error(`❌ Erro ao enviar comando de calibração para linha ${lineNumber}`);
+                showBalanceToast('❌ Erro ao enviar comando.\nTente novamente.', 3000);
+            }
+        } catch (error) {
+            console.error(`[BALANCE] ❌ Erro crítico na linha ${lineNumber}:`, error);
+            showBalanceToast('❌ Erro ao processar calibração.\nTente novamente.', 3000);
+        } finally {
+            // ✅ LIBERA BLOQUEIO (com cooldown)
+            endCalibrationBlock();
+        }
+        
         updateGrid();
+        console.log(`[BALANCE] ✅ Linha ${lineNumber} ${weightType}: Processamento concluído`);
     }
 
     // Event Listeners
     toggleBtn.addEventListener('click', handleToggleCalibration);
 
     document.getElementById('min-weight-btn')
-        .addEventListener('click', () => handleWeightSelection('min'));
+        .addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleWeightSelection('min');
+        });
 
     document.getElementById('max-weight-btn')
-        .addEventListener('click', () => handleWeightSelection('max'));
+        .addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleWeightSelection('max');
+        });
 
     // X para fechar nos modais
     document.querySelectorAll('.modal .modal-close').forEach(btn => {
@@ -316,6 +496,7 @@ function inicializarBalance() {
 
     // Função para mostrar/ocultar modal de carregamento
     function toggleLoadingModal(show) {
+        if (!loadingModal) return; // Proteção contra null
         if (show) {
             loadingModal.style.display = 'flex';
         } else {
@@ -374,7 +555,12 @@ function inicializarBalance() {
     // Função para monitorar status da calibração via PLC
     function startCalibrationStatusPolling() {
         const CALIBRATION_STATUS_TAG = 'XLCLASS_DB229_PESAGEM_STATUS_PASSO_CALIBRACAO';
-        let calibrationPollingInterval = null;
+        
+        // Limpa intervalo anterior se existir
+        if (calibrationPollingInterval) {
+            clearInterval(calibrationPollingInterval);
+            calibrationPollingInterval = null;
+        }
         
         const pollCalibrationStatus = async () => {
             try {
@@ -387,38 +573,43 @@ function inicializarBalance() {
                 const statusValue = Number(res.values[CALIBRATION_STATUS_TAG] || 0);
                 console.log('Status da calibração:', statusValue);
                 
-                // Verifica se está no intervalo válido (1-9)
+                // Verifica se está no intervalo válido (1-9) - mostra popup apenas nesse intervalo
                 if (statusValue >= 1 && statusValue <= 9) {
-                    // Calcula porcentagem baseada no valor (1=11%, 9=100%)
-                    const percentage = Math.round((statusValue / 9) * 100);
-                    updateProgress(statusValue); // Usa o valor direto (1-9) para a função updateProgress
+                    // Atualiza progresso baseado no valor (0-10, onde 1-9 são os passos)
+                    updateProgress(statusValue); // updateProgress já calcula porcentagem corretamente (value/10*100)
+                    const percentage = Math.round((statusValue / 10) * 100);
                     console.log(`Calibração em andamento: passo ${statusValue} (${percentage}%)`);
+                    
+                    // Garante que o popup está visível
+                    if (loadingModal.style.display !== 'flex') {
+                        toggleLoadingModal(true);
+                    }
                     
                     // Desabilita botões durante o processo
                     if (calibrationButtonsEnabled) {
                         calibrationButtonsEnabled = false;
                         updateGrid();
                     }
-                } else if (statusValue > 9) {
-                    // Calibração finalizada (valor > 9) - habilita botões
-                    console.log('Calibração finalizada (status > 9) - habilitando botões');
+                } else if (statusValue >= 10) {
+                    // Calibração finalizada (valor >= 10) - fecha popup e habilita botões
+                    console.log('Calibração finalizada (status >= 10) - fechando popup e habilitando botões');
                     calibrationButtonsEnabled = true;
                     updateGrid();
                     
+                    // Fecha o popup imediatamente
                     clearInterval(calibrationPollingInterval);
-                    setTimeout(() => {
-                        toggleLoadingModal(false);
-                    }, 500);
+                    calibrationPollingInterval = null;
+                    toggleLoadingModal(false);
                 } else {
-                    // Valor 0 ou inválido - desabilita botões e para o polling
-                    console.log('Calibração não iniciada ou valor inválido - desabilitando botões');
+                    // Valor 0 ou inválido - desabilita botões e fecha popup
+                    console.log('Calibração não iniciada ou valor inválido (status = 0) - fechando popup e desabilitando botões');
                     calibrationButtonsEnabled = false;
                     updateGrid();
                     
+                    // Fecha o popup imediatamente
                     clearInterval(calibrationPollingInterval);
-                    setTimeout(() => {
-                        toggleLoadingModal(false);
-                    }, 500);
+                    calibrationPollingInterval = null;
+                    toggleLoadingModal(false);
                 }
             } catch (error) {
                 console.error('Erro ao ler status da calibração:', error);

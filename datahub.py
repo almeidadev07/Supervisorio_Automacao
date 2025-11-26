@@ -53,9 +53,9 @@ DBS = [
     # {"id": 6, "size": 50},     # DB6: Auxiliar indexação - NAO ACESSIVEL
     # {"id": 7, "size": 50},     # DB7: Index cap janelas - NAO ACESSIVEL
     {"id": 10, "size": 10},    # DB10: Ventiladores
-    {"id": 20, "size": 50},    # DB20: Alarmes
-    {"id": 40, "size": 50},    # DB40: Alarmes
-    {"id": 50, "size": 50},    # DB50: Alarmes
+    # {"id": 20, "size": 50},    # DB20: Alarmes - ❌ REMOVIDA DO PLC
+    # {"id": 40, "size": 50},    # DB40: Alarmes - ❌ REMOVIDA DO PLC
+    # {"id": 50, "size": 50},    # DB50: Alarmes - ❌ REMOVIDA DO PLC
     
     # DBs Info e Status
     {"id": 101, "size": 500},  # DB101: Info
@@ -84,8 +84,8 @@ DBS = [
     {"id": 229, "size": 1000}, # DB229: Pesagem (alarmes calibração)
     
     # DBs Esteira Inline (Acumuladora / Dosificadora / Escovas)
-    {"id": 901, "size": 20},   # DB901: Esteira Inline (comandos, velocidades)
-    {"id": 911, "size": 20},   # DB911: Dosificadora Inline (comandos, velocidades)
+    # {"id": 901, "size": 20},   # DB901: Esteira Inline - ❌ REMOVIDA DO PLC
+    # {"id": 911, "size": 20},   # DB911: Dosificadora Inline - ❌ REMOVIDA DO PLC
     {"id": 921, "size": 20},   # DB921: Escovas (comandos, velocidades)
     
     # DBs Predição Vermelho (P1-P7)
@@ -362,8 +362,18 @@ class Snap7Handler:
             
         except Exception as e:
             self.last_error = str(e)
-            logger.error(f"❌ Erro ao ler DB{db_number}: {e}")
-            self.connected = False
+            error_msg = str(e)
+            
+            # ✅ MELHORIA: Não marca conexão como perdida se a DB simplesmente não existe
+            # Apenas loga o erro e retorna None
+            if "Item not available" in error_msg:
+                # DB não existe no PLC - não é erro de conexão
+                logger.warning(f"⚠️ DB{db_number} não disponível no PLC: {error_msg}")
+            else:
+                # Outros erros podem indicar perda de conexão
+                logger.error(f"❌ Erro ao ler DB{db_number}: {e}")
+                self.connected = False
+            
             return None
     
     def write_db(self, db_number: int, start: int, data: bytearray) -> bool:
@@ -561,8 +571,10 @@ class DataHub:
             
             # DBs CRÍTICAS que devem estar sempre disponíveis
             # Estas DBs contêm dados essenciais (velocidades, alarmes principais, status)
-            critical_dbs = [1, 3, 4, 10, 20, 40, 50, 101, 200]
+            # NOTA: DBs 101 e 200 removidas da lista crítica para não bloquear leitura
+            critical_dbs = [1, 3, 4, 10]  # ✅ Apenas DBs principais confirmadas
             critical_failed = [db for db in failed_dbs if db in critical_dbs]
+            non_critical_failed = [db for db in failed_dbs if db not in critical_dbs]
             
             # ✅ CORREÇÃO: Só atualiza cache se DBs críticas foram lidas com sucesso
             # Isso garante que não vamos misturar dados novos com dados antigos
@@ -577,6 +589,10 @@ class DataHub:
                 # Detecta mudanças e notifica WebSockets
                 self._detect_and_notify_changes()
                 
+                # Log DBs não críticas que falharam (apenas a cada 50 leituras)
+                if non_critical_failed and self.read_count % 50 == 0:
+                    logger.info(f"ℹ️ DBs não críticas indisponíveis: {non_critical_failed}")
+                
                 # Log sucesso apenas a cada 50 leituras para não poluir
                 if self.read_count % 50 == 0:
                     logger.debug(f"✓ {self.read_count} leituras bem-sucedidas")
@@ -584,6 +600,8 @@ class DataHub:
             elif critical_failed:
                 # DBs críticas falharam - mantém cache anterior consistente
                 logger.warning(f"⚠️ DBs críticas falharam: {critical_failed} - mantendo cache anterior")
+                if non_critical_failed:
+                    logger.info(f"ℹ️ DBs não críticas também falharam: {non_critical_failed}")
                 self.error_count += 1
             
             else:
