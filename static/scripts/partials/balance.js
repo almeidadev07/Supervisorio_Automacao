@@ -4,6 +4,7 @@ function inicializarBalance() {
     // Estado
     let calibrationEnabled = false; // Controlado pelo usuário (botão toggle)
     let calibrationButtonsEnabled = false; // Controlado pela tag do PLC (status > 9)
+    let calibrationButtonsLocked = false; // ✅ NOVO: Trava os botões visíveis até ação do usuário
     let plcConnected = false; // Status da comunicação com o PLC
     let selectedLine = null;
     let selectedWeightType = null; // 'min' ou 'max'
@@ -44,6 +45,54 @@ function inicializarBalance() {
     function endCalibrationBlock() {
         calibrationBlockedUntil = Date.now() + CALIBRATION_BLOCK_MS;
         console.log(`[BALANCE] ⏳ Escrita concluída - cooldown de ${CALIBRATION_BLOCK_MS/1000}s`);
+    }
+    
+    // ✅ NOVO: Função para resetar o estado de calibração (volta ao estado inicial)
+    function resetCalibrationState() {
+        console.log('[BALANCE] 🔄 Resetando estado de calibração para estado inicial');
+        calibrationEnabled = false;
+        calibrationButtonsEnabled = false;
+        calibrationButtonsLocked = false;
+        
+        // Atualiza o botão de toggle
+        if (toggleBtn) {
+            toggleBtn.textContent = 'Habilitar Calibração';
+            toggleBtn.classList.remove('enabled');
+            toggleBtn.classList.add('disabled');
+        }
+        
+        // Para o polling de calibração se estiver ativo
+        if (calibrationPollingInterval) {
+            clearInterval(calibrationPollingInterval);
+            calibrationPollingInterval = null;
+        }
+        
+        // Fecha o modal de loading se estiver aberto
+        toggleLoadingModal(false);
+        
+        // Atualiza a grid para mostrar status ao invés de botões
+        updateGrid();
+        
+        // ✅ Força leitura imediata dos status para atualizar ícones rapidamente
+        forceUpdateStatusIcons();
+    }
+    
+    // ✅ Função para forçar atualização imediata dos ícones de status
+    async function forceUpdateStatusIcons() {
+        try {
+            const PENDENTE_01 = 'XLCLASS_DB229_PESAGEM_CAL_PENDENTE_01';
+            const PENDENTE_02 = 'XLCLASS_DB229_PESAGEM_CAL_PENDENTE_02';
+            const res = await fetch(`/api/read_tags?names=${encodeURIComponent(`${PENDENTE_01},${PENDENTE_02}`)}`, { cache: 'no-store' }).then(r => r.json());
+            
+            if (res && res.ok && res.values) {
+                const pendente01 = Number(res.values[PENDENTE_01] || 0) >>> 0;
+                const pendente02 = Number(res.values[PENDENTE_02] || 0) >>> 0;
+                console.log('[BALANCE] ⚡ Atualização imediata dos ícones de status:', { pendente01, pendente02 });
+                updateStatusIcons(pendente01, pendente02);
+            }
+        } catch (error) {
+            console.error('[BALANCE] Erro ao forçar atualização dos ícones:', error);
+        }
     }
     let lines = Array.from({ length: 18 }, (_, i) => ({
         number: i + 1,
@@ -166,6 +215,69 @@ function inicializarBalance() {
         calibrationBlockedUntil = 0; // Libera bloqueio
         console.log('[BALANCE] 🔓 Todos os modais fechados e bloqueio liberado');
     };
+    
+    // ✅ NOVO: Função global de cleanup para ser chamada quando sair da tela
+    window.cleanupBalance = function() {
+        console.log('[BALANCE] 🧹 Cleanup da tela de balança');
+        console.log('[BALANCE] Estado atual:', { calibrationEnabled, calibrationButtonsEnabled, calibrationButtonsLocked });
+        
+        // ✅ SEMPRE reseta o estado ao sair da tela (sem condição)
+        // Salva o estado antes de resetar para poder escrever no PLC
+        const wasEnabled = calibrationEnabled;
+        const wasButtonsEnabled = calibrationButtonsEnabled;
+        const wasLocked = calibrationButtonsLocked;
+        
+        // Reseta estado local
+        calibrationEnabled = false;
+        calibrationButtonsEnabled = false;
+        calibrationButtonsLocked = false;
+        
+        // Atualiza o botão de toggle
+        if (toggleBtn) {
+            toggleBtn.textContent = 'Habilitar Calibração';
+            toggleBtn.classList.remove('enabled');
+            toggleBtn.classList.add('disabled');
+        }
+        
+        // Para o polling de calibração
+        if (calibrationPollingInterval) {
+            clearInterval(calibrationPollingInterval);
+            calibrationPollingInterval = null;
+        }
+        
+        // Fecha modais
+        if (weightModal) weightModal.style.display = 'none';
+        if (confirmationModal) confirmationModal.style.display = 'none';
+        const lm = document.getElementById('loading-modal');
+        if (lm) lm.style.display = 'none';
+        hideBalanceToast();
+        
+        // Atualiza grid para mostrar status
+        updateGrid();
+        
+        // ✅ Escreve no PLC para desabilitar calibração se estava em qualquer estado de calibração
+        if (wasEnabled || wasButtonsEnabled || wasLocked) {
+            console.log('[BALANCE] 📡 Escrevendo no PLC para desabilitar calibração');
+            fetch('/api/write_word_bit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: 'XLCLASS_DB229_PESAGEM_COMANDO_STATUS',
+                    bit: 8,
+                    mode: 'state',
+                    value: 0
+                })
+            }).catch(e => console.error('[BALANCE] Erro ao desabilitar calibração no PLC:', e));
+        }
+        
+        // Para polling de leitura
+        stopPolling();
+        
+        // Remove subscrição
+        unsubscribeScreen();
+        
+        console.log('[BALANCE] ✅ Cleanup concluído - estado resetado');
+    };
 
     // Alterna o estado da calibração (ativa/desativa)
     async function handleToggleCalibration() {
@@ -178,37 +290,66 @@ function inicializarBalance() {
         isToggling = true;
         console.log('Toggle calibração clicado. Estado atual:', calibrationEnabled);
         
-        // Atualiza estado local IMEDIATAMENTE (sem esperar PLC)
-        calibrationEnabled = !calibrationEnabled;
-        toggleBtn.textContent = calibrationEnabled ? 'Desabilitar Calibração' : 'Habilitar Calibração';
-        toggleBtn.classList.toggle('enabled', calibrationEnabled);
-        toggleBtn.classList.toggle('disabled', !calibrationEnabled);
+        // ✅ Se está DESABILITANDO a calibração, reseta todo o estado
+        if (calibrationEnabled) {
+            console.log('[BALANCE] 🔄 Desabilitando calibração - resetando estado');
+            resetCalibrationState();
+            
+            // Escreve no PLC em background
+            setTimeout(async () => {
+                try {
+                    const tagName = 'XLCLASS_DB229_PESAGEM_COMANDO_STATUS';
+                    console.log('[BALANCE] Escrevendo no PLC: Desabilitado');
+                    
+                    const writeRes = await fetch('/api/write_word_bit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: tagName,
+                            bit: 8,
+                            mode: 'state',
+                            value: 0
+                        })
+                    });
+                    
+                    const result = await writeRes.json();
+                    
+                    if (!writeRes.ok || !result.ok) {
+                        throw new Error(result.error || 'Falha ao escrever no PLC');
+                    }
+                    
+                    console.log('[BALANCE] ✅ Escrita no PLC concluída:', result);
+                } catch(e) {
+                    console.error('[BALANCE] ❌ Erro ao escrever no PLC:', e);
+                } finally {
+                    isToggling = false;
+                }
+            }, 100);
+            return;
+        }
+        
+        // ✅ Se está HABILITANDO a calibração
+        calibrationEnabled = true;
+        toggleBtn.textContent = 'Desabilitar Calibração';
+        toggleBtn.classList.add('enabled');
+        toggleBtn.classList.remove('disabled');
         
         // Atualiza grid imediatamente
         updateGrid();
         
-        // Se habilitando, mostra loading baseado na tag do PLC
-        if (calibrationEnabled) {
-            try { 
-                startCalibrationLoading(); 
-            } catch (e) { 
-                console.warn('Falha ao iniciar carregamento baseado no PLC:', e); 
-            }
+        // Mostra loading baseado na tag do PLC
+        try { 
+            startCalibrationLoading(); 
+        } catch (e) { 
+            console.warn('Falha ao iniciar carregamento baseado no PLC:', e); 
         }
         
         // Escreve no PLC em background (não bloqueia a UI)
-        // ✅ Usa API atômica write_word_bit com lock no backend
         setTimeout(async () => {
             try {
                 const tagName = 'XLCLASS_DB229_PESAGEM_COMANDO_STATUS';
-                const bitValue = calibrationEnabled ? 1 : 0;
                 
-                console.log('[BALANCE] Escrevendo no PLC:', { 
-                    estado: calibrationEnabled ? 'Habilitado' : 'Desabilitado',
-                    tag: tagName,
-                    bit: 8,
-                    value: bitValue
-                });
+                console.log('[BALANCE] Escrevendo no PLC: Habilitado');
                 
                 const writeRes = await fetch('/api/write_word_bit', {
                     method: 'POST',
@@ -217,7 +358,7 @@ function inicializarBalance() {
                         name: tagName,
                         bit: 8,
                         mode: 'state',
-                        value: bitValue
+                        value: 1
                     })
                 });
                 
@@ -522,34 +663,34 @@ function inicializarBalance() {
 
     // Função para iniciar carregamento baseado na tag do PLC
     function startCalibrationLoading() {
-        console.log('Iniciando carregamento baseado na tag do PLC...');
-        toggleLoadingModal(true);
+        console.log('Iniciando monitoramento da tag do PLC (popup só aparece quando status >= 1 && <= 9)...');
         
-        // Aguardar o modal aparecer
-        setTimeout(() => {
-            const progressLeft = document.getElementById('loading-progress-left');
-            const progressRight = document.getElementById('loading-progress-right');
-            const progressText = document.getElementById('loading-progress-text');
-            const progressBar = document.querySelector('.progress-bar');
-            
-            if (progressLeft && progressRight) {
-                progressLeft.style.width = '0%';
-                progressRight.style.width = '0%';
-            }
-            
-            if (progressText) {
-                progressText.textContent = '0%';
-            }
-            
-            if (progressBar) {
-                progressBar.style.opacity = '1';
-                progressBar.style.visibility = 'visible';
-                progressBar.style.display = 'block';
-            }
-        }, 200);
-        
-        // Inicia polling da tag de status
+        // ✅ NÃO mostra o popup imediatamente - só quando a tag estiver entre 1 e 9
+        // Apenas inicia o polling da tag de status
         startCalibrationStatusPolling();
+    }
+    
+    // Função auxiliar para preparar o popup de loading (chamada quando status entra no intervalo 1-9)
+    function prepareLoadingPopup() {
+        const progressLeft = document.getElementById('loading-progress-left');
+        const progressRight = document.getElementById('loading-progress-right');
+        const progressText = document.getElementById('loading-progress-text');
+        const progressBar = document.querySelector('.progress-bar');
+        
+        if (progressLeft && progressRight) {
+            progressLeft.style.width = '0%';
+            progressRight.style.width = '0%';
+        }
+        
+        if (progressText) {
+            progressText.textContent = '0%';
+        }
+        
+        if (progressBar) {
+            progressBar.style.opacity = '1';
+            progressBar.style.visibility = 'visible';
+            progressBar.style.display = 'block';
+        }
     }
 
     // Função para monitorar status da calibração via PLC
@@ -575,15 +716,17 @@ function inicializarBalance() {
                 
                 // Verifica se está no intervalo válido (1-9) - mostra popup apenas nesse intervalo
                 if (statusValue >= 1 && statusValue <= 9) {
+                    // ✅ Só mostra o popup quando o valor entra no intervalo 1-9
+                    if (loadingModal.style.display !== 'flex') {
+                        console.log('[BALANCE] Status entrou no intervalo 1-9 - mostrando popup de carregamento');
+                        prepareLoadingPopup();
+                        toggleLoadingModal(true);
+                    }
+                    
                     // Atualiza progresso baseado no valor (0-10, onde 1-9 são os passos)
                     updateProgress(statusValue); // updateProgress já calcula porcentagem corretamente (value/10*100)
                     const percentage = Math.round((statusValue / 10) * 100);
                     console.log(`Calibração em andamento: passo ${statusValue} (${percentage}%)`);
-                    
-                    // Garante que o popup está visível
-                    if (loadingModal.style.display !== 'flex') {
-                        toggleLoadingModal(true);
-                    }
                     
                     // Desabilita botões durante o processo
                     if (calibrationButtonsEnabled) {
@@ -594,6 +737,8 @@ function inicializarBalance() {
                     // Calibração finalizada (valor >= 10) - fecha popup e habilita botões
                     console.log('Calibração finalizada (status >= 10) - fechando popup e habilitando botões');
                     calibrationButtonsEnabled = true;
+                    calibrationButtonsLocked = true; // ✅ NOVO: Trava os botões visíveis
+                    console.log('[BALANCE] 🔒 Botões de calibração TRAVADOS (só desbloqueia com ação do usuário)');
                     updateGrid();
                     
                     // Fecha o popup imediatamente
@@ -601,15 +746,25 @@ function inicializarBalance() {
                     calibrationPollingInterval = null;
                     toggleLoadingModal(false);
                 } else {
-                    // Valor 0 ou inválido - desabilita botões e fecha popup
-                    console.log('Calibração não iniciada ou valor inválido (status = 0) - fechando popup e desabilitando botões');
-                    calibrationButtonsEnabled = false;
-                    updateGrid();
-                    
-                    // Fecha o popup imediatamente
-                    clearInterval(calibrationPollingInterval);
-                    calibrationPollingInterval = null;
-                    toggleLoadingModal(false);
+                    // ✅ Valor 0 ou inválido
+                    if (calibrationButtonsLocked) {
+                        // Botões travados - para polling e fecha popup
+                        console.log('Status = 0 mas botões TRAVADOS - mantendo botões de calibração visíveis');
+                        clearInterval(calibrationPollingInterval);
+                        calibrationPollingInterval = null;
+                        toggleLoadingModal(false);
+                    } else if (calibrationEnabled) {
+                        // ✅ NOVO: Calibração habilitada mas valor ainda 0 - CONTINUA aguardando
+                        // NÃO para o polling - espera o PLC mudar o valor para 1-9
+                        console.log('[BALANCE] Status = 0, aguardando PLC mudar para intervalo 1-9...');
+                        // Mantém polling ativo, não faz nada
+                    } else {
+                        // Calibração não habilitada - para polling
+                        console.log('Calibração não habilitada (status = 0) - parando polling');
+                        clearInterval(calibrationPollingInterval);
+                        calibrationPollingInterval = null;
+                        toggleLoadingModal(false);
+                    }
                 }
             } catch (error) {
                 console.error('Erro ao ler status da calibração:', error);
@@ -620,8 +775,8 @@ function inicializarBalance() {
             }
         };
         
-        // Inicia polling a cada 500ms
-        calibrationPollingInterval = setInterval(pollCalibrationStatus, 500);
+        // Inicia polling a cada 200ms para leitura mais rápida
+        calibrationPollingInterval = setInterval(pollCalibrationStatus, 200);
         
         // Primeira leitura imediata
         pollCalibrationStatus();
@@ -759,12 +914,18 @@ function inicializarBalance() {
             // NUNCA atualiza o estado da calibração via polling - apenas via clique do usuário
             // O estado é controlado 100% pelo usuário
             
-            // Controla botões de calibração baseado no status do PLC
-            const newButtonsEnabled = calibrationStatus > 9;
-            if (newButtonsEnabled !== calibrationButtonsEnabled) {
-                calibrationButtonsEnabled = newButtonsEnabled;
-                console.log(`Botões de calibração ${calibrationButtonsEnabled ? 'habilitados' : 'desabilitados'} (status: ${calibrationStatus})`);
-                updateGrid();
+            // ✅ AJUSTADO: Só atualiza botões se NÃO estiverem travados pelo usuário
+            if (!calibrationButtonsLocked) {
+                // Controla botões de calibração baseado no status do PLC
+                const newButtonsEnabled = calibrationStatus > 9;
+                if (newButtonsEnabled !== calibrationButtonsEnabled) {
+                    calibrationButtonsEnabled = newButtonsEnabled;
+                    console.log(`Botões de calibração ${calibrationButtonsEnabled ? 'habilitados' : 'desabilitados'} (status: ${calibrationStatus})`);
+                    updateGrid();
+                }
+            } else {
+                // Botões travados - ignora mudanças da tag do PLC
+                console.log(`[BALANCE] Botões TRAVADOS - ignorando mudança de status do PLC (status: ${calibrationStatus})`);
             }
             
             // Atualiza ícones apenas se botões de calibração desativados
@@ -1005,6 +1166,24 @@ function inicializarBalance() {
             // Aba oculta: para polling e desativa subscrição
             stopPolling();
             unsubscribeScreen();
+            
+            // ✅ NOVO: Reseta estado de calibração quando sai da tela
+            if (calibrationEnabled || calibrationButtonsLocked) {
+                console.log('[BALANCE] 🔄 Tela oculta - resetando estado de calibração');
+                resetCalibrationState();
+                
+                // Escreve no PLC para desabilitar calibração
+                fetch('/api/write_word_bit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'XLCLASS_DB229_PESAGEM_COMANDO_STATUS',
+                        bit: 8,
+                        mode: 'state',
+                        value: 0
+                    })
+                }).catch(e => console.error('[BALANCE] Erro ao desabilitar calibração no PLC:', e));
+            }
         } else {
             // Aba visível: reinicia polling e ativa subscrição
             startPolling();

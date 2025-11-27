@@ -63,6 +63,11 @@ function hideAllContainers() {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
+    
+    // ✅ Cleanup da tela de balança quando sair (reseta estado de calibração)
+    if (typeof window.cleanupBalance === 'function') {
+        window.cleanupBalance();
+    }
 }
 
 // Função para exibir o grid
