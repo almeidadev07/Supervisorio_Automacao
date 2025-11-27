@@ -62,6 +62,158 @@ function inicializarClassification() {
         isLoadingRecipe: false, // Flag para evitar que PLC sobrescreva durante carregamento
         lastRecipeLoad: null // Timestamp da última receita carregada
     };
+    
+    // ✅ Sistema de fila de escritas com debounce (evita conflitos de escrita simultânea)
+    const WRITE_DEBOUNCE_MS = 4000; // 4 segundos de debounce antes de escrever
+    const WRITE_COOLDOWN_MS = 2000; // 2 segundos de cooldown após todas as escritas
+    let writeQueue = []; // Fila de escritas pendentes: [{ embId, classId, tipo, estadoAnterior, timeoutId }]
+    let writeTimeoutId = null; // Timeout atual para próxima escrita
+    let isWritingToPLC = false; // Flag para indicar se está escrevendo no PLC
+    let writeCooldownUntil = 0; // Timestamp até quando o cooldown está ativo
+    
+    // ✅ Função para verificar se está escrevendo no PLC (para pausar sincronização)
+    function isClassificationBusy() {
+        const now = Date.now();
+        const inCooldown = writeCooldownUntil > now;
+        return isWritingToPLC || writeQueue.length > 0 || inCooldown;
+    }
+    
+    // ✅ Função para processar próxima escrita da fila
+    async function processNextWrite() {
+        if (isWritingToPLC) {
+            console.log('[CLASSIFICATION] ⏸️ Já está escrevendo, aguardando...');
+            return;
+        }
+        
+        if (writeQueue.length === 0) {
+            writeTimeoutId = null;
+            return;
+        }
+        
+        const write = writeQueue.shift();
+        if (!write) {
+            writeTimeoutId = null;
+            return;
+        }
+        
+        console.log(`[CLASSIFICATION] 📡 Escrevendo no PLC: ${write.embId}/${write.classId}/${write.tipo} (${writeQueue.length} na fila)`);
+        isWritingToPLC = true;
+        
+        try {
+            const success = await syncSelectionToPLC(write.embId, write.classId, write.tipo);
+            if (!success) {
+                console.warn(`[CLASSIFICATION] Falha ao escrever ${write.embId}/${write.classId}/${write.tipo} - revertendo`);
+                // Reverte estado se escrita falhar
+                const embIndex = state.embaladoras.findIndex(e => e.id === write.embId);
+                if (embIndex !== -1) {
+                    state.embaladoras[embIndex].classes = write.estadoAnterior;
+                    renderGrid();
+                }
+            } else {
+                console.log(`[CLASSIFICATION] ✅ Escrita concluída: ${write.embId}/${write.classId}/${write.tipo}`);
+            }
+        } catch (error) {
+            console.error(`[CLASSIFICATION] Erro ao escrever ${write.embId}/${write.classId}/${write.tipo}:`, error);
+            // Reverte estado se erro
+            const embIndex = state.embaladoras.findIndex(e => e.id === write.embId);
+            if (embIndex !== -1) {
+                state.embaladoras[embIndex].classes = write.estadoAnterior;
+                renderGrid();
+            }
+        } finally {
+            isWritingToPLC = false;
+            // Processa próxima escrita da fila se houver (com delay para dar tempo do PLC processar)
+            if (writeQueue.length > 0) {
+                console.log(`[CLASSIFICATION] ⏭️ Processando próxima escrita da fila (${writeQueue.length} restantes) em 1s...`);
+                // Aguarda 1 segundo entre escritas para dar tempo do PLC processar
+                writeTimeoutId = setTimeout(() => {
+                    writeTimeoutId = null;
+                    processNextWrite();
+                }, 1000);
+            } else {
+                writeTimeoutId = null;
+                // Ativa cooldown após todas as escritas para evitar sincronização imediata
+                writeCooldownUntil = Date.now() + WRITE_COOLDOWN_MS;
+                console.log(`[CLASSIFICATION] ✅ Fila de escritas vazia - cooldown ativo por ${WRITE_COOLDOWN_MS/1000}s`);
+            }
+        }
+    }
+    
+    // ✅ Função para agendar escrita no PLC (debounce de 4 segundos)
+    function scheduleWriteToPLC(embId, classId, tipo, estadoAnterior) {
+        // Remove escrita anterior da mesma embaladora/classe se existir (substitui por nova)
+        writeQueue = writeQueue.filter(w => !(w.embId === embId && w.classId === classId));
+        
+        // Adiciona nova escrita à fila
+        writeQueue.push({ embId, classId, tipo, estadoAnterior });
+        
+        console.log(`[CLASSIFICATION] ⏱️ Escrita agendada para ${embId}/${classId}/${tipo} (fila: ${writeQueue.length}, timeout ativo: ${!!writeTimeoutId}, escrevendo: ${isWritingToPLC})`);
+        
+        // Se não há timeout ativo E não está escrevendo, agenda a primeira escrita após 4 segundos
+        if (!writeTimeoutId && !isWritingToPLC) {
+            console.log(`[CLASSIFICATION] ⏱️ Iniciando timer de ${WRITE_DEBOUNCE_MS/1000}s para primeira escrita`);
+            writeTimeoutId = setTimeout(() => {
+                writeTimeoutId = null;
+                processNextWrite();
+            }, WRITE_DEBOUNCE_MS);
+        } else {
+            console.log(`[CLASSIFICATION] ⏱️ Escrita adicionada à fila (será processada após escritas anteriores)`);
+        }
+    }
+    
+    // ✅ Função para mostrar toast de feedback
+    let toastTimeoutId = null;
+    
+    function showClassificationToast(message, duration = 2000) {
+        // Cancela timeout anterior
+        if (toastTimeoutId) {
+            clearTimeout(toastTimeoutId);
+            toastTimeoutId = null;
+        }
+        
+        // Remove toast anterior se existir
+        const existingToast = document.getElementById('classification-toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
+        
+        // Cria novo toast
+        const toast = document.createElement('div');
+        toast.id = 'classification-toast';
+        toast.style.cssText = `
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 10000;
+            text-align: center;
+        `;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        // Remove após o tempo especificado
+        toastTimeoutId = setTimeout(() => {
+            const t = document.getElementById('classification-toast');
+            if (t) t.remove();
+            toastTimeoutId = null;
+        }, duration);
+    }
+    
+    // ✅ Função para remover toast imediatamente
+    function hideClassificationToast() {
+        if (toastTimeoutId) {
+            clearTimeout(toastTimeoutId);
+            toastTimeoutId = null;
+        }
+        const t = document.getElementById('classification-toast');
+        if (t) t.remove();
+    }
 
     // API helpers (reutiliza a lógica da tela de faixa de peso para nomes dinâmicos)
     const api = {
@@ -406,6 +558,13 @@ function inicializarClassification() {
 		}
     }
     async function refreshSelectionsFromPLC(force = false) {
+        // ✅ Não atualiza se estiver escrevendo no PLC (evita conflito leitura/gravação)
+        // Permite apenas se for durante carregamento de receita (que tem controle próprio)
+        if (!state.isLoadingRecipe && isClassificationBusy()) {
+            console.log('[CLASSIFICATION] ⏸️ Pulando refreshSelectionsFromPLC - escrita em andamento');
+            return;
+        }
+        
         // Não atualiza se estiver carregando uma receita (a menos que force=true)
         if (!force && state.isLoadingRecipe) {
             console.log('Pulando refreshSelectionsFromPLC - carregando receita');
@@ -483,6 +642,12 @@ function inicializarClassification() {
         }
     }
     async function loadSelectionsFromPLC() {
+        // ✅ Não atualiza se estiver escrevendo no PLC (evita conflito leitura/gravação)
+        if (isClassificationBusy()) {
+            console.log('[CLASSIFICATION] ⏸️ Pulando loadSelectionsFromPLC - escrita em andamento');
+            return;
+        }
+        
         // Monta lista de tags para leitura: P1..P7, P9, P10 em índices [0] e [1] para DB200 (branco) e DB201 (vermelho)
         const pList = ['P1','P2','P3','P4','P5','P6','P7','P9','P10'];
         const tags = [];
@@ -602,6 +767,8 @@ function inicializarClassification() {
         // Calcula próximos valores conforme o tipo
         let nextWhite = wWhite;
         let nextRed = wRed;
+        const isCrackVisio = (classId === 'CRACK' || classId === 'VISIO');
+        
         if (tipo === 'branco') {
             nextWhite = setBit(wWhite, bit, true);
             nextRed = setBit(wRed, bit, false);
@@ -609,8 +776,15 @@ function inicializarClassification() {
             nextWhite = setBit(wWhite, bit, false);
             nextRed = setBit(wRed, bit, true);
         } else if (tipo === 'misto') {
-            nextWhite = setBit(wWhite, bit, true);
-            nextRed = setBit(wRed, bit, true);
+            // ✅ Para CRACK/VISIO, misto escreve apenas na DB200 (não na DB201)
+            if (isCrackVisio) {
+                nextWhite = setBit(wWhite, bit, true);
+                nextRed = setBit(wRed, bit, false); // Não escreve na DB201 para CRACK/VISIO
+            } else {
+                // Para outras classes, misto = ambos
+                nextWhite = setBit(wWhite, bit, true);
+                nextRed = setBit(wRed, bit, true);
+            }
         } else {
             // Sem tipo (removido) => limpa ambos
             nextWhite = setBit(wWhite, bit, false);
@@ -656,6 +830,8 @@ function inicializarClassification() {
 				if (!p) continue;
 				const target = acc[p]?.[index];
 				if (!target) continue;
+				const isCrackVisio = (cls.id === 'CRACK' || cls.id === 'VISIO');
+				
 				if (cls.tipo === 'branco') {
 					target.white = setBit(target.white >>> 0, bit, true) >>> 0;
 					target.red = setBit(target.red >>> 0, bit, false) >>> 0;
@@ -663,8 +839,15 @@ function inicializarClassification() {
 					target.white = setBit(target.white >>> 0, bit, false) >>> 0;
 					target.red = setBit(target.red >>> 0, bit, true) >>> 0;
 				} else if (cls.tipo === 'misto') {
-					target.white = setBit(target.white >>> 0, bit, true) >>> 0;
-					target.red = setBit(target.red >>> 0, bit, true) >>> 0;
+					// ✅ Para CRACK/VISIO, misto escreve apenas na DB200 (não na DB201)
+					if (isCrackVisio) {
+						target.white = setBit(target.white >>> 0, bit, true) >>> 0;
+						target.red = setBit(target.red >>> 0, bit, false) >>> 0; // Não escreve na DB201 para CRACK/VISIO
+					} else {
+						// Para outras classes, misto = ambos
+						target.white = setBit(target.white >>> 0, bit, true) >>> 0;
+						target.red = setBit(target.red >>> 0, bit, true) >>> 0;
+					}
 				}
 			}
 		}
@@ -761,10 +944,32 @@ function inicializarClassification() {
 				// Define o bit conforme o estado desejado dos cards
 				const desired = (emb.classes || []).find(c => classIdToP(c.id) === p);
 				let desiredTipo = desired ? desired.tipo : null;
-				if (desiredTipo === 'branco') { wWhite = setBit(wWhite, bit, true); wRed = setBit(wRed, bit, false); }
-				else if (desiredTipo === 'vermelho') { wWhite = setBit(wWhite, bit, false); wRed = setBit(wRed, bit, true); }
-				else if (desiredTipo === 'misto') { wWhite = setBit(wWhite, bit, true); wRed = setBit(wRed, bit, true); }
-				else { wWhite = setBit(wWhite, bit, false); wRed = setBit(wRed, bit, false); }
+				const desiredClassId = desired ? desired.id : null;
+				const isCrackVisio = (desiredClassId === 'CRACK' || desiredClassId === 'VISIO');
+				
+				if (desiredTipo === 'branco') { 
+					wWhite = setBit(wWhite, bit, true); 
+					wRed = setBit(wRed, bit, false); 
+				}
+				else if (desiredTipo === 'vermelho') { 
+					wWhite = setBit(wWhite, bit, false); 
+					wRed = setBit(wRed, bit, true); 
+				}
+				else if (desiredTipo === 'misto') {
+					// ✅ Para CRACK/VISIO, misto escreve apenas na DB200 (não na DB201)
+					if (isCrackVisio) {
+						wWhite = setBit(wWhite, bit, true);
+						wRed = setBit(wRed, bit, false); // Não escreve na DB201 para CRACK/VISIO
+					} else {
+						// Para outras classes, misto = ambos
+						wWhite = setBit(wWhite, bit, true);
+						wRed = setBit(wRed, bit, true);
+					}
+				}
+				else { 
+					wWhite = setBit(wWhite, bit, false); 
+					wRed = setBit(wRed, bit, false); 
+				}
 				payload[`XLCLASS_DB200_CLASSIFICACAO_${p}[${index}]`] = Number(wWhite) >>> 0;
 				payload[`XLCLASS_DB201_CLASSIFICACAO_${p}[${index}]`] = Number(wRed) >>> 0;
 			}
@@ -892,27 +1097,53 @@ function inicializarClassification() {
             <div class="header-cell">${emb.nome}</div>
         `).join('');
     }
+    // ✅ Armazena handlers para poder removê-los (evita vazamento de memória)
+    const columnClickHandlers = new Map();
+    
     function renderGrid() {
         const grid = document.getElementById('embaladora-grid');
         if (!grid) return;
         console.log('Renderizando grid com estado:', state.embaladoras);
+        
+        // ✅ Remove listeners antigos antes de recriar o HTML (evita vazamento de memória)
+        document.querySelectorAll('.embaladora-column').forEach(column => {
+            const embId = column.getAttribute('data-id');
+            const handler = columnClickHandlers.get(embId);
+            if (handler) {
+                column.removeEventListener('click', handler);
+                columnClickHandlers.delete(embId);
+            }
+        });
+        
         grid.innerHTML = state.embaladoras.map(emb => `
             <div class="embaladora-column" data-id="${emb.id}">
                 ${renderClasses(emb.classes)}
             </div>
         `).join('');
         
+        // ✅ Adiciona novos listeners e armazena referências
         document.querySelectorAll('.embaladora-column').forEach(column => {
-            column.addEventListener('click', () => {
-                const embId = column.getAttribute('data-id');
+            const embId = column.getAttribute('data-id');
+            // Cria handler nomeado para poder removê-lo depois
+            const handler = () => {
                 handleEmbaladoraClick(embId);
-            });
+            };
+            column.addEventListener('click', handler);
+            columnClickHandlers.set(embId, handler);
         });
     }
 
 	// Verifica no PLC se o estado corresponde aos cards e tenta corrigir discrepâncias
 	async function verifySelectionsWithPLC() {
 		console.log('=== verifySelectionsWithPLC INICIADA ===');
+		
+		// ✅ Não verifica se estiver escrevendo no PLC (evita conflito leitura/gravação)
+		// Mas permite durante carregamento de receita (que tem controle próprio)
+		if (!state.isLoadingRecipe && isClassificationBusy()) {
+			console.log('[CLASSIFICATION] ⏸️ Pulando verifySelectionsWithPLC - escrita em andamento');
+			return true; // Retorna true para não bloquear o fluxo
+		}
+		
 		// Monta lista de tags a ler
 		const tags = [];
 		const pList = ['P1','P2','P3','P4','P5','P6','P7','P9','P10'];
@@ -1184,27 +1415,32 @@ function inicializarClassification() {
     }
     function handleClassSelection(embId, classId, tipo) {
         console.log('Selection:', embId, classId, tipo);
+        
+        // ✅ FECHA O MODAL IMEDIATAMENTE ao selecionar uma classe
+        hideModal('class-modal');
+        
         const embaladora = state.embaladoras.find(e => e.id === embId);
         const classe = state.classesOvos.find(c => c.id === classId);
         
         if (!embaladora || !classe) return;
         const embIndex = state.embaladoras.findIndex(e => e.id === embId);
         if (embIndex === -1) return;
-        const novasClasses = [...state.embaladoras[embIndex].classes];
+        
+        // ✅ Salva estado anterior para poder reverter se escrita falhar
+        const estadoAnterior = [...state.embaladoras[embIndex].classes];
+        const novasClasses = [...estadoAnterior];
         const existingClassIndex = novasClasses.findIndex(c => c.id === classId);
         
         if (existingClassIndex !== -1 && novasClasses[existingClassIndex].tipo === tipo) {
             // Remove a classe se clicar no mesmo tipo
             novasClasses.splice(existingClassIndex, 1);
             
-            const button = document.querySelector(`.type-btn[data-emb="${embId}"][data-class="${classId}"][data-type="${tipo}"]`);
-            if (button) {
-                button.classList.remove('selected');
-            }
-            // Sincroniza com PLC limpando bits
-            syncSelectionToPLC(embId, classId, null).then((ok) => {
-                if (!ok) console.warn('Falha ao limpar seleção no PLC');
-            });
+            // ✅ APLICA VISUALMENTE IMEDIATAMENTE
+            state.embaladoras[embIndex].classes = novasClasses;
+            renderGrid();
+            
+            // ✅ Agenda escrita no PLC após 4 segundos (remove seleção)
+            scheduleWriteToPLC(embId, classId, null, estadoAnterior);
         } else {
             // Remove a classe existente se houver
             if (existingClassIndex !== -1) {
@@ -1219,23 +1455,15 @@ function inicializarClassification() {
                 tipo: tipo
             });
             
-        // Atualiza os botões visuais (se modal ainda aberto)
-        const buttons = document.querySelectorAll(`.type-btn[data-emb="${embId}"][data-class="${classId}"]`);
-        if (buttons && buttons.length) {
-            buttons.forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            const selectedButton = document.querySelector(`.type-btn[data-emb="${embId}"][data-class="${classId}"][data-type="${tipo}"]`);
-            if (selectedButton) selectedButton.classList.add('selected');
+            // ✅ APLICA VISUALMENTE IMEDIATAMENTE
+            state.embaladoras[embIndex].classes = novasClasses;
+            renderGrid();
+            
+            // ✅ Agenda escrita no PLC após 4 segundos
+            scheduleWriteToPLC(embId, classId, tipo, estadoAnterior);
         }
-            // Sincroniza com PLC conforme tipo escolhido
-            syncSelectionToPLC(embId, classId, tipo).then((ok) => {
-                if (!ok) console.warn('Falha ao escrever seleção no PLC');
-            });
-        }
-        state.embaladoras[embIndex].classes = novasClasses;
-        console.log('Estado atualizado:', state.embaladoras[embIndex]);
-        renderGrid();
+        
+        console.log('[CLASSIFICATION] Estado atualizado visualmente:', state.embaladoras[embIndex]);
     }
     function handleSalvarPreset() {
         console.log('=== INÍCIO handleSalvarPreset ===');
@@ -2072,7 +2300,22 @@ function inicializarClassification() {
             }
         }, LABEL_REFRESH_MS);
 
-        // Polling apenas do alerta de parada (SEM sincronização automática)
+        // ✅ Polling periódico para sincronizar seleções do PLC (respeita bloqueio durante escrita)
+        const SELECTION_REFRESH_MS = 10000; // 10 segundos (dá tempo das escritas serem concluídas no PLC)
+        let selectionTimer = setInterval(async () => {
+            // ✅ Só sincroniza se não estiver escrevendo (evita conflito)
+            if (!isClassificationBusy() && !state.isLoadingRecipe) {
+                try {
+                    await refreshSelectionsFromPLC(false);
+                } catch (error) {
+                    console.error('[CLASSIFICATION] Erro no polling de seleções:', error);
+                }
+            } else {
+                console.log('[CLASSIFICATION] ⏸️ Polling pausado - escritas pendentes ou em andamento');
+            }
+        }, SELECTION_REFRESH_MS);
+        
+        // Polling apenas do alerta de parada
         const ALERT_REFRESH_MS = 1000;
         let lastAlertText = '';
         let lastVisible = false;
@@ -2094,20 +2337,96 @@ function inicializarClassification() {
                 renderClaw(visible);
                 renderClawGreen(showGreen);
             }
-            // REMOVIDO: refreshSelectionsFromPLC() - não sincroniza mais automaticamente
         }, ALERT_REFRESH_MS);
 
+        // ✅ Função de cleanup para limpar listeners e timers
+        function cleanupClassification() {
+            console.log('[CLASSIFICATION] 🧹 Limpando recursos...');
+            
+            // Limpa todos os listeners de colunas
+            document.querySelectorAll('.embaladora-column').forEach(column => {
+                const embId = column.getAttribute('data-id');
+                const handler = columnClickHandlers.get(embId);
+                if (handler) {
+                    column.removeEventListener('click', handler);
+                    columnClickHandlers.delete(embId);
+                }
+            });
+            columnClickHandlers.clear();
+            
+            // Limpa timers
+            if (labelTimer) {
+                clearInterval(labelTimer);
+                labelTimer = null;
+            }
+            if (alertTimer) {
+                clearInterval(alertTimer);
+                alertTimer = null;
+            }
+            if (selectionTimer) {
+                clearInterval(selectionTimer);
+                selectionTimer = null;
+            }
+            
+            // Limpa toast
+            hideClassificationToast();
+            
+            // Para heartbeat
+            stopHeartbeat();
+            
+            // Remove subscription
+            unsubscribeScreen();
+            
+            // ✅ Limpa fila de escritas e timeouts
+            if (writeTimeoutId) {
+                clearTimeout(writeTimeoutId);
+                writeTimeoutId = null;
+            }
+            writeQueue = [];
+            isWritingToPLC = false;
+            writeCooldownUntil = 0;
+            
+            console.log('[CLASSIFICATION] ✅ Cleanup concluído');
+        }
+        
+        // ✅ Função global de cleanup para ser chamada quando sair da tela
+        window.cleanupClassification = cleanupClassification;
+        
         // Pausa quando aba não está visível para economizar recursos
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 if (labelTimer) { clearInterval(labelTimer); labelTimer = null; }
                 if (alertTimer) { clearInterval(alertTimer); alertTimer = null; }
+                if (selectionTimer) { clearInterval(selectionTimer); selectionTimer = null; }
                 stopHeartbeat();
                 unsubscribeScreen();
+                
+                // ✅ Limpa listeners quando aba fica oculta
+                document.querySelectorAll('.embaladora-column').forEach(column => {
+                    const embId = column.getAttribute('data-id');
+                    const handler = columnClickHandlers.get(embId);
+                    if (handler) {
+                        column.removeEventListener('click', handler);
+                        columnClickHandlers.delete(embId);
+                    }
+                });
             } else {
                 // Ao voltar para esta aba/tela, força leitura do PLC para repovoar os cards
                 setTimeout(() => { refreshSelectionsFromPLC(true); }, 200);
                 subscribeScreen();
+                
+                // ✅ Reinicia polling de seleções
+                if (!selectionTimer) {
+                    selectionTimer = setInterval(async () => {
+                        if (!isClassificationBusy() && !state.isLoadingRecipe) {
+                            try {
+                                await refreshSelectionsFromPLC(false);
+                            } catch (error) {
+                                console.error('[CLASSIFICATION] Erro no polling de seleções:', error);
+                            }
+                        }
+                    }, SELECTION_REFRESH_MS);
+                }
                 startHeartbeat();
                 if (!labelTimer) {
                     labelTimer = setInterval(async () => {

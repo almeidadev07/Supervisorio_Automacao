@@ -1,4 +1,96 @@
 // machine_select.js (versão avançada com detecção automática)
+
+// ============================================================================
+// ✅ MODO DE SIMULAÇÃO PARA TESTES (chamar via console do navegador)
+// ============================================================================
+// 
+// Funções disponíveis no console:
+//   simularMaquina('200CX')  - Simula máquina 200CX (6 linhas balança)
+//   simularMaquina('400CX')  - Simula máquina 400CX (12 linhas balança)
+//   simularMaquina('700CX')  - Simula máquina 700CX (18 linhas balança)
+//   simularEmbaladoras(12)   - Simula quantidade de embaladoras (classificação)
+//   voltarNormal()           - Volta ao estado normal (remove simulação)
+//
+// NOTA: Tipo de máquina (linhas balança) e embaladoras são INDEPENDENTES
+// ============================================================================
+
+window.simularMaquina = function(machineType) {
+  const validMachines = ['200CX', '400CX', '700CX'];
+  const type = machineType.toUpperCase();
+  
+  if (!validMachines.includes(type)) {
+    console.error('❌ Máquina inválida. Use: 200CX, 400CX ou 700CX');
+    return;
+  }
+  
+  // Salva modo de simulação e tipo de máquina
+  localStorage.setItem('supervisor_simulation_mode', 'true');
+  localStorage.setItem('supervisor_machine_type', type);
+  
+  const linhas = type === '200CX' ? 6 : type === '400CX' ? 12 : 18;
+  console.log(`✅ SIMULAÇÃO ATIVADA: ${type} (${linhas} linhas na balança)`);
+  console.log('📍 Recarregando página para aplicar...');
+  
+  // Recarrega para aplicar
+  setTimeout(() => location.reload(), 500);
+};
+
+window.simularEmbaladoras = function(quantity) {
+  if (quantity < 1 || quantity > 24) {
+    console.error('❌ Quantidade inválida. Use entre 1 e 24');
+    return;
+  }
+  
+  // Salva modo de simulação e quantidade de embaladoras
+  localStorage.setItem('supervisor_simulation_mode', 'true');
+  localStorage.setItem('supervisor_embaladora_quantity', quantity.toString());
+  
+  console.log(`✅ SIMULAÇÃO ATIVADA: ${quantity} embaladoras (tela classificação)`);
+  console.log('📍 Recarregando página para aplicar...');
+  
+  // Recarrega para aplicar
+  setTimeout(() => location.reload(), 500);
+};
+
+window.voltarNormal = function() {
+  localStorage.removeItem('supervisor_simulation_mode');
+  localStorage.removeItem('supervisor_machine_type');
+  localStorage.removeItem('supervisor_embaladora_quantity');
+  console.log('✅ SIMULAÇÃO DESATIVADA - Voltando ao normal');
+  console.log('📍 Recarregando página...');
+  setTimeout(() => location.reload(), 500);
+};
+
+// Mostra aviso se estiver em modo de simulação
+if (localStorage.getItem('supervisor_simulation_mode') === 'true') {
+  console.warn('⚠️ MODO DE SIMULAÇÃO ATIVO');
+  console.warn('Para voltar ao normal, execute: voltarNormal()');
+  
+  // Adiciona indicador visual
+  setTimeout(() => {
+    const indicator = document.createElement('div');
+    indicator.id = 'simulation-indicator';
+    indicator.style.cssText = `
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: #ff6b00;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 12px;
+      z-index: 99999;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    `;
+    indicator.textContent = '🧪 MODO SIMULAÇÃO';
+    indicator.title = 'Clique para desativar ou execute voltarNormal() no console';
+    indicator.onclick = () => window.voltarNormal();
+    document.body.appendChild(indicator);
+  }, 1000);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const socket = io();
 
@@ -230,6 +322,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Seleciona a máquina atual no dropdown
         select.value = result.machine;
         
+        // ✅ Salva o tipo de máquina atual no localStorage (para tela de balança)
+        const machineTypeMatch = result.machine.match(/(200CX|400CX|700CX)/i);
+        if (machineTypeMatch) {
+          const currentSaved = localStorage.getItem('supervisor_machine_type');
+          const newType = machineTypeMatch[1].toUpperCase();
+          if (currentSaved !== newType) {
+            localStorage.setItem('supervisor_machine_type', newType);
+            console.log('[MACHINE_SELECT] Tipo de máquina atualizado:', newType);
+          }
+        }
+        
         // Adiciona indicador visual se conectada
         if (result.connected) {
           const option = select.querySelector(`option[value="${result.machine}"]`);
@@ -313,6 +416,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statusDiv) {
           statusDiv.textContent = 'Máquina alterada com sucesso!';
           statusDiv.className = 'status success';
+        }
+        
+        // ✅ Salva o tipo de máquina no localStorage (para tela de balança)
+        // Extrai o tipo da máquina (200CX, 400CX, 700CX)
+        const machineTypeMatch = machineName.match(/(200CX|400CX|700CX)/i);
+        if (machineTypeMatch) {
+          localStorage.setItem('supervisor_machine_type', machineTypeMatch[1].toUpperCase());
+          console.log('[MACHINE_SELECT] Tipo de máquina salvo:', machineTypeMatch[1].toUpperCase());
         }
         
         // Fecha o modal imediatamente após sucesso

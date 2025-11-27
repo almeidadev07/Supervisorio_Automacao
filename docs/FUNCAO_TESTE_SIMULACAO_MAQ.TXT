@@ -1,0 +1,12 @@
+// Simular tipo de máquina (afeta BALANÇA):
+simularMaquina('200CX')  // 6 linhas
+simularMaquina('400CX')  // 12 linhas
+simularMaquina('700CX')  // 18 linhas
+
+// Simular quantidade de embaladoras (afeta CLASSIFICAÇÃO):
+simularEmbaladoras(6)    // 6 embaladoras
+simularEmbaladoras(12)   // 12 embaladoras
+simularEmbaladoras(24)   // 24 embaladoras
+
+// Voltar ao normal:
+voltarNormal()

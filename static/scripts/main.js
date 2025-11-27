@@ -68,6 +68,11 @@ function hideAllContainers() {
     if (typeof window.cleanupBalance === 'function') {
         window.cleanupBalance();
     }
+    
+    // ✅ Cleanup da tela de classificação quando sair (limpa listeners e timers)
+    if (typeof window.cleanupClassification === 'function') {
+        window.cleanupClassification();
+    }
 }
 
 // Função para exibir o grid

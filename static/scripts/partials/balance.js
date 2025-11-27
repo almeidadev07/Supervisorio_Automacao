@@ -1,6 +1,48 @@
 function inicializarBalance() {
     console.log('Inicializando Balance...');
 
+    // ✅ Função para obter quantidade de linhas baseado no tipo de máquina
+    // 200CX = 6 linhas, 400CX = 12 linhas, 700CX = 18 linhas
+    // NOTA: Este parâmetro é INDEPENDENTE da quantidade de embaladoras (tela de classificação)
+    function getLineQuantity() {
+        const machineType = localStorage.getItem('supervisor_machine_type') || '700CX';
+        
+        // Mapeia tipo de máquina para quantidade de linhas de balança
+        switch (machineType.toUpperCase()) {
+            case '200CX':
+                return 6;
+            case '400CX':
+                return 12;
+            case '700CX':
+            default:
+                return 18;
+        }
+    }
+    
+    // ✅ Função para atualizar o layout do grid baseado na quantidade de linhas
+    function updateGridLayout(lineCount) {
+        const balanceGrid = document.querySelector('.balance-grid');
+        if (!balanceGrid) return;
+        
+        // Sempre organiza em 2 linhas (rows), ajustando apenas as colunas
+        // 6 boxes = 3 colunas x 2 linhas
+        // 12 boxes = 6 colunas x 2 linhas
+        // 18 boxes = 9 colunas x 2 linhas
+        const columns = Math.ceil(lineCount / 2);
+        const gap = '16px';
+        
+        // Aplica layout centralizado com colunas calculadas
+        balanceGrid.style.gridTemplateColumns = `repeat(${columns}, minmax(120px, 180px))`;
+        balanceGrid.style.gap = gap;
+        balanceGrid.style.justifyContent = 'center';
+        balanceGrid.style.alignContent = 'center';
+        
+        // Adiciona data-attribute para referência
+        balanceGrid.setAttribute('data-lines', lineCount);
+        
+        console.log(`[BALANCE] Layout ajustado: ${lineCount} boxes, ${columns} colunas x 2 linhas, centralizado`);
+    }
+
     // Estado
     let calibrationEnabled = false; // Controlado pelo usuário (botão toggle)
     let calibrationButtonsEnabled = false; // Controlado pela tag do PLC (status > 9)
@@ -12,6 +54,10 @@ function inicializarBalance() {
     let isToggling = false; // Flag para evitar múltiplos cliques
     let pollingInterval = null; // Referência do intervalo de polling
     let calibrationPollingInterval = null; // Referência do intervalo de polling da calibração
+    
+    // ✅ Obtém quantidade de linhas da configuração
+    const lineQuantity = getLineQuantity();
+    console.log(`[BALANCE] Quantidade de linhas configurada: ${lineQuantity}`);
     
     // ✅ Sistema de bloqueio baseado em TIMESTAMP (não depende de timers)
     let calibrationBlockedUntil = 0; // Timestamp até quando está bloqueado
@@ -94,7 +140,9 @@ function inicializarBalance() {
             console.error('[BALANCE] Erro ao forçar atualização dos ícones:', error);
         }
     }
-    let lines = Array.from({ length: 18 }, (_, i) => ({
+    
+    // ✅ Cria linhas baseado na quantidade configurada
+    let lines = Array.from({ length: lineQuantity }, (_, i) => ({
         number: i + 1,
         weight: 0,
         calibrated: false
@@ -112,6 +160,10 @@ function inicializarBalance() {
     // Atualiza a visualização da grid com as linhas
     function updateGrid() {
         balanceGrid.innerHTML = '';
+        
+        // ✅ Aplica layout dinâmico baseado na quantidade de linhas
+        updateGridLayout(lines.length);
+        
         lines.forEach(line => {
             const card = document.createElement('div');
             card.className = 'balance-card';
@@ -789,8 +841,8 @@ function inicializarBalance() {
     function updateStatusIcons(pendente01, pendente02) {
         console.log('Atualizando ícones com valores:', { pendente01, pendente02 });
         
-        // Atualiza ícones para cada linha
-        for (let lineNum = 1; lineNum <= 18; lineNum++) {
+        // Atualiza ícones para cada linha (usa quantidade configurada)
+        for (let lineNum = 1; lineNum <= lineQuantity; lineNum++) {
             const statusIcons = document.querySelector(`.status-icons[data-line="${lineNum}"]`);
             if (!statusIcons) continue;
             
@@ -860,8 +912,8 @@ function inicializarBalance() {
             const CMD_TAG = 'XLCLASS_DB229_PESAGEM_COMANDO_STATUS';
             const PENDENTE_01 = 'XLCLASS_DB229_PESAGEM_CAL_PENDENTE_01';
             const PENDENTE_02 = 'XLCLASS_DB229_PESAGEM_CAL_PENDENTE_02';
-            // Tags de peso instantâneo das linhas 1..18 => índices 0..17
-            const instantTags = Array.from({ length: 18 }, (_, i) => `XLCLASS_DB229_PESAGEM_INSTANTANEO[${i}]`);
+            // Tags de peso instantâneo (usa quantidade configurada)
+            const instantTags = Array.from({ length: lineQuantity }, (_, i) => `XLCLASS_DB229_PESAGEM_INSTANTANEO[${i}]`);
             const CALIBRATION_STATUS_TAG = 'XLCLASS_DB229_PESAGEM_STATUS_PASSO_CALIBRACAO';
             const names = `${SPEED_TAG},${CMD_TAG},${PENDENTE_01},${PENDENTE_02},${CALIBRATION_STATUS_TAG},${instantTags.join(',')}`;
             const res = await fetch(`/api/read_tags?names=${encodeURIComponent(names)}`, { cache: 'no-store' }).then(r=>r.json());
@@ -876,7 +928,7 @@ function inicializarBalance() {
 
             // Atualiza pesos das linhas a partir das tags instantâneas
             let validValuesCount = 0;
-            for (let i = 0; i < 18; i++) {
+            for (let i = 0; i < lineQuantity; i++) {
                 const tag = `XLCLASS_DB229_PESAGEM_INSTANTANEO[${i}]`;
                 const hasTag = res.values && Object.prototype.hasOwnProperty.call(res.values, tag);
                 if (!hasTag) {
@@ -950,8 +1002,8 @@ function inicializarBalance() {
 
     function buildSubscribedTags() {
         const tags = [];
-        // Tags de peso instantâneo das linhas 1..18
-        for (let i = 0; i < 18; i++) {
+        // Tags de peso instantâneo (usa quantidade configurada)
+        for (let i = 0; i < lineQuantity; i++) {
             tags.push(`XLCLASS_DB229_PESAGEM_INSTANTANEO[${i}]`);
         }
         // Tags de comando e status
@@ -1188,6 +1240,15 @@ function inicializarBalance() {
             // Aba visível: reinicia polling e ativa subscrição
             startPolling();
             subscribeScreen();
+        }
+    });
+    
+    // ✅ Listener para mudanças no tipo de máquina (storage event)
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'supervisor_machine_type') {
+            console.log('[BALANCE] Tipo de máquina mudou no localStorage:', e.newValue);
+            // Recarrega a página para aplicar a nova quantidade de linhas
+            location.reload();
         }
     });
 }
