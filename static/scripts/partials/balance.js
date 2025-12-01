@@ -390,10 +390,10 @@ function inicializarBalance() {
         updateGrid();
         
         // Mostra loading baseado na tag do PLC
-        try { 
-            startCalibrationLoading(); 
-        } catch (e) { 
-            console.warn('Falha ao iniciar carregamento baseado no PLC:', e); 
+            try { 
+                startCalibrationLoading(); 
+            } catch (e) { 
+                console.warn('Falha ao iniciar carregamento baseado no PLC:', e); 
         }
         
         // Escreve no PLC em background (não bloqueia a UI)
@@ -724,25 +724,25 @@ function inicializarBalance() {
     
     // Função auxiliar para preparar o popup de loading (chamada quando status entra no intervalo 1-9)
     function prepareLoadingPopup() {
-        const progressLeft = document.getElementById('loading-progress-left');
-        const progressRight = document.getElementById('loading-progress-right');
-        const progressText = document.getElementById('loading-progress-text');
-        const progressBar = document.querySelector('.progress-bar');
-        
-        if (progressLeft && progressRight) {
-            progressLeft.style.width = '0%';
-            progressRight.style.width = '0%';
-        }
-        
-        if (progressText) {
-            progressText.textContent = '0%';
-        }
-        
-        if (progressBar) {
-            progressBar.style.opacity = '1';
-            progressBar.style.visibility = 'visible';
-            progressBar.style.display = 'block';
-        }
+            const progressLeft = document.getElementById('loading-progress-left');
+            const progressRight = document.getElementById('loading-progress-right');
+            const progressText = document.getElementById('loading-progress-text');
+            const progressBar = document.querySelector('.progress-bar');
+            
+            if (progressLeft && progressRight) {
+                progressLeft.style.width = '0%';
+                progressRight.style.width = '0%';
+            }
+            
+            if (progressText) {
+                progressText.textContent = '0%';
+            }
+            
+            if (progressBar) {
+                progressBar.style.opacity = '1';
+                progressBar.style.visibility = 'visible';
+                progressBar.style.display = 'block';
+            }
     }
 
     // Função para monitorar status da calibração via PLC
@@ -813,9 +813,9 @@ function inicializarBalance() {
                     } else {
                         // Calibração não habilitada - para polling
                         console.log('Calibração não habilitada (status = 0) - parando polling');
-                        clearInterval(calibrationPollingInterval);
-                        calibrationPollingInterval = null;
-                        toggleLoadingModal(false);
+                    clearInterval(calibrationPollingInterval);
+                    calibrationPollingInterval = null;
+                    toggleLoadingModal(false);
                     }
                 }
             } catch (error) {
@@ -968,12 +968,12 @@ function inicializarBalance() {
             
             // ✅ AJUSTADO: Só atualiza botões se NÃO estiverem travados pelo usuário
             if (!calibrationButtonsLocked) {
-                // Controla botões de calibração baseado no status do PLC
-                const newButtonsEnabled = calibrationStatus > 9;
-                if (newButtonsEnabled !== calibrationButtonsEnabled) {
-                    calibrationButtonsEnabled = newButtonsEnabled;
-                    console.log(`Botões de calibração ${calibrationButtonsEnabled ? 'habilitados' : 'desabilitados'} (status: ${calibrationStatus})`);
-                    updateGrid();
+            // Controla botões de calibração baseado no status do PLC
+            const newButtonsEnabled = calibrationStatus > 9;
+            if (newButtonsEnabled !== calibrationButtonsEnabled) {
+                calibrationButtonsEnabled = newButtonsEnabled;
+                console.log(`Botões de calibração ${calibrationButtonsEnabled ? 'habilitados' : 'desabilitados'} (status: ${calibrationStatus})`);
+                updateGrid();
                 }
             } else {
                 // Botões travados - ignora mudanças da tag do PLC

@@ -10,6 +10,47 @@ let chartData = {
     programmedFlow: [0, 0, 0, 0, 0, 0, 0] // Fluxo programado para C1-C7
 };
 
+// Estados dos símbolos + e - para cada classe
+let classSymbols = {
+    plus: [false, false, false, false, false, false, false],  // Símbolo + para C1-C7
+    minus: [false, false, false, false, false, false, false]   // Símbolo - para C1-C7
+};
+
+// Mapeamento de tags de fluxo por classe
+// Ordem: C1 (Industrial), C2 (Médio), C3 (Grande), C4 (Extra), C5 (Jumbo), C6 (Super Jumbo), C7
+const FLUXO_TAGS = {
+    real: [
+        'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_REAL_IND',      // C1 - Industrial
+        'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_REAL_PQ',      // C2 - Médio
+        'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_REAL_MED',     // C3 - Grande
+        'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_REAL_GRD',     // C4 - Extra
+        'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_REAL_EXG',     // C5 - Jumbo
+        'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_REAL_JUM',     // C6 - Super Jumbo
+        'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_REAL_SPJ'      // C7
+    ],
+    max: [
+        'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_MAX_PERMITIDO_IND',  // C1 - Industrial
+        'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_MAX_PERMITIDO_PQ',   // C2 - Médio
+        'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_MAX_PERMITIDO_MED',  // C3 - Grande
+        'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_MAX_PERMITIDO_GRD',  // C4 - Extra
+        'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_MAX_PERMITIDO_EXG',  // C5 - Jumbo
+        'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_MAX_PERMITIDO_JUM',  // C6 - Super Jumbo
+        'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_MAX_PERMITIDO_SPJ'   // C7
+    ]
+};
+
+// Tag de habilitação de controle (WORD - 16 bits)
+const HAB_CONTROLE_TAG = 'XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_HAB_CONTROLE';
+// Mapeamento de bits por classe: C1=bit8, C2=bit9, C3=bit10, C4=bit11, C5=bit12, C6=bit13, C7=bit14
+const HAB_CONTROLE_BITS = [8, 9, 10, 11, 12, 13, 14];
+
+// Sistema de subscription
+let graphicsClientId = null;
+let graphicsHeartbeatTimer = null;
+let graphicsSocket = null;
+let isGraphicsScreenVisible = false;
+let isGridScreenVisible = false;
+
 // Cores das classes (conforme definido na tela de classificação)
 const CLASS_COLORS = {
     'C1': '#FF3399',
@@ -95,12 +136,16 @@ async function refreshClassLabelsFromPLC() {
             
             // Atualiza o gráfico se existir
             if (classesChart && classesChart.data) {
-                classesChart.data.labels = CLASS_NAMES;
+                // Atualiza labels com símbolos
+                classesChart.data.labels = generateFormattedLabels();
                 classesChart.update('none');
             }
             
             // Atualiza a legenda
-            try { renderClassesLegend(); } catch(_) {}
+            try { 
+                renderClassesLegend(); 
+                renderSymbolsLegend();
+            } catch(_) {}
             
             // Também atualiza window.classificationLabels para compatibilidade
             try {
@@ -137,7 +182,17 @@ async function initGraphics() {
         
         createChart();
         setupEventListeners();
-        startDataUpdate();
+        
+        // ✅ Inicializa subscription e Socket.IO para dados em tempo real
+        initGraphicsSubscription();
+        initGraphicsSocketIO();
+        
+        // Remove o intervalo antigo que gerava dados aleatórios
+        if (dataUpdateIntervalId) {
+            clearInterval(dataUpdateIntervalId);
+            dataUpdateIntervalId = null;
+        }
+        
         // Garante render após ficar visível
         setTimeout(() => {
             try {
@@ -219,10 +274,26 @@ function createChart() {
     chartData.realFlow = [120, 180, 95, 210, 150, 175, 130];
     chartData.programmedFlow = [150, 200, 120, 250, 180, 200, 160];
 
+    // Gera labels iniciais
+    const initialLabels = generateFormattedLabels();
+    
+    // Registra plugin customizado se Chart.js suportar
+    try {
+        if (typeof Chart !== 'undefined' && Chart.register) {
+            // Tenta registrar o plugin (Chart.js v4+)
+            if (!Chart.registry || !Chart.registry.getPlugin || !Chart.registry.getPlugin('chartSymbolsPlugin')) {
+                Chart.register(chartSymbolsPlugin);
+            }
+        }
+    } catch (e) {
+        console.warn('[graphics] Não foi possível registrar plugin de símbolos:', e);
+    }
+    
     classesChart = new Chart(ctx, {
         type: 'bar',
+        plugins: [chartSymbolsPlugin],
         data: {
-            labels: CLASS_NAMES,
+            labels: initialLabels,
             datasets: [
                 {
                     label: 'Fluxo Real',
@@ -305,7 +376,11 @@ function createChart() {
                         font: {
                             size: 12,
                             weight: 'bold'
-                        }
+                        },
+                        maxRotation: 0,
+                        minRotation: 0,
+                        // Aumenta padding para dar espaço aos símbolos (evitar sobreposição)
+                        padding: 45
                     }
                 },
                 y: {
@@ -351,7 +426,10 @@ function createChart() {
         window.classesChart = classesChart;
     }
     console.log('[graphics] createChart: gráfico criado');
-    try { renderClassesLegend(); } catch(_) {}
+    try { 
+        renderClassesLegend(); 
+        renderSymbolsLegend();
+    } catch(_) {}
 }
 
 function setupEventListeners() {
@@ -362,6 +440,7 @@ function setupEventListeners() {
             updateChartData();
             updateLastUpdateTime();
             renderClassesLegend();
+            renderSymbolsLegend();
         });
     }
 
@@ -424,26 +503,248 @@ function renderClassesLegend() {
     legendRoot.innerHTML = items;
 }
 
-function updateChartData() {
-    // Simula dados aleatórios para demonstração
-    // Em produção, estes dados viriam do PLC/servidor
-    chartData.realFlow = CLASS_NAMES.map(() => Math.floor(Math.random() * 500) + 50);
-    chartData.programmedFlow = CLASS_NAMES.map(() => Math.floor(Math.random() * 550) + 100);
+/**
+ * Renderiza a legenda dos símbolos + e - com "Embaladoras"
+ */
+function renderSymbolsLegend() {
+    const legendRoot = document.getElementById('symbols-legend');
+    if (!legendRoot) return;
     
+    const plusColor = '#39FF14'; // Verde neon
+    const minusColor = '#FF0000'; // Vermelho
+    const symbolFontSize = 20;
+    
+    const items = `
+        <span class="symbol-legend-item">
+            <span class="symbol-legend-symbol" style="color:${plusColor}; font-size:${symbolFontSize}px; font-weight:bold;">+</span>
+            <span class="symbol-legend-text">Embaladoras</span>
+        </span>
+        <span class="symbol-legend-item">
+            <span class="symbol-legend-symbol" style="color:${minusColor}; font-size:${symbolFontSize}px; font-weight:bold;">-</span>
+            <span class="symbol-legend-text">Embaladoras</span>
+        </span>
+    `;
+    legendRoot.innerHTML = items;
+}
+
+/**
+ * Verifica se um bit específico está ativo em um valor WORD (16 bits)
+ * @param {number} value - Valor WORD (0-65535)
+ * @param {number} bitIndex - Índice do bit (0-15)
+ * @returns {boolean} true se o bit está ativo
+ */
+function isBitSet(value, bitIndex) {
+    if (value === null || value === undefined || isNaN(value)) return false;
+    const numValue = parseInt(value);
+    return (numValue & (1 << bitIndex)) !== 0;
+}
+
+/**
+ * Atualiza os estados dos símbolos + e - baseado nos dados do PLC
+ * @param {Object} telemetryData - Dados recebidos via Socket.IO
+ */
+function updateClassSymbols(telemetryData) {
+    if (!telemetryData) return;
+    
+    let symbolsChanged = false;
+    
+    // Processa tag HAB_CONTROLE para símbolo +
+    const habControleValue = telemetryData[HAB_CONTROLE_TAG];
+    if (habControleValue !== null && habControleValue !== undefined) {
+        for (let i = 0; i < HAB_CONTROLE_BITS.length; i++) {
+            const bitIndex = HAB_CONTROLE_BITS[i];
+            const shouldShowPlus = isBitSet(habControleValue, bitIndex);
+            if (classSymbols.plus[i] !== shouldShowPlus) {
+                classSymbols.plus[i] = shouldShowPlus;
+                symbolsChanged = true;
+            }
+        }
+    }
+    
+    // Processa condições para símbolo -
+    for (let i = 0; i < FLUXO_TAGS.real.length; i++) {
+        const realFlowTag = FLUXO_TAGS.real[i];
+        const maxFlowTag = FLUXO_TAGS.max[i];
+        
+        const realFlow = telemetryData[realFlowTag];
+        const maxFlow = telemetryData[maxFlowTag];
+        
+        if (realFlow !== null && realFlow !== undefined && 
+            maxFlow !== null && maxFlow !== undefined) {
+            const realValue = parseFloat(realFlow);
+            const maxValue = parseFloat(maxFlow);
+            
+            // Condição: (FLUXO_MAX / 2) >= FLUXO_REAL E FLUXO_REAL <> 0
+            const shouldShowMinus = (maxValue / 2) >= realValue && realValue !== 0;
+            
+            if (classSymbols.minus[i] !== shouldShowMinus) {
+                classSymbols.minus[i] = shouldShowMinus;
+                symbolsChanged = true;
+            }
+        }
+    }
+    
+    return symbolsChanged;
+}
+
+/**
+ * Gera labels formatados (apenas nomes, símbolos são renderizados pelo plugin)
+ * @returns {Array<string>} Array de labels formatados
+ */
+function generateFormattedLabels() {
+    return CLASS_NAMES.map((name, index) => {
+        // Retorna apenas o nome, os símbolos serão renderizados pelo plugin customizado
+        return name;
+    });
+}
+
+/**
+ * Plugin customizado do Chart.js para renderizar símbolos + e - abaixo dos labels
+ */
+const chartSymbolsPlugin = {
+    id: 'chartSymbolsPlugin',
+    afterDraw: function(chart) {
+        const ctx = chart.ctx;
+        const xAxis = chart.scales.x;
+        const yAxis = chart.scales.y;
+        
+        if (!xAxis || !yAxis) return;
+        
+        // Cores dos símbolos
+        const plusColor = '#39FF14'; // Verde neon
+        const minusColor = '#FF0000'; // Vermelho
+        
+        // Tamanho da fonte dos símbolos (aumentado)
+        const symbolFontSize = 76; // Tamanho aumentado para melhor visibilidade
+        
+        ctx.save();
+        ctx.font = `bold ${symbolFontSize}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        
+        // Obtém os dois datasets (Real e Máximo Permitido)
+        const meta1 = chart.getDatasetMeta(0); // Primeira coluna (Real)
+        const meta2 = chart.getDatasetMeta(1); // Segunda coluna (Máximo Permitido)
+        
+        if (!meta1 || !meta1.data || !meta2 || !meta2.data) return;
+        
+        // Itera sobre cada classe
+        meta1.data.forEach((bar1, index) => {
+            if (index < CLASS_NAMES.length && index < classSymbols.plus.length) {
+                const bar2 = meta2.data[index];
+                if (!bar2) return;
+                
+                // Calcula a posição X central entre as duas barras
+                const x1 = bar1.x; // Posição X da primeira barra (Real)
+                const x2 = bar2.x; // Posição X da segunda barra (Máximo Permitido)
+                const centerX = (x1 + x2) / 2; // Ponto médio entre as duas colunas
+                
+                // Posição Y mais próxima das colunas (subiu um pouco)
+                const y = yAxis.bottom - 5; // Subiu os símbolos para mais próximo das colunas
+                
+                // Verifica quais símbolos devem aparecer
+                const hasPlus = classSymbols.plus[index];
+                const hasMinus = classSymbols.minus[index];
+                
+                // Desenha símbolos sobrepostos na mesma posição
+                if (hasPlus) {
+                    ctx.fillStyle = plusColor;
+                    ctx.fillText('+', centerX, y);
+                }
+                
+                if (hasMinus) {
+                    ctx.fillStyle = minusColor;
+                    ctx.fillText('-', centerX, y); // Mesma posição X, sobreposto
+                }
+            }
+        });
+        
+        ctx.restore();
+    }
+};
+
+/**
+ * Atualiza os dados do gráfico a partir dos valores recebidos do PLC
+ * @param {Object} telemetryData - Dados recebidos via Socket.IO
+ */
+function updateChartDataFromPLC(telemetryData) {
+    if (!telemetryData) return;
+    
+    let hasChanges = false;
+    
+    // Atualiza fluxo real
+    for (let i = 0; i < FLUXO_TAGS.real.length; i++) {
+        const tagName = FLUXO_TAGS.real[i];
+        const value = telemetryData[tagName];
+        if (value !== null && value !== undefined && !isNaN(value)) {
+            const numValue = parseFloat(value);
+            if (chartData.realFlow[i] !== numValue) {
+                chartData.realFlow[i] = numValue;
+                hasChanges = true;
+            }
+        }
+    }
+    
+    // Atualiza fluxo máximo permitido
+    for (let i = 0; i < FLUXO_TAGS.max.length; i++) {
+        const tagName = FLUXO_TAGS.max[i];
+        const value = telemetryData[tagName];
+        if (value !== null && value !== undefined && !isNaN(value)) {
+            const numValue = parseFloat(value);
+            if (chartData.programmedFlow[i] !== numValue) {
+                chartData.programmedFlow[i] = numValue;
+                hasChanges = true;
+            }
+        }
+    }
+    
+    // Atualiza símbolos + e -
+    const symbolsChanged = updateClassSymbols(telemetryData);
+    
+    // Só atualiza o gráfico se houver mudanças
+    if (hasChanges || symbolsChanged) {
+        if (classesChart) {
+            classesChart.data.datasets[0].data = chartData.realFlow;
+            classesChart.data.datasets[1].data = chartData.programmedFlow;
+            
+            // Atualiza labels com símbolos
+            classesChart.data.labels = generateFormattedLabels();
+            
+            classesChart.update('active');
+            updateLastUpdateTime();
+        }
+        
+        // Notifica outros módulos que os dados foram atualizados
+        try {
+            const evt = new CustomEvent('graphics-data-updated', { detail: getGraphicsSummary() });
+            window.dispatchEvent(evt);
+        } catch (e) {
+            console.warn('[graphics] Falha ao emitir evento de atualização:', e);
+        }
+    }
+}
+
+function updateChartData() {
+    // Função mantida para compatibilidade, mas agora os dados vêm do PLC via Socket.IO
+    // Esta função pode ser chamada manualmente para forçar atualização
     if (classesChart) {
         classesChart.data.datasets[0].data = chartData.realFlow;
         classesChart.data.datasets[1].data = chartData.programmedFlow;
+        
+        // Atualiza labels com símbolos
+        classesChart.data.labels = generateFormattedLabels();
+        
         classesChart.update('active');
-    }
-    
-    updateTotalEggs();
-
-    // Notifica outros módulos que os dados foram atualizados
-    try {
-        const evt = new CustomEvent('graphics-data-updated', { detail: getGraphicsSummary() });
-        window.dispatchEvent(evt);
-    } catch (e) {
-        console.warn('[graphics] Falha ao emitir evento de atualização:', e);
+        updateLastUpdateTime();
+        updateTotalEggs();
+        
+        // Notifica outros módulos que os dados foram atualizados
+        try {
+            const evt = new CustomEvent('graphics-data-updated', { detail: getGraphicsSummary() });
+            window.dispatchEvent(evt);
+        } catch (e) {
+            console.warn('[graphics] Falha ao emitir evento de atualização:', e);
+        }
     }
 }
 
@@ -456,16 +757,7 @@ function updateLastUpdateTime() {
     }
 }
 
-function updateTotalEggs() {
-    const totalReal = chartData.realFlow.reduce((sum, val) => sum + val, 0);
-    const totalProgrammed = chartData.programmedFlow.reduce((sum, val) => sum + val, 0);
-    const total = Math.max(totalReal, totalProgrammed);
-    
-    const totalElement = document.getElementById('total-eggs');
-    if (totalElement) {
-        totalElement.textContent = total.toLocaleString('pt-BR');
-    }
-}
+// Função removida - Total de ovos não é mais exibido
 
 function exportChart() {
     if (!classesChart) return;
@@ -478,19 +770,195 @@ function exportChart() {
 }
 
 function startDataUpdate() {
-    // Garante apenas um intervalo ativo
-    if (dataUpdateIntervalId) {
-        clearInterval(dataUpdateIntervalId);
-    }
-    // Atualiza dados a cada 5 segundos
-    dataUpdateIntervalId = setInterval(() => {
-        updateChartData();
-        updateLastUpdateTime();
-    }, 5000);
-    
-    // Atualização inicial
+    // Função mantida para compatibilidade, mas dados agora vêm via Socket.IO em tempo real
+    // Não precisa mais de polling, mas mantemos para garantir atualização inicial
     updateChartData();
     updateLastUpdateTime();
+}
+
+// ============================================================================
+// Sistema de Subscription para tags de fluxo
+// ============================================================================
+
+/**
+ * Constrói lista de tags para subscription
+ */
+function buildGraphicsSubscribedTags() {
+    const tags = [];
+    // Adiciona todas as tags de fluxo real e máximo permitido
+    tags.push(...FLUXO_TAGS.real);
+    tags.push(...FLUXO_TAGS.max);
+    // Adiciona tag de habilitação de controle
+    tags.push(HAB_CONTROLE_TAG);
+    return tags;
+}
+
+/**
+ * Faz subscription das tags de fluxo
+ */
+async function subscribeGraphicsScreen() {
+    if (!graphicsClientId) {
+        graphicsClientId = `graphics-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+    
+    try {
+        const tags = buildGraphicsSubscribedTags();
+        const res = await fetch('/api/subscribe_tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                client_id: graphicsClientId, 
+                tags: tags, 
+                screen_name: 'tela_graficos' 
+            })
+        });
+        await res.json().catch(() => ({}));
+        startGraphicsHeartbeat();
+        console.log('[GRAPHICS] ✅ Subscrição de tags ativada para tela de gráficos');
+    } catch (error) {
+        console.error('[GRAPHICS] ❌ Erro ao ativar subscrição de tags:', error);
+    }
+}
+
+/**
+ * Remove subscription das tags de fluxo
+ */
+async function unsubscribeGraphicsScreen() {
+    try {
+        stopGraphicsHeartbeat();
+        if (graphicsClientId) {
+            await fetch('/api/unsubscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ client_id: graphicsClientId })
+            });
+            console.log('[GRAPHICS] ✅ Subscrição de tags desativada para tela de gráficos');
+        }
+    } catch (error) {
+        console.error('[GRAPHICS] ❌ Erro ao desativar subscrição de tags:', error);
+    }
+}
+
+/**
+ * Envia heartbeat para manter subscription ativa
+ */
+async function heartbeatGraphicsScreen() {
+    try {
+        if (graphicsClientId) {
+            await fetch('/api/heartbeat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ client_id: graphicsClientId })
+            });
+        }
+    } catch (error) {
+        console.error('[GRAPHICS] ❌ Erro no heartbeat:', error);
+    }
+}
+
+/**
+ * Inicia heartbeat periódico
+ */
+function startGraphicsHeartbeat() {
+    if (graphicsHeartbeatTimer) clearInterval(graphicsHeartbeatTimer);
+    graphicsHeartbeatTimer = setInterval(heartbeatGraphicsScreen, 15000); // 15 segundos
+}
+
+/**
+ * Para heartbeat
+ */
+function stopGraphicsHeartbeat() {
+    if (graphicsHeartbeatTimer) {
+        clearInterval(graphicsHeartbeatTimer);
+        graphicsHeartbeatTimer = null;
+    }
+}
+
+/**
+ * Inicializa sistema de subscription
+ */
+function initGraphicsSubscription() {
+    // Verifica se deve fazer subscription (tela de gráficos aberta OU tela inicial)
+    const graphicsContainer = document.getElementById('graphics-container');
+    const gridContainer = document.getElementById('grid-container');
+    
+    isGraphicsScreenVisible = graphicsContainer && graphicsContainer.style.display !== 'none';
+    isGridScreenVisible = gridContainer && gridContainer.style.display !== 'none';
+    
+    if (isGraphicsScreenVisible || isGridScreenVisible) {
+        subscribeGraphicsScreen();
+    }
+}
+
+/**
+ * Inicializa Socket.IO para receber dados em tempo real
+ */
+function initGraphicsSocketIO() {
+    try {
+        // Reutiliza socket global se disponível (mesmo padrão do grid.js)
+        if (typeof io !== 'undefined') {
+            // Usa socket global se já existir, senão cria um novo
+            graphicsSocket = window.supervisorSocket || (
+                window.supervisorSocket = io({
+                    reconnection: true,
+                    reconnectionAttempts: Infinity,
+                    reconnectionDelay: 1000,
+                    reconnectionDelayMax: 5000,
+                    timeout: 20000,
+                    forceNew: false,
+                    transports: ['polling', 'websocket'],
+                    upgrade: true,
+                    rememberUpgrade: false
+                })
+            );
+            
+            // Remove listeners antigos se houver para evitar duplicação
+            graphicsSocket.off('telemetry');
+            
+            // Escuta evento telemetry para atualizar gráfico em tempo real
+            graphicsSocket.on('telemetry', (data) => {
+                if (!data) return;
+                
+                // Atualiza gráfico com dados recebidos
+                updateChartDataFromPLC(data);
+            });
+            
+            console.log('[GRAPHICS] ✅ Socket.IO configurado para gráficos');
+        } else {
+            console.warn('[GRAPHICS] Socket.IO não disponível');
+        }
+    } catch (error) {
+        console.error('[GRAPHICS] Erro ao inicializar Socket.IO:', error);
+    }
+}
+
+/**
+ * Verifica se deve manter subscription ativa
+ * Subscription deve estar ativa quando:
+ * - Tela de gráficos estiver aberta OU
+ * - Tela inicial (grid) estiver aberta
+ */
+function checkGraphicsSubscription() {
+    const graphicsContainer = document.getElementById('graphics-container');
+    const gridContainer = document.getElementById('grid-container');
+    
+    const wasGraphicsVisible = isGraphicsScreenVisible;
+    const wasGridVisible = isGridScreenVisible;
+    
+    isGraphicsScreenVisible = graphicsContainer && graphicsContainer.style.display !== 'none';
+    isGridScreenVisible = gridContainer && gridContainer.style.display !== 'none';
+    
+    const shouldSubscribe = isGraphicsScreenVisible || isGridScreenVisible;
+    const isSubscribed = graphicsClientId !== null;
+    
+    // Se precisa estar subscrito e não está, faz subscription
+    if (shouldSubscribe && !isSubscribed) {
+        subscribeGraphicsScreen();
+    }
+    // Se não precisa estar subscrito mas está, faz unsubscribe
+    else if (!shouldSubscribe && isSubscribed) {
+        unsubscribeGraphicsScreen();
+    }
 }
 
 // Não inicializa automaticamente; a inicialização ocorre ao abrir a tela (showGraphics)
@@ -498,6 +966,7 @@ function startDataUpdate() {
 // Exporta funções para uso global
 window.initGraphics = initGraphics;
 window.updateChartData = updateChartData;
+window.checkGraphicsSubscription = checkGraphicsSubscription;
 window.getGraphicsSummary = function getGraphicsSummary() {
     return CLASS_NAMES.map((name, idx) => {
         const key = 'C' + (idx + 1);
@@ -533,13 +1002,15 @@ window.getGraphicsSummary = function getGraphicsSummary() {
             } catch(_) {}
         }
         
-        // Atualização inicial imediata
-        try { updateChartData(); } catch (_) {}
+        // ✅ Inicializa subscription e Socket.IO para dados em tempo real
+        // Subscription será ativada se grid estiver visível
+        initGraphicsSubscription();
+        initGraphicsSocketIO();
         
-        // Atualiza a cada 5 segundos (dados do gráfico)
+        // ✅ Monitora mudanças de visibilidade das telas para gerenciar subscription
         setInterval(() => {
-            try { updateChartData(); } catch (_) {}
-        }, 5000);
+            checkGraphicsSubscription();
+        }, 2000); // Verifica a cada 2 segundos
         
         // ✅ Atualiza os nomes a cada 30s + monitora conexão PLC ↔ DataHub
         let plcConnected = true;
@@ -564,7 +1035,10 @@ window.getGraphicsSummary = function getGraphicsSummary() {
                                 classesChart.data.labels = CLASS_NAMES;
                                 classesChart.update('none');
                             }
-                            try { renderClassesLegend(); } catch(_) {}
+                            try { 
+                                renderClassesLegend(); 
+                                renderSymbolsLegend();
+                            } catch(_) {}
                         }
                     }
                     return;

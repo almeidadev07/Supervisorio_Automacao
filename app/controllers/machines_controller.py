@@ -574,6 +574,166 @@ def read_tags():
     values = current_app.plc_controller.read_tags(names)
     return jsonify({'ok': True, 'values': values})
 
+# ✅ FILA ROBUSTA DE ESCRITA PARA CLASSIFICAÇÃO
+# Processa múltiplas escritas de bits de forma sequencial e thread-safe
+_classification_queue = queue.Queue(maxsize=500)
+_classification_worker_running = False
+_classification_worker_thread = None
+_classification_lock = threading.Lock()
+
+def _classification_queue_worker(app):
+    """Worker thread que processa a fila de escritas de classificação"""
+    global _classification_worker_running
+    logger.info("[CLASSIFICATION_QUEUE] 🚀 Worker iniciado")
+    
+    while _classification_worker_running:
+        try:
+            # Aguarda próximo item (timeout 1s para verificar se deve parar)
+            try:
+                item = _classification_queue.get(timeout=1.0)
+            except queue.Empty:
+                continue
+            
+            if item is None:  # Sinal de parada
+                break
+            
+            tag_name, bit, value = item
+            logger.info(f"[CLASSIFICATION_QUEUE] 📝 Processando: {tag_name} bit {bit} = {value}")
+            
+            with app.app_context():
+                try:
+                    # Obtém lock para a tag
+                    word_lock = get_word_lock(tag_name)
+                    
+                    with word_lock:
+                        # Lê valor atual
+                        values = current_app.plc_controller.read_tags([tag_name]) or {}
+                        current_word = int(values.get(tag_name, 0)) & 0xFFFF
+                        
+                        # Modifica bit
+                        if value:
+                            new_word = (current_word | (1 << bit)) & 0xFFFF
+                        else:
+                            new_word = (current_word & ~(1 << bit)) & 0xFFFF
+                        
+                        # Escreve no PLC
+                        ok = current_app.plc_controller.write_tags({tag_name: new_word})
+                        
+                        if ok:
+                            logger.info(f"[CLASSIFICATION_QUEUE] ✅ Escrito: {tag_name} 0x{current_word:04X} -> 0x{new_word:04X}")
+                        else:
+                            logger.error(f"[CLASSIFICATION_QUEUE] ❌ Falha ao escrever {tag_name}")
+                        
+                        # Pequeno delay entre escritas
+                        time.sleep(0.1)
+                        
+                except Exception as e:
+                    logger.error(f"[CLASSIFICATION_QUEUE] ❌ Erro: {e}")
+            
+            _classification_queue.task_done()
+            
+        except Exception as e:
+            logger.error(f"[CLASSIFICATION_QUEUE] ❌ Erro no worker: {e}")
+    
+    logger.info("[CLASSIFICATION_QUEUE] 🛑 Worker finalizado")
+
+def _ensure_classification_worker():
+    """Garante que o worker de classificação está rodando"""
+    global _classification_worker_running, _classification_worker_thread
+    
+    with _classification_lock:
+        if _classification_worker_running and _classification_worker_thread and _classification_worker_thread.is_alive():
+            return
+        
+        _classification_worker_running = True
+        app = current_app._get_current_object()
+        _classification_worker_thread = threading.Thread(
+            target=_classification_queue_worker,
+            args=(app,),
+            daemon=True,
+            name="ClassificationQueueWorker"
+        )
+        _classification_worker_thread.start()
+        logger.info("[CLASSIFICATION_QUEUE] ✨ Worker criado")
+
+@machines_bp.route('/queue_classification_write', methods=['POST'])
+def queue_classification_write():
+    """
+    ✅ ENDPOINT ROBUSTO PARA ESCRITA DE CLASSIFICAÇÃO
+    
+    Enfileira múltiplas escritas de bits para processamento sequencial.
+    O frontend envia todas as alterações de uma vez e o backend processa
+    de forma ordenada e thread-safe.
+    
+    Payload: {
+        "writes": [
+            {"tag": "XLCLASS_DB200_...", "bit": 5, "value": true},
+            {"tag": "XLCLASS_DB201_...", "bit": 5, "value": false}
+        ]
+    }
+    
+    Retorna imediatamente após enfileirar (não espera processamento).
+    """
+    try:
+        payload = request.json or {}
+        writes = payload.get('writes', [])
+        
+        if not writes:
+            return jsonify({'ok': False, 'error': 'No writes provided'}), 400
+        
+        # Valida máquina ativa
+        cfg = current_app.plc_controller.active_config
+        if not cfg:
+            return jsonify({'ok': False, 'error': 'No machine selected'}), 400
+        
+        # Garante worker rodando
+        _ensure_classification_worker()
+        
+        # Enfileira cada escrita
+        queued_count = 0
+        for write in writes:
+            tag = write.get('tag')
+            bit = write.get('bit')
+            value = write.get('value', False)
+            
+            if not tag or bit is None:
+                continue
+            
+            try:
+                bit = int(bit)
+                if bit < 0 or bit > 15:
+                    continue
+                
+                _classification_queue.put_nowait((tag, bit, bool(value)))
+                queued_count += 1
+                
+            except queue.Full:
+                logger.warning(f"[CLASSIFICATION_QUEUE] ⚠️ Fila cheia, descartando {tag} bit {bit}")
+            except Exception as e:
+                logger.error(f"[CLASSIFICATION_QUEUE] ❌ Erro ao enfileirar: {e}")
+        
+        return jsonify({
+            'ok': True,
+            'queued': queued_count,
+            'queue_size': _classification_queue.qsize()
+        })
+        
+    except Exception as e:
+        logger.error(f"[CLASSIFICATION_QUEUE] ❌ Erro no endpoint: {e}")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@machines_bp.route('/classification_queue_status', methods=['GET'])
+def classification_queue_status():
+    """Retorna status da fila de classificação"""
+    global _classification_worker_running, _classification_worker_thread
+    
+    return jsonify({
+        'ok': True,
+        'queue_size': _classification_queue.qsize(),
+        'worker_running': _classification_worker_running,
+        'worker_alive': _classification_worker_thread.is_alive() if _classification_worker_thread else False
+    })
+
 @machines_bp.route('/write_tags', methods=['POST'])
 def write_tags():
     """Escreve valores nas tags do PLC"""

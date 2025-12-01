@@ -4,7 +4,8 @@ let menu = document.getElementById('menu');
 // Adiciona listener para clicks em toda a página
 document.addEventListener('mousedown', function(event) {
     // Verifica se o menu está aberto e se o clique foi fora do menu
-    if (isMenuOpen && !menu.contains(event.target) && !event.target.classList.contains('menu-btn')) {
+    // Garante que `menu` exista antes de acessar `contains` para evitar erro de JavaScript
+    if (isMenuOpen && menu && !menu.contains(event.target) && !event.target.classList.contains('menu-btn')) {
         toggleMenu();
     }
 });
@@ -129,12 +130,6 @@ function shutdownSystem() {
 // Corrige obtenção do menu após DOMContentLoaded
 document.addEventListener('DOMContentLoaded', function() {
     menu = document.getElementById('menu');
-
-    // Adicionar navegação para a tela de alarmes
-    const alarmBtn = document.querySelector('.menu-btn[onclick*="Alarme"]');
-    if (alarmBtn) {
-        alarmBtn.addEventListener('click', () => {
-            window.location.href = '/alarm';
-        });
-    }
+    // Mantém o comportamento original dos botões (onclick no HTML),
+    // sem redirecionar para uma rota inexistente como "/alarm".
 });

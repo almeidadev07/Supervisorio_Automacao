@@ -96,6 +96,12 @@ function showGrid(event) {
     if (window.startDateTimeUpdate) {
         window.startDateTimeUpdate();
     }
+    
+    // ✅ Garante que subscription seja ativada quando tela inicial (grid) for aberta
+    // O grid também tem um mini-gráfico que precisa dos dados
+    if (typeof window.checkGraphicsSubscription === 'function') {
+        setTimeout(() => window.checkGraphicsSubscription(), 100);
+    }
 }
 
 // Função para exibir gráficos
@@ -132,6 +138,11 @@ function showGraphics(event) {
         }
     } else {
         console.error('Função initGraphics não encontrada!');
+    }
+    
+    // ✅ Garante que subscription seja ativada quando tela de gráficos for aberta
+    if (typeof window.checkGraphicsSubscription === 'function') {
+        setTimeout(() => window.checkGraphicsSubscription(), 100);
     }
 }
 
@@ -471,18 +482,17 @@ Promise.all([
         console.error('Função inicializarAlarmes não disponível após carregamento!');
     }
 
-    // Initialize weight range if function exists
+    // Inicializa telas principais, se os scripts já tiverem carregado
     if (typeof inicializarWeightRange === 'function') {
         inicializarWeightRange();
     }
 
-    // Initialize inicializarBalance if function exists
     if (typeof inicializarBalance === 'function') {
         inicializarBalance();
     }
 
-    // Initialize inicializarBalance if function exists
-    if (typeof inicializarBalance === 'function') {
+    // Inicializa classificação apenas se a função existir
+    if (typeof inicializarClassification === 'function') {
         inicializarClassification();
     }
 

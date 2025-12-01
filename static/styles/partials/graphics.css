@@ -173,6 +173,15 @@
 
 .graphics-info .info-item + .info-item { margin-left: 16px; } /* espaço entre Última atualização e Total */
 
+/* Container da legenda de classes - centralizado horizontalmente */
+.graphics-info .classes-legend-container {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex: 1 1 auto;
+	width: 100%;
+}
+
 /* Legenda de classes (linha única, centralizada) */
 .graphics-info .classes-legend {
 	display: flex;
@@ -180,9 +189,46 @@
 	justify-content: center;
 	align-items: center;
 	gap: 10px;
-	flex: 1 1 auto;
 	flex-wrap: nowrap;
 	overflow-x: auto; /* evita quebra; permite scroll se faltar espaço */
+}
+
+/* Container da legenda de símbolos */
+.graphics-info .symbols-legend-container {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex: 0 0 auto;
+	width: 100%;
+	margin-top: 10px;
+}
+
+/* Legenda de símbolos + e - */
+.graphics-info .symbols-legend {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+	gap: 20px;
+}
+
+.symbol-legend-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 1rem;
+	font-weight: 600;
+	color: #2c3e50;
+}
+
+.symbol-legend-symbol {
+	font-weight: bold;
+	line-height: 1;
+}
+
+.symbol-legend-text {
+	color: #2c3e50;
+	font-weight: 600;
 }
 
 .classes-legend .legend-chip {
