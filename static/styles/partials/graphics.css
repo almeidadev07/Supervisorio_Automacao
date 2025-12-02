@@ -23,6 +23,7 @@
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
     flex-shrink: 0;
+    position: relative; /* permite centralizar o título no meio do header */
 }
 
 .graphics-tabs {
@@ -49,6 +50,10 @@
     font-weight: 700;
     margin: 0;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: absolute;     /* centraliza em relação ao header inteiro */
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
 }
 
 .graphics-controls {
@@ -160,15 +165,18 @@
 }
 
 .graphics-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px;
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 15px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    flex-shrink: 0;
+	display: flex;
+	flex-direction: row;           /* linha: esquerda (info), centro (classes), direita (+/-) */
+	justify-content: space-between;
+	align-items: center;
+	padding: 15px;
+	background: rgba(255, 255, 255, 0.9);
+	border-radius: 15px;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+	backdrop-filter: blur(10px);
+	flex-shrink: 0;
+	gap: 10px;
+	position: relative;            /* permite centralizar a legenda de classes no box */
 }
 
 .graphics-info .info-item + .info-item { margin-left: 16px; } /* espaço entre Última atualização e Total */
@@ -178,52 +186,59 @@
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	flex: 1 1 auto;
-	width: 100%;
+	margin: 0;
+	position: absolute;      /* centraliza em relação às bordas do box, não às infos */
+	left: 50%;
+	transform: translateX(-50%);
 }
 
-/* Legenda de classes (linha única, centralizada) */
+/* Legenda de classes (centralizada e responsiva) */
 .graphics-info .classes-legend {
 	display: flex;
-	flex-direction: row !important; /* força em linha, sobrepondo .info-item */
-	justify-content: center;
+	flex-direction: row !important; /* mantém em linha, mas permite quebra */
+	justify-content: center;        /* centraliza no eixo horizontal do box */
 	align-items: center;
 	gap: 10px;
-	flex-wrap: nowrap;
-	overflow-x: auto; /* evita quebra; permite scroll se faltar espaço */
+	flex-wrap: nowrap;              /* em telas grandes, mantém tudo em uma linha */
+	overflow: visible;              /* evita scroll horizontal da legenda */
+	text-align: center;
 }
 
 /* Container da legenda de símbolos */
 .graphics-info .symbols-legend-container {
 	display: flex;
-	justify-content: center;
+	justify-content: flex-end; /* alinha a legenda + / - à direita */
 	align-items: center;
 	flex: 0 0 auto;
-	width: 100%;
-	margin-top: 10px;
+	margin-top: 0;
 }
 
 /* Legenda de símbolos + e - */
 .graphics-info .symbols-legend {
 	display: flex;
 	flex-direction: row;
-	justify-content: center;
+	justify-content: flex-start; /* acompanha o container mais à esquerda */
 	align-items: center;
-	gap: 20px;
+	gap: 18px; /* um pouco mais de espaço entre + e - */
 }
 
 .symbol-legend-item {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	font-size: 1rem;
+	justify-content: center;
+	gap: 6px;
+	font-size: 1.1rem;
 	font-weight: 600;
 	color: #2c3e50;
+	padding: 6px 10px; /* cria um \"box\" visual em volta do texto */
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.8);
 }
 
 .symbol-legend-symbol {
 	font-weight: bold;
 	line-height: 1;
+	font-size: 2.6rem; /* aumenta o tamanho do símbolo + e - */
 }
 
 .symbol-legend-text {
@@ -234,12 +249,15 @@
 .classes-legend .legend-chip {
 	display: inline-flex;
 	align-items: center;
+	justify-content: center; /* centraliza o conteúdo dentro do chip */
 	gap: 6px;
-	padding: 4px 8px;
+	padding: 4px 10px;
 	background: #fff;
 	border-radius: 8px;
 	box-shadow: 0 1px 2px rgba(0,0,0,0.06);
 	white-space: nowrap;
+	text-align: center;
+	min-width: 80px; /* garante uma largura mínima para centralizar melhor o texto */
 }
 
 .classes-legend .legend-dot {
@@ -293,10 +311,13 @@
         flex-direction: column;
         gap: 20px;
         text-align: center;
+        position: static; /* layout simples em coluna no mobile/tablet */
     }
     
     .graphics-header h1 {
         font-size: 1.8rem;
+        position: static;      /* remove centralização absoluta em telas menores */
+        transform: none;
     }
     
     .graphics-controls {
@@ -314,10 +335,31 @@
         gap: 15px;
         align-items: center;
     }
-    
+
+    /* Em telas médias, empilha e centraliza tudo */
     .graphics-info {
         flex-direction: column;
         gap: 15px;
+        align-items: center;
+    }
+
+    /* Em telas médias, volta a legenda de classes para fluxo normal (sem position absolute) */
+    .graphics-info .classes-legend-container {
+        position: static;
+        transform: none;
+    }
+
+    .graphics-info .classes-legend {
+        flex-wrap: wrap;
+    }
+
+    .graphics-info .symbols-legend-container {
+        justify-content: center; /* em telas menores, centraliza */
+        padding-left: 0;
+    }
+
+    .graphics-info .symbols-legend {
+        justify-content: center;
     }
 }
 
@@ -327,21 +369,37 @@
     }
     
     .graphics-content {
-        padding: 20px;
+        padding: 16px;
     }
-    
+
     .chart-container {
-        min-height: 250px;
-        padding: 15px;
+        min-height: 230px;
+        padding: 12px;
     }
-    
+
     .graphics-controls .control-btn {
         padding: 8px 12px;
         font-size: 0.8rem;
     }
-    
+
     .graphics-controls .control-btn img {
         width: 16px;
         height: 16px;
+    }
+
+    .graphics-info .symbols-legend-container {
+        justify-content: center;
+        padding-left: 0;
+        margin-top: 8px;
+    }
+
+    .graphics-info .symbols-legend {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    /* Em telas muito pequenas, mantém quebra de linha das classes */
+    .graphics-info .classes-legend {
+        flex-wrap: wrap;
     }
 }
