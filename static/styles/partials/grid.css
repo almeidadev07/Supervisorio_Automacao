@@ -718,10 +718,11 @@
 }
 
 .menu-icon_farm {
-    width: 150px;
-    height: 150px;
+    width: 180px;
+    height: 180px;
     margin: 15px;
     display: block;
+    object-fit: contain;
 }
 
 .tecla.ok {
@@ -1135,6 +1136,15 @@
         min-width: 100px !important; min-height: 55px !important;
         max-width: 100px !important; max-height: 55px !important;
     }
+    .escova-power-container #btn-escova-manual-toggle,
+    .escova-power-container #btn-power-toggle {
+        width: 100px !important;
+        height: 55px !important;
+        min-width: 100px !important;
+        min-height: 55px !important;
+        max-width: 100px !important;
+        max-height: 55px !important;
+    }
     .peripheral-label {
         font-size: 0.8rem;
     }
@@ -1145,6 +1155,15 @@
         width: 90px !important; height: 50px !important; 
         min-width: 90px !important; min-height: 50px !important;
         max-width: 90px !important; max-height: 50px !important;
+    }
+    .escova-power-container #btn-escova-manual-toggle,
+    .escova-power-container #btn-power-toggle {
+        width: 90px !important;
+        height: 50px !important;
+        min-width: 90px !important;
+        min-height: 50px !important;
+        max-width: 90px !important;
+        max-height: 50px !important;
     }
     .peripheral-label {
         font-size: 0.75rem;
@@ -1195,7 +1214,7 @@
 }
 
 .time-display {
-    font-size: 2.4em;
+    font-size: 3.2em;
     font-weight: 1000;
     color: #00ff00;
     text-align: center;
@@ -1222,7 +1241,7 @@
     }
     
     .time-display {
-        font-size: 1.8em;
+        font-size: 2.4em;
         letter-spacing: 1.5px;
     }
 }
@@ -1234,7 +1253,7 @@
     }
     
     .time-display {
-        font-size: 1.6em;
+        font-size: 2.2em;
         letter-spacing: 1.2px;
     }
 }
@@ -1246,7 +1265,7 @@
     }
     
     .time-display {
-        font-size: 1.4em;
+        font-size: 2em;
         letter-spacing: 1px;
     }
 }
@@ -1254,15 +1273,23 @@
 /* Estilos específicos para o botão de liga/desliga no grid de periféricos */
 /* Botão de liga/desliga funciona como os outros peripheral-btn */
 #btn-power-toggle {
+    /* Herda todas as propriedades do .btn-icon */
+    width: 120px !important;
+    height: 80px !important;
+    padding: 0 !important;
+    border: none !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    min-width: 120px !important;
+    min-height: 80px !important;
+    max-width: 120px !important;
+    max-height: 80px !important;
+    transition: none !important;
     /* Imagem padrão (desligado) */
     background-image: url('/static/images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') !important;
-    /* Ajuste o tamanho do botão aqui */
-    width: 70px !important;
-    height: 50px !important;
-    min-width: 70px !important;
-    min-height: 50px !important;
-    max-width: 70px !important;
-    max-height: 50px !important;
 }
 
 #btn-power-toggle.power-on {
@@ -1275,7 +1302,7 @@
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 0px !important; /* Ajuste este valor para mudar o espaço entre os botões (0px = sem espaço) */
+    gap: 0px !important; /* Sem gap, o espaçamento é controlado pelo margin-right */
     margin: 0 !important;
     padding: 0 !important;
     width: fit-content !important; /* Ajusta a largura ao conteúdo */
@@ -1289,8 +1316,33 @@
     border: none !important;
 }
 
+/* Garante que ambos os botões tenham exatamente o mesmo tamanho e comportamento */
+.escova-power-container #btn-escova-manual-toggle{
+    width: 120px !important;
+    height: 80px !important;
+    min-width: 120px !important;
+    min-height: 80px !important;
+    max-width: 120px !important;
+    max-height: 80px !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+}
+
+.escova-power-container #btn-power-toggle {
+    width: 90px !important;
+    height: 50px !important;
+    min-width: 90px !important;
+    min-height: 50px !important;
+    max-width: 90px !important;
+    max-height: 50px !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+}
+
 /* Espaçamento específico entre os dois botões usando margin-right no primeiro */
 .escova-power-container #btn-escova-manual-toggle {
-    margin-right: -20px !important; /* Ajuste este valor (0px, 1px, 2px, etc) */
+    margin-right: -30px !important; /* Valor negativo reduz o espaço entre os botões */
 }
 

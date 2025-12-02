@@ -57,7 +57,8 @@ function hideAllContainers() {
         'dryer-container',
         'windows-container', // Adicionar windows-container
         'diagram-container',
-        'graphics-container' // Adicionar graphics-container
+        'graphics-container', // Adicionar graphics-container
+        'viewer3d-container' // Adicionar viewer3d-container
     ];
     containers.forEach(id => {
         const el = document.getElementById(id);
