@@ -143,24 +143,6 @@
     "14": "nr12",
     "15": "emergency"
   },
-  "XLCLASS_DB04_PRINCIPAL_EMERG_EMB09": {
-    "0": "emergency",
-    "1": "emergency",
-    "2": "emergency",
-    "3": "emergency",
-    "4": "emergency",
-    "5": "emergency",
-    "6": "emergency",
-    "7": "emergency",
-    "8": "emergency",
-    "9": "emergency",
-    "10": "emergency",
-    "11": "emergency",
-    "12": "nr12",
-    "13": "nr12",
-    "14": "nr12",
-    "15": "emergency"
-  },
   "XLCLASS_DB06_AUX_INDEX_ALARME_JANELA_FORA_POS_VISION_EMB09": {
     "0": "hardware",
     "1": "hardware",
@@ -178,6 +160,24 @@
     "13": "process",
     "14": "process",
     "15": "process"
+  },
+  "XLCLASS_DB04_PRINCIPAL_EMERG_EMB09": {
+    "0": "emergency",
+    "1": "emergency",
+    "2": "emergency",
+    "3": "emergency",
+    "4": "emergency",
+    "5": "emergency",
+    "6": "emergency",
+    "7": "emergency",
+    "8": "emergency",
+    "9": "emergency",
+    "10": "emergency",
+    "11": "emergency",
+    "12": "nr12",
+    "13": "nr12",
+    "14": "nr12",
+    "15": "emergency"
   },
   "XLCLASS_DB06_AUX_INDEX_ALARME_JANELA_FORA_POS_EMB10_CAP_FINAL": {
     "0": "process",

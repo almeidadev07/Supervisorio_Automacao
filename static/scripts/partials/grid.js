@@ -42,11 +42,15 @@ const GRID_CLIENT_ID = 'grid-' + Math.random().toString(36).slice(2, 10);
 let USER_TYPING_VELOCITY = false;
 let VELOCITY_WRITE_TIMESTAMP = 0;
 
-// Nome da tag de velocidade
+// Nome das tags de velocidade
 const SPEED_TAG_PRIMARY = 'XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_REAL';
 const SPEED_TAG_PROGRAMMED = 'XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_PROG';
-// Tags usadas nas leituras
-const SPEED_TAGS = [SPEED_TAG_PRIMARY, SPEED_TAG_PROGRAMMED];
+// Tag de modo AUTO de velocidade (WORD, usar bit 8)
+const SPEED_TAG_AUTO = 'XLCLASS_DB1_PRINCIPAL_VELOCIDADE_AUTO';
+// Tags usadas nas leituras HTTP
+const SPEED_TAGS = [SPEED_TAG_PRIMARY, SPEED_TAG_PROGRAMMED, SPEED_TAG_AUTO];
+// Estado atual do modo AUTO (UI)
+let SPEED_AUTO_ACTIVE = false;
 const SPEED_TAGS_REAL_ONLY = [SPEED_TAG_PRIMARY];
 // Chaves alternativas que podem vir do backend/telemetria
 const SPEED_FALLBACK_KEYS = [
@@ -738,11 +742,14 @@ function atualizarVelocidadeRealUI(valor){
     const valorNum = Math.max(0, Math.min(SPEED_MAX, Number(valor) || 0));
     // Atualiza tanto estrutura antiga (#valorReal) quanto a nova (#valorReal .valor)
     const valorEl = document.querySelector('#valorReal .valor');
-        const root = document.getElementById('valorReal');
-    if (valorEl) valorEl.textContent = Math.round(valorNum);
-        if (root) root.textContent = String(Math.round(valorNum));
+    const root = document.getElementById('valorReal');
+    const text = String(Math.round(valorNum));
+    if (valorEl) valorEl.textContent = text;
+    if (root) root.textContent = text;
     const ponteiro = document.getElementById('ponteiroReal');
     if (ponteiro) atualizarPonteiro(ponteiro, valorNum);
+    // Se AUTO estiver ativo, garante que o texto exibido é "Auto" em vez do valor numérico
+    applySpeedAutoText();
     // debug
     // console.debug('[GRID] UI atualizado com valor', valorNum);
 }
@@ -750,11 +757,12 @@ function atualizarVelocidadeRealUI(valor){
 function mostrarVelocidadeIndisponivel(){
     // Velocidade real
     const valorEl = document.querySelector('#valorReal .valor');
+    const root = document.getElementById('valorReal');
     if (valorEl) {
         valorEl.textContent = '###';
-    } else {
-        const root = document.getElementById('valorReal');
-        if (root) root.textContent = '###';
+    }
+    if (root) {
+        root.textContent = '###';
     }
     const ponteiro = document.getElementById('ponteiroReal');
     if (ponteiro) atualizarPonteiro(ponteiro, 0);
@@ -768,6 +776,9 @@ function mostrarVelocidadeIndisponivel(){
     if (ponteiroProg) {
         atualizarPonteiro(ponteiroProg, 0);
     }
+
+    // Modo AUTO não faz sentido em estado indisponível
+    SPEED_AUTO_ACTIVE = false;
 }
 
 function pickSpeedValue(obj){
@@ -787,6 +798,67 @@ function pickSpeedValue(obj){
 function pickSpeedProgrammedValue(obj){
     if (!obj) return null;
     return obj[SPEED_TAG_PROGRAMMED] || null;
+}
+
+// Lê a palavra XLCLASS_DB1_PRINCIPAL_VELOCIDADE_AUTO
+// Considera AUTO ativo sempre que o valor da WORD for diferente de 0
+// (mais robusto, independente se o PLC usar bit 0, 8 ou outro para sinalizar AUTO)
+function isSpeedAuto(obj){
+    if (!obj) return false;
+    const raw = obj[SPEED_TAG_AUTO];
+    if (raw == null) return false;
+    const word = Number(raw) >>> 0;
+    return word !== 0;
+}
+
+// Atualiza o estado AUTO e aplica o texto correspondente na UI
+function setSpeedAutoActive(active) {
+    SPEED_AUTO_ACTIVE = !!active;
+    applySpeedAutoText();
+}
+
+function applySpeedAutoText() {
+    const valorEl = document.querySelector('#valorReal .valor');
+    const root = document.getElementById('valorReal');
+    if (!valorEl && !root) return;
+
+    if (SPEED_AUTO_ACTIVE) {
+        if (valorEl) valorEl.textContent = 'Auto';
+        if (root) root.textContent = 'Auto';
+    }
+}
+
+// Polling dedicado para a tag de AUTO (garante atualização rápida mesmo se telemetria não trouxer a WORD)
+let __pollAutoLoopAtivo = false;
+function pollSpeedAutoLoop() {
+    if (__pollAutoLoopAtivo) return;
+    __pollAutoLoopAtivo = true;
+
+    const INTERVAL_MS = 1000; // 1s para resposta rápida na UI
+
+    async function loop() {
+        try {
+            // Só atualiza se o grid estiver visível
+            const grid = document.getElementById('grid-container');
+            const visivel = grid && grid.offsetParent !== null && getComputedStyle(grid).display !== 'none';
+            if (!visivel) {
+                setTimeout(loop, INTERVAL_MS);
+                return;
+            }
+
+            const values = await fetchTagsWithFallback([SPEED_TAG_AUTO]);
+            if (values) {
+                const autoAtivo = isSpeedAuto(values);
+                setSpeedAutoActive(autoAtivo);
+            }
+        } catch (e) {
+            console.warn('[GRID][AUTO] Erro no polling da tag de velocidade AUTO:', e);
+        } finally {
+            setTimeout(loop, INTERVAL_MS);
+        }
+    }
+
+    setTimeout(loop, INTERVAL_MS);
 }
 
 // Lê tags via /api/read_tags (GET)
@@ -1024,6 +1096,8 @@ function bindTelemetryVelocidadeReal(){
                             SPEED_LAST_OK_TS = Date.now(); // Reset timestamp para permitir polling
                             // ✅ ATUALIZAÇÃO IMEDIATA: Força atualização com o valor atual
                             atualizarVelocidadeRealUI(val);
+                            // Atualiza estado AUTO com base na tag de telemetria
+                            setSpeedAutoActive(isSpeedAuto(data));
                             lastStableValue = val;
                             // Atualiza velocidade programada também se disponível
                             const valProg = pickSpeedProgrammedValue(data);
@@ -1165,6 +1239,8 @@ function bindTelemetryVelocidadeReal(){
                     atualizarVelocidadeRealUI(val);
                     lastStableValue = val;
                 }
+                // Atualiza estado AUTO de acordo com a tag recebida, mesmo que o valor não tenha mudado
+                setSpeedAutoActive(isSpeedAuto(data));
             } else {
                 // Valor null - tolera 5 leituras null antes de limpar (aumentado de 2)
                 SPEED_NULL_STREAK++;
@@ -2047,7 +2123,8 @@ function inicializarVelocimetro() {
         fetch('/api/subscribe_tags', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ client_id: GRID_CLIENT_ID, tags: [SPEED_TAG_PRIMARY, SPEED_TAG_PROGRAMMED] })
+            // Inclui também a tag de AUTO na subscrição do DataHub
+            body: JSON.stringify({ client_id: GRID_CLIENT_ID, tags: [SPEED_TAG_PRIMARY, SPEED_TAG_PROGRAMMED, SPEED_TAG_AUTO] })
         }).then(()=>{
             if (window.__gridHeartbeat) clearInterval(window.__gridHeartbeat);
             window.__gridHeartbeat = setInterval(() => {
@@ -2276,11 +2353,16 @@ function inicializarVelocimetro() {
         .then(values => {
             if (values) {
                 PLC_CONNECTED = true;
-                try { console.log('[GRID][post-sync] values=', values); } catch(_) {}
+                try { console.log('[GRID][post-sync] values=', values, 'AUTO=', values[SPEED_TAG_AUTO]); } catch(_) {}
                 const valReal = pickSpeedValue(values);
                 if (valReal != null) {
                     try { console.log('[GRID][post-sync] real=', valReal); } catch(_) {}
                     atualizarVelocidadeRealUI(valReal);
+                    // Atualiza estado AUTO também no pós-sync HTTP
+                    setSpeedAutoActive(isSpeedAuto(values));
+                } else {
+                    // Mesmo sem valor de velocidade válido, ainda podemos atualizar o estado AUTO
+                    setSpeedAutoActive(isSpeedAuto(values));
                 }
                 const valProg = pickSpeedProgrammedValue(values);
                 if (valProg != null) atualizarVelocidadeProgramadaUI(valProg);
@@ -2313,6 +2395,9 @@ function inicializarVelocimetro() {
             try { setAlarmCountsOffline(); } catch(_) {}
         }
     }, 30000); // Checa a cada 30s
+
+    // Inicia polling dedicado da tag de AUTO para garantir atualização rápida do texto "Auto"
+    pollSpeedAutoLoop();
 }
 
 // Inicialização
