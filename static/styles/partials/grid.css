@@ -1,6 +1,6 @@
 /* ==== Resumo do Gráfico (Grid 10) ==== */
 .graphics-summary-title {
-	margin: 0 0 10px 0; /* mais espaço entre o título e o gráfico */
+	margin: 0 0 16px 0; /* mais espaço entre o título e o gráfico no grid resumo */
 	font-size: 1.05em;
 	color: #2c3e50;
 }
@@ -8,10 +8,12 @@
 .mini-classes-chart-container {
     position: relative;
     width: 100%;
-    height: 180px;
+    /* Altura acompanha totalmente a área útil do grid (e cresce junto com a tela) */
+    height: 60%;
     background: rgba(255, 255, 255, 0.9);
     border-radius: 10px;
     padding: 4px 0px; /* padding consistente e positivo para evitar clipping */
+    margin-top: 10px; /* espaço claro entre o título e o box do gráfico */
     box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     display: flex;
     align-items: center;
@@ -343,8 +345,22 @@
     padding: 15px;
     display: flex;
     flex-direction: column;
-    align-items: stretch;
+    align-items: stretch;      /* títulos alinhados na mesma posição em todos os grids */
     justify-content: flex-start;
+}
+
+/* Mantém o título fixo no topo dentro de cada grid */
+.unit > h2 {
+    flex: 0 0 auto;
+}
+
+/* Centraliza o conteúdo abaixo do título dentro da área restante do grid */
+.unit > div {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 .pie-gauge, .jog-switch, .slider-wrapper {
@@ -1207,18 +1223,18 @@
 }
 
 .date-display {
-    font-size: 1.8em;
+    font-size: 1.4em;  /* data menor */
     font-weight: 800;
     color: #fff;
     text-align: center;
     letter-spacing: 1px;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin-top: 36px;
+    margin-top: 20px;  /* sobe um pouco a posição da data/hora */
 }
 
 .time-display {
-    font-size: 3.2em;
+    font-size: 3.2em;  /* hora maior */
     font-weight: 1000;
     color: #00ff00;
     text-align: center;
@@ -1240,36 +1256,36 @@
 /* Responsividade para Data e Hora */
 @media screen and (max-width: 768px) {
     .date-display {
-        font-size: 1.5em;
+        font-size: 1.2em;   /* mantém data menor em telas médias */
         letter-spacing: 0.8px;
     }
     
     .time-display {
-        font-size: 2.4em;
+        font-size: 2.8em;   /* hora ainda em destaque em telas médias */
         letter-spacing: 1.5px;
     }
 }
 
 @media screen and (max-width: 480px) {
     .date-display {
-        font-size: 1.3em;
+        font-size: 1.1em;
         letter-spacing: 0.6px;
     }
     
     .time-display {
-        font-size: 2.2em;
+        font-size: 2.5em;
         letter-spacing: 1.2px;
     }
 }
 
 @media screen and (max-width: 320px) {
     .date-display {
-        font-size: 1.1em;
+        font-size: 1em;
         letter-spacing: 0.4px;
     }
     
     .time-display {
-        font-size: 2em;
+        font-size: 2.3em;
         letter-spacing: 1px;
     }
 }
