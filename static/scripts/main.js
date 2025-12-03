@@ -12,6 +12,19 @@ function loadScript(src) {
     });
 }
 
+// =========================
+// Persistência da última tela aberta
+// =========================
+const LAST_SCREEN_KEY = 'supervisor_last_screen';
+
+function setLastScreen(screenName) {
+    try {
+        localStorage.setItem(LAST_SCREEN_KEY, screenName);
+    } catch (e) {
+        console.warn('Não foi possível salvar última tela no localStorage:', e);
+    }
+}
+
 function showWeightRange() {
     console.log('Mostrando tela de faixa de peso...'); // Debug
     
@@ -78,6 +91,7 @@ function hideAllContainers() {
 
 // Função para exibir o grid
 function showGrid(event) {
+    setLastScreen('grid');
     hideAllContainers();
     const grid = document.getElementById('grid-container');
     if (grid) grid.style.display = 'block';
@@ -107,6 +121,7 @@ function showGrid(event) {
 
 // Função para exibir gráficos
 function showGraphics(event) {
+    setLastScreen('graphics');
     hideAllContainers();
     const graphics = document.getElementById('graphics-container');
     if (graphics) graphics.style.display = 'block';
@@ -149,6 +164,7 @@ function showGraphics(event) {
 
 // Função para exibir o conteúdo do alarme
 function showAlarm(event) {
+    setLastScreen('alarm');
     hideAllContainers();
     const alarm = document.getElementById('alarm-container');
     if (alarm) alarm.style.display = 'block';
@@ -240,6 +256,7 @@ function showAlarm(event) {
 }
 
 function showWeightRange(event) {
+    setLastScreen('weight');
     hideAllContainers();
     const weightContainer = document.getElementById('weight-range-container');
     if (weightContainer) weightContainer.style.display = 'block';
@@ -260,6 +277,7 @@ function showWeightRange(event) {
 }
 
 function showBalance(event) {
+    setLastScreen('balance');
     hideAllContainers();
     const balanceContainer = document.getElementById('balance-container');
     if (balanceContainer) balanceContainer.style.display = 'block';
@@ -279,6 +297,7 @@ function showBalance(event) {
 }
 
 function showClassification(event) {
+    setLastScreen('classification');
     hideAllContainers();
     const classificationContainer = document.getElementById('classification-container');
     if (classificationContainer) {
@@ -301,6 +320,7 @@ function showClassification(event) {
 }
 
 function showInput(event) {
+    setLastScreen('input');
     hideAllContainers();
     const inputContainer = document.getElementById('input-container');
     if (inputContainer) inputContainer.style.display = 'block';
@@ -321,6 +341,7 @@ function showInput(event) {
 
 // ✅ Exibe a tela da lavadora
 function showWasher(event) {
+    setLastScreen('washer');
     hideAllContainers();
     const washerContainer = document.getElementById('washer-container');
     if (washerContainer) {
@@ -346,6 +367,7 @@ function showWasher(event) {
 
 // ✅ Exibe a tela da secadora
 function showDryer(event) {
+    setLastScreen('dryer');
     hideAllContainers();
     const dryerContainer = document.getElementById('dryer-container');
     if (dryerContainer) {
@@ -370,6 +392,7 @@ function showDryer(event) {
 
 // Função para exibir a tela de diagramas
 function showDiagram(event) {
+    setLastScreen('diagram');
     hideAllContainers();
     const diagramContainer = document.getElementById('diagram-container');
     if (diagramContainer) {
@@ -395,6 +418,7 @@ function showDiagram(event) {
 
 // 1. Adicione esta função ao seu main.js
 function showWindows(event) {
+    setLastScreen('windows');
     hideAllContainers();
     const windowsContainer = document.getElementById('windows-container');
     if (windowsContainer) {
@@ -420,6 +444,7 @@ function showWindows(event) {
 
 // Função para exibir a tela do visualizador 3D
 function showViewer3D(event) {
+    setLastScreen('viewer3d');
     hideAllContainers();
     const viewer3dContainer = document.getElementById('viewer3d-container');
     if (viewer3dContainer) {
@@ -467,6 +492,18 @@ Promise.all([
 ])
 .then(() => {
     console.log('Todos os scripts carregados com sucesso!');
+
+    // Restaura usuário salvo (mantém menu técnico após F5 até logoff)
+    try {
+        if (typeof loadUserFromStorage === 'function') {
+            loadUserFromStorage();
+        }
+        if (typeof updateUserDisplay === 'function') {
+            updateUserDisplay();
+        }
+    } catch (e) {
+        console.warn('Falha ao restaurar usuário salvo:', e);
+    }
     
     // Verificar se a função do velocímetro existe antes de chamá-la
     if (typeof inicializarVelocimetro === 'function') {
@@ -511,7 +548,54 @@ Promise.all([
 
 
 document.addEventListener('DOMContentLoaded', function() {
-    showGrid(); // Ensure the grid is displayed correctly on initial load
+    // Detecta se é um recarregamento (F5) ou uma navegação inicial/aba nova
+    let isReload = false;
+    try {
+        if (performance && typeof performance.getEntriesByType === 'function') {
+            const navEntries = performance.getEntriesByType('navigation');
+            if (navEntries && navEntries[0]) {
+                isReload = navEntries[0].type === 'reload';
+            }
+        } else if (performance && performance.navigation) {
+            // API antiga (fallback)
+            isReload = performance.navigation.type === 1; // 1 = reload
+        }
+    } catch (e) {
+        console.warn('Não foi possível determinar o tipo de navegação:', e);
+    }
+
+    // Mapa de telas
+    const screenMap = {
+        grid: showGrid,
+        alarm: showAlarm,
+        graphics: showGraphics,
+        weight: showWeightRange,
+        balance: showBalance,
+        classification: showClassification,
+        input: showInput,
+        washer: showWasher,
+        dryer: showDryer,
+        diagram: showDiagram,
+        windows: showWindows,
+        viewer3d: showViewer3D
+    };
+
+    // Regra:
+    // - Primeira carga / navegação normal: sempre abre na tela inicial (grid)
+    // - Recarregamento (F5): tenta voltar para a última tela salva
+    if (!isReload) {
+        // Primeira vez após iniciar servidor ou abrir nova aba → sempre grid
+        showGrid();
+    } else {
+        let lastScreen = null;
+        try {
+            lastScreen = localStorage.getItem(LAST_SCREEN_KEY);
+        } catch (e) {
+            console.warn('Não foi possível ler última tela do localStorage:', e);
+        }
+        const fn = screenMap[lastScreen] || showGrid;
+        fn();
+    }
 });
 // Exporta funções para o escopo global
 window.showGrid = showGrid;

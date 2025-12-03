@@ -27,6 +27,12 @@ function handleLogin(event) {
             role: users[username].role,
             displayName: users[username].displayName
         };
+        // Persiste usuário logado (inclusive Técnico) até que seja feito logout
+        try {
+            localStorage.setItem('supervisor_current_user', JSON.stringify(currentUser));
+        } catch (e) {
+            console.warn('Falha ao salvar usuário no localStorage:', e);
+        }
         hideLoginModal();
         updateUIByRole();
         updateUserDisplay();
@@ -41,10 +47,39 @@ function handleLogout() {
         role: 'Operador',
         displayName: 'Operador'
     };
+    // Remove usuário persistido ao fazer logoff
+    try {
+        localStorage.removeItem('supervisor_current_user');
+    } catch (e) {
+        console.warn('Falha ao remover usuário do localStorage:', e);
+    }
     updateUIByRole();
     updateUserDisplay();
     hideLoginModal();
-    console.log('Logout realizado, retornando para Operador');
+
+    // Após logoff, sempre volta para a tela inicial (grid)
+    try {
+        // Garante que todos os containers (incluindo viewer3d) sejam escondidos
+        if (typeof window.hideAllContainers === 'function') {
+            window.hideAllContainers();
+        }
+        // Reseta a última tela salva para grid, para futuros F5 após logout
+        if (typeof window.localStorage !== 'undefined') {
+            try {
+                localStorage.setItem('supervisor_last_screen', 'grid');
+            } catch (e) {
+                console.warn('Falha ao salvar última tela como grid após logout:', e);
+            }
+        }
+        // Mostra explicitamente o grid
+        if (typeof window.showGrid === 'function') {
+            window.showGrid();
+        }
+    } catch (e) {
+        console.warn('Falha ao retornar para tela inicial após logout:', e);
+    }
+
+    console.log('Logout realizado, retornando para Operador e tela inicial');
 }
 
 function updateUserDisplay() {
@@ -109,6 +144,21 @@ function hideLoginModal() {
     updateUserDisplay();
 }
 
+// Carrega usuário salvo (Operador/Técnico) do localStorage ao iniciar
+function loadUserFromStorage() {
+    try {
+        const raw = localStorage.getItem('supervisor_current_user');
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.username && parsed.role && parsed.displayName) {
+            currentUser = parsed;
+            updateUIByRole();
+        }
+    } catch (e) {
+        console.warn('Falha ao carregar usuário do localStorage:', e);
+    }
+}
+
 // Exporta funções necessárias
 window.handleLogin = handleLogin;
 window.showLoginModal = showLoginModal;
@@ -125,8 +175,3 @@ document.addEventListener('click', function(event) {
 });
 
 // Removido: monitoramento de atividade para logout automático
-
-// Atualizar display do usuário na inicialização
-document.addEventListener('DOMContentLoaded', function() {
-    updateUserDisplay();
-});
