@@ -1,0 +1,161 @@
+.samples-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - var(--menu-height, 100px) - 20px);
+    overflow: hidden;
+    position: relative;
+    box-sizing: border-box;
+    background: #f8f9fa;
+    padding: 10px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 700;
+    color: #4a5568;
+}
+
+.samples-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1800px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 10px;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-sizing: border-box;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.samples-title {
+    text-align: center;
+    font-size: 20px;
+    font-weight: bold;
+    color: #2d3748;
+    margin: 0 0 8px 0;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.samples-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.samples-row {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    height: calc((100% - 17 * 4px) / 18);
+    min-height: 0;
+    flex-shrink: 0;
+}
+
+.samples-row-label {
+    min-width: 45px;
+    width: 45px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #2d3748;
+    text-align: center;
+    padding: 4px;
+    background: #e2e8f0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.samples-row-cells {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.samples-cell {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #1a202c;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    position: relative;
+    box-sizing: border-box;
+}
+
+/* Cores baseadas na imagem */
+.samples-cell.empty {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+}
+
+.samples-cell.green {
+    background: #33CC33;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.samples-cell.blue {
+    background: #0000FF;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.samples-cell.yellow {
+    background: #FFFF00;
+    color: #1a202c;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.samples-cell.gray {
+    background: #999999;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.samples-cell.white {
+    background: #ffffff;
+    color: #1a202c;
+    border: 1px solid #cbd5e0;
+}
+
+/* Animação para destacar células com valores */
+.samples-cell.has-value {
+    animation: pulse-value 0.3s ease;
+}
+
+@keyframes pulse-value {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Efeito de brilho para células ativas (com valor atual) */
+.samples-cell.active {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+    border: 2px solid #3b82f6;
+    z-index: 1;
+}
+

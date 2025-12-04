@@ -71,21 +71,121 @@ function hideAllContainers() {
         'windows-container', // Adicionar windows-container
         'diagram-container',
         'graphics-container', // Adicionar graphics-container
-        'viewer3d-container' // Adicionar viewer3d-container
+        'viewer3d-container', // Adicionar viewer3d-container
+        'samples-container' // Adicionar samples-container
     ];
     containers.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
     
-    // ✅ Cleanup da tela de balança quando sair (reseta estado de calibração)
+    // ✅ CRÍTICO: Cleanup de TODAS as telas quando sair (evita vazamento de memória)
+    // Cleanup da tela de balança
     if (typeof window.cleanupBalance === 'function') {
-        window.cleanupBalance();
+        try {
+            window.cleanupBalance();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de balança:', e);
+        }
     }
     
-    // ✅ Cleanup da tela de classificação quando sair (limpa listeners e timers)
+    // Cleanup da tela de classificação
     if (typeof window.cleanupClassification === 'function') {
-        window.cleanupClassification();
+        try {
+            window.cleanupClassification();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de classificação:', e);
+        }
+    }
+    
+    // Cleanup da tela de gráficos
+    if (typeof window.cleanupGraphics === 'function') {
+        try {
+            window.cleanupGraphics();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de gráficos:', e);
+        }
+    }
+    
+    // Cleanup da tela de entrada
+    if (typeof window.cleanupInput === 'function') {
+        try {
+            window.cleanupInput();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de entrada:', e);
+        }
+    }
+    
+    // Cleanup da tela de lavadora
+    if (typeof window.cleanupWasher === 'function') {
+        try {
+            window.cleanupWasher();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de lavadora:', e);
+        }
+    }
+    
+    // Cleanup da tela de secadora
+    if (typeof window.cleanupDryer === 'function') {
+        try {
+            window.cleanupDryer();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de secadora:', e);
+        }
+    }
+    
+    // Cleanup da tela de diagrama
+    if (typeof window.cleanupDiagram === 'function') {
+        try {
+            window.cleanupDiagram();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de diagrama:', e);
+        }
+    }
+    
+    // Cleanup da tela de janelas
+    if (typeof window.cleanupWindows === 'function') {
+        try {
+            window.cleanupWindows();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de janelas:', e);
+        }
+    }
+    
+    // Cleanup da tela de visualizador 3D
+    if (typeof window.cleanupViewer3D === 'function') {
+        try {
+            window.cleanupViewer3D();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de visualizador 3D:', e);
+        }
+    }
+    
+    // Cleanup da tela de faixa de peso
+    if (typeof window.cleanupWeightRange === 'function') {
+        try {
+            window.cleanupWeightRange();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de faixa de peso:', e);
+        }
+    }
+    
+    // Cleanup da tela de alarmes
+    if (typeof window.cleanupAlarm === 'function') {
+        try {
+            window.cleanupAlarm();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de alarmes:', e);
+        }
+    }
+    
+    // Cleanup da tela de amostras
+    if (typeof window.cleanupSamples === 'function') {
+        try {
+            window.cleanupSamples();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de amostras:', e);
+        }
     }
 }
 
@@ -314,8 +414,17 @@ function showClassification(event) {
         event.currentTarget.classList.add('active');
     }
 
+    // ✅ CRÍTICO: Evita múltiplas inicializações (causa vazamento de memória)
+    // Só inicializa se ainda não foi inicializada ou se foi limpa
     if (typeof inicializarClassification === 'function') {
-        inicializarClassification();
+        // Verifica se já foi inicializada (flag global)
+        if (!window._classificationInitialized) {
+            inicializarClassification();
+            window._classificationInitialized = true;
+        } else {
+            // Se já foi inicializada, apenas reativa (sem criar novos timers/listeners)
+            console.log('[MAIN] Tela de classificação já inicializada, pulando re-inicialização');
+        }
     }
 }
 
@@ -471,6 +580,39 @@ function showViewer3D(event) {
     }, 100);
 }
 
+// Função para exibir a tela de amostras
+function showSamples(event) {
+    setLastScreen('samples');
+    hideAllContainers();
+    const samplesContainer = document.getElementById('samples-container');
+    if (samplesContainer) {
+        samplesContainer.style.display = 'block';
+    }
+
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
+
+    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+    if (event?.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+    
+    // Inicializa a tela de amostras sempre que a tela for exibida
+    // Usa um pequeno delay para garantir que o DOM está pronto
+    setTimeout(() => {
+        if (typeof window.inicializarSamples === 'function') {
+            console.log('🔧 Inicializando sistema de Amostras...');
+            // Limpa estado anterior se existir
+            if (window.cleanupSamples) {
+                window.cleanupSamples();
+            }
+            // Reinicializa
+            window.inicializarSamples();
+        }
+    }, 100);
+}
+
 
 // Carregar os scripts de forma assíncrona
 Promise.all([
@@ -487,7 +629,8 @@ Promise.all([
     loadScript('/static/scripts/partials/diagram.js'), 
     loadScript('/static/scripts/partials/windows.js'),
     loadScript('/static/scripts/partials/graphics.js'),
-    loadScript('/static/scripts/partials/viewer3d.js')
+    loadScript('/static/scripts/partials/viewer3d.js'),
+    loadScript('/static/scripts/partials/samples.js') // ✅ Script de amostras
 
 ])
 .then(() => {
@@ -577,7 +720,8 @@ document.addEventListener('DOMContentLoaded', function() {
         dryer: showDryer,
         diagram: showDiagram,
         windows: showWindows,
-        viewer3d: showViewer3D
+        viewer3d: showViewer3D,
+        samples: showSamples
     };
 
     // Regra:
@@ -609,5 +753,6 @@ window.showDryer = showDryer;   // ✅ Exportação global da função da secado
 window.showDiagram = showDiagram;
 window.showWindows = showWindows;
 window.showViewer3D = showViewer3D; // ✅ Exportação global da função do visualizador 3D
+window.showSamples = showSamples; // ✅ Exportação global da função de amostras
 
 

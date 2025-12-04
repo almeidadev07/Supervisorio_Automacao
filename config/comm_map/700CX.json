@@ -125,7 +125,7 @@
     {
       "name": "XLCLASS_DB1_PRINCIPAL_ALARME_CLASSIFICADORA",
       "offset": 204,
-      "type": "WORD",
+      "type": "INT",
       "description": "XLCLASS - DB1 - PRINCIPAL ALARME CLASSIFICADORA"
     },
     {

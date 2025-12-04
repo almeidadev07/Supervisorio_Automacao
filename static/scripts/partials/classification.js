@@ -117,12 +117,15 @@ function inicializarClassification() {
     // ✅ Constantes de intervalo para reuso
     const LABEL_REFRESH_MS = 2000;
     const SELECTION_REFRESH_MS = 50000;
-    const ALERT_REFRESH_MS = 1000;
+    // Alertas e garras precisam responder rápido à mudança de bits no PLC
+    // ✅ Aumentado para 500ms para reduzir carga na memória (evita vazamento)
+    const ALERT_REFRESH_MS = 500; // 500ms entre leituras (balanceado entre resposta e uso de memória)
     
     // ✅ Variáveis de estado para alertas (escopo global para evitar perda de referência)
     let lastAlertText = '';
-    let lastVisible = false;
-    let lastGreenVisible = false;
+    let lastVisible = false;       // visibilidade da garra vermelha / texto
+    let lastGreenVisible = false;  // visibilidade da garra verde
+    let lastRawAlert = 0;          // ✅ Valor bruto do alarme (para detectar mudanças rápidas)
     let plcConnected = true;
     let consecutiveFailures = 0;
     let lastQuantity = 0;
@@ -447,6 +450,8 @@ function inicializarClassification() {
         tags.push('XLCLASS_DB201_CLASSIFICACAO_CLASSES_A_IGNORAR');
         // Status principal lido para ícones e power
         tags.push('XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_01');
+        // ✅ Tag de alarme da classificadora (para garra vermelha e box de alerta)
+        tags.push('XLCLASS_DB1_PRINCIPAL_ALARME_CLASSIFICADORA');
         // Comandos de classificação (bit 8 do lixo)
         tags.push('XLCLASS_DB200_CLASSIFICACAO_COMANDO_STATUS');
         tags.push('XLCLASS_DB201_CLASSIFICACAO_COMANDO_STATUS');
@@ -502,35 +507,92 @@ function inicializarClassification() {
     }
 
     // ✅ Alert/claw tags reader (lê ambas as tags necessárias de uma vez)
+    // ✅ CRÍTICO: Variável global para cancelar requisição anterior (evita acúmulo)
+    let currentAlertRequestController = null;
+    let currentAlertRequestPromise = null;
+    
     async function getAlertAndStatus() {
         const TAG_ALERT = 'XLCLASS_DB1_PRINCIPAL_ALARME_CLASSIFICADORA';
         const TAG_STATUS = 'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_01';
         const names = `${TAG_ALERT},${TAG_STATUS}`;
         
+        // ✅ CRÍTICO: Cancela requisição anterior se ainda estiver pendente (evita acúmulo)
+        if (currentAlertRequestController) {
+            try {
+                currentAlertRequestController.abort();
+            } catch (_) {}
+            currentAlertRequestController = null;
+        }
+        
+        // ✅ Limpa promise anterior para evitar referências mantidas em memória
+        if (currentAlertRequestPromise) {
+            currentAlertRequestPromise = null;
+        }
+        
         // ✅ AbortController para timeout
         const controller = new AbortController();
-        activeAbortControllers.add(controller);
-        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout (mais rápido para alertas)
+        currentAlertRequestController = controller;
+        const timeoutId = setTimeout(() => {
+            try {
+                controller.abort();
+            } catch (_) {}
+        }, 800); // 800ms timeout (maior que o intervalo do timer)
         
         try {
-            const res = await fetch(`/api/read_tags?names=${encodeURIComponent(names)}`, { 
+            // ✅ Cria promise e armazena referência (para poder cancelar depois)
+            const fetchPromise = fetch(`/api/read_tags?names=${encodeURIComponent(names)}`, { 
                 cache: 'no-store',
-                signal: controller.signal
+                signal: controller.signal,
+                // ✅ Adiciona headers para evitar cache do navegador
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
             });
+            
+            currentAlertRequestPromise = fetchPromise;
+            const res = await fetchPromise;
+            
             clearTimeout(timeoutId);
-            if (!res.ok) throw new Error('bad');
+            
+            if (!res.ok) {
+                throw new Error('bad');
+            }
+            
             const data = await res.json();
-            const rawAlert = Number(data?.values?.[TAG_ALERT] ?? 0) || 0;
-            const rawStatus = Number(data?.values?.[TAG_STATUS] ?? 0) || 0;
+            
+            // ✅ Limpa dados grandes imediatamente após processar (libera memória)
+            const alertValue = data?.values?.[TAG_ALERT];
+            const statusValue = data?.values?.[TAG_STATUS];
+            
+            // Converte null/undefined para 0, mas mantém outros valores (incluindo 0 válido)
+            const rawAlert = (alertValue === null || alertValue === undefined) ? 0 : Number(alertValue) || 0;
+            const rawStatus = (statusValue === null || statusValue === undefined) ? 0 : Number(statusValue) || 0;
+            
+            // ✅ Força limpeza de referências grandes
+            data.values = null;
+            
             return { rawAlert, rawStatus };
         } catch (e) {
-            if (e.name !== 'AbortError') {
-                console.error('[CLASSIFICATION] Erro em getAlertAndStatus:', e);
+            // ✅ Apenas loga erros não-abort (AbortError é esperado quando cancela requisição anterior)
+            if (e.name !== 'AbortError' && e.name !== 'TypeError') {
+                // Log apenas erros críticos, não todos os erros (com throttling)
+                if (Date.now() - (window._lastAlertErrorLog || 0) > 10000) {
+                    console.error('[CLASSIFICATION] Erro em getAlertAndStatus:', e);
+                    window._lastAlertErrorLog = Date.now();
+                }
             }
             return { rawAlert: 0, rawStatus: 0 };
         } finally {
             clearTimeout(timeoutId);
-            activeAbortControllers.delete(controller);
+            // ✅ Limpa referências se esta requisição foi concluída
+            if (currentAlertRequestController === controller) {
+                currentAlertRequestController = null;
+            }
+            if (currentAlertRequestPromise) {
+                currentAlertRequestPromise = null;
+            }
         }
     }
     function computeAlertText(rawValue) {
@@ -2634,15 +2696,19 @@ function inicializarClassification() {
         lastAlertText = '';
         lastVisible = false;
         lastGreenVisible = false;
+        lastRawAlert = 0; // ✅ Reset valor bruto para forçar primeira atualização
         
-        // Limpa timer existente antes de criar novo
+        // ✅ CRÍTICO: Limpa timer existente antes de criar novo (evita timers duplicados)
         if (alertTimer) {
             clearInterval(alertTimer);
             alertTimer = null;
         }
         
+        // ✅ Garante que não há timer rodando antes de criar novo
+        alertTimerRunning = false;
+        
         alertTimer = setInterval(async () => {
-            // ✅ CRÍTICO: Evita execuções simultâneas (evita acúmulo de promises)
+            // ✅ Evita execuções simultâneas (evita acúmulo de promises e requisições)
             if (alertTimerRunning) {
                 return; // Pula se ainda estiver rodando
             }
@@ -2652,21 +2718,38 @@ function inicializarClassification() {
                 const { rawAlert, rawStatus } = await getAlertAndStatus();
                 // Atualiza power pela leitura do status
                 updatePowerButtonsFromStatus(rawStatus);
-                const text = computeAlertText(rawAlert);
-                const bit8Set = ((rawStatus >>> 8) & 1) === 1; // bit 8 == 1?
-                const visible = (rawAlert !== 0) && !bit8Set;
-                const showGreen = bit8Set; // quando bit8 = 1, mostra garra verde animada
 
-                if (text !== lastAlertText || visible !== lastVisible || showGreen !== lastGreenVisible) {
+                const text = computeAlertText(rawAlert);
+
+                // Lógica de garras (ajustada):
+                // - Garra verde: TAG_STATUS bit 8 = 1
+                // - Garra vermelha: QUALQUER alarme (rawAlert != 0) E TAG_STATUS bit 8 = 0
+                const statusBit8 = (((rawStatus >>> 8) & 1) === 1);
+                const hasAlert   = (Number(rawAlert) >>> 0) !== 0;
+
+                const showGreen = statusBit8;
+                const visible   = hasAlert && !statusBit8; // garra vermelha e texto só quando há alarme E não está em movimento (verde)
+
+                // ✅ Compara também o valor bruto para detectar mudanças mesmo quando o texto pode ser similar
+                const rawAlertChanged = (rawAlert !== lastRawAlert);
+                
+                if (rawAlertChanged || text !== lastAlertText || visible !== lastVisible || showGreen !== lastGreenVisible) {
+                    lastRawAlert = rawAlert;   // ✅ Atualiza valor bruto
                     lastAlertText = text;
                     lastVisible = visible;
                     lastGreenVisible = showGreen;
                     renderAlert(text, visible);
-                    renderClaw(visible);
+                    renderClaw(visible);       // garra vermelha
                     renderClawGreen(showGreen);
+                    
+                    // ✅ Logs removidos completamente para evitar vazamento de memória
                 }
             } catch (error) {
-                console.error('[CLASSIFICATION] Erro no alertTimer:', error);
+                // ✅ Log apenas erros críticos (com throttling para evitar spam)
+                if (Date.now() - (window._lastAlertTimerError || 0) > 5000) {
+                    console.error('[CLASSIFICATION] Erro no alertTimer:', error);
+                    window._lastAlertTimerError = Date.now();
+                }
             } finally {
                 alertTimerRunning = false;
             }
@@ -2760,6 +2843,49 @@ function inicializarClassification() {
                 toastTimeoutId = null;
             }
             
+            // ✅ CRÍTICO: Limpa debounce do renderGrid (evita acúmulo de timers)
+            if (renderGridDebounceTimer) {
+                clearTimeout(renderGridDebounceTimer);
+                renderGridDebounceTimer = null;
+            }
+            
+            // ✅ CRÍTICO: Cancela requisição pendente de alertas (evita vazamento de memória)
+            if (currentAlertRequestController) {
+                try {
+                    currentAlertRequestController.abort();
+                } catch (_) {}
+                currentAlertRequestController = null;
+            }
+            
+            // ✅ Limpa promise pendente
+            if (currentAlertRequestPromise) {
+                currentAlertRequestPromise = null;
+            }
+            
+            // ✅ Limpa variáveis globais do window (evita vazamento)
+            if (window._lastAlertCheck !== undefined) {
+                delete window._lastAlertCheck;
+            }
+            if (window._lastAlertErrorLog !== undefined) {
+                delete window._lastAlertErrorLog;
+            }
+            if (window._lastAlertTimerError !== undefined) {
+                delete window._lastAlertTimerError;
+            }
+            
+            // ✅ Força limpeza de variáveis de estado de alertas
+            lastRawAlert = 0;
+            lastAlertText = '';
+            lastVisible = false;
+            lastGreenVisible = false;
+            
+            // ✅ Tenta forçar garbage collection se disponível (apenas Chrome/Edge)
+            if (window.gc && typeof window.gc === 'function') {
+                try {
+                    window.gc();
+                } catch (_) {}
+            }
+            
             // ✅ Limpa todos os timers rastreados (fallback)
             clearAllTrackedTimers();
             
@@ -2840,6 +2966,11 @@ function inicializarClassification() {
             if (window.gc) {
                 window.gc();
                 console.log('[CLASSIFICATION] 🗑️ Garbage collection solicitado');
+            }
+            
+            // ✅ CRÍTICO: Reseta flag de inicialização para permitir nova inicialização quando necessário
+            if (window._classificationInitialized) {
+                window._classificationInitialized = false;
             }
             
             console.log('[CLASSIFICATION] ✅ Cleanup concluído - todos os recursos liberados');

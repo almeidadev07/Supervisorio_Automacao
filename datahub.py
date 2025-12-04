@@ -47,7 +47,7 @@ PLC_CONFIGS = [
 # Descobertos automaticamente em 2025-11-06
 DBS = [
     # DBs Principais
-    {"id": 1, "size": 200},    # DB1: Principal (velocidades, alarmes)
+    {"id": 1, "size": 250},    # DB1: Principal (velocidades, alarmes) - Aumentado para cobrir offset 204 (alarme classificadora) e 242-246 (posições)
     {"id": 3, "size": 256},    # DB3: Controle de velocidade dinâmica
     {"id": 4, "size": 50},     # DB4: Principal emergência
     # {"id": 6, "size": 50},     # DB6: Auxiliar indexação - NAO ACESSIVEL
@@ -102,8 +102,8 @@ DBS = [
 ]
 
 # Configurações de timing
-# ✅ CORREÇÃO: Aumentado de 0.2s para 0.5s para reduzir carga no PLC
-POLLING_INTERVAL = 0.5  # 500ms entre leituras (era 200ms)
+# ✅ Ajustado para resposta mais rápida em alarmes (balanceado com carga no PLC)
+POLLING_INTERVAL = 0.2  # 200ms entre leituras (otimizado para resposta rápida em alarmes)
 RECONNECT_INTERVAL = 5.0  # 5s entre tentativas de reconexão
 PING_TIMEOUT = 1  # 1s timeout para ping
 
