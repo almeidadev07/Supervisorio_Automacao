@@ -6,7 +6,7 @@
     position: relative;
     box-sizing: border-box;
     background: #f8f9fa;
-    padding: 10px;
+    padding: 8px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-weight: 700;
     color: #4a5568;
@@ -20,7 +20,7 @@
     max-width: 1800px;
     margin: 0 auto;
     background: rgba(255, 255, 255, 0.95);
-    padding: 10px;
+    padding: 8px;
     border-radius: 16px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -34,7 +34,7 @@
     font-size: 20px;
     font-weight: bold;
     color: #2d3748;
-    margin: 0 0 8px 0;
+    margin: 0 0 4px 0;
     padding: 0;
     flex-shrink: 0;
 }
@@ -42,7 +42,7 @@
 .samples-grid {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
     width: 100%;
     flex: 1;
     min-height: 0;
@@ -53,8 +53,8 @@
     display: flex;
     gap: 4px;
     align-items: center;
-    height: calc((100% - 17 * 4px) / 18);
-    min-height: 0;
+    height: calc((100% - 17 * 2px) / 18);
+    min-height: 40px;
     flex-shrink: 0;
 }
 
@@ -90,7 +90,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 18px;
     font-weight: bold;
     color: #1a202c;
     transition: all 0.2s ease;
