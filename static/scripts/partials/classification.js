@@ -1467,9 +1467,9 @@ function inicializarClassification() {
     // ✅ CRÍTICO: Cache de cálculos para evitar recalcular a cada renderização
     let renderClassesCache = {
         cardHeight: 450,
-        marginSafe: 20,
+        marginSafe: 15,
         circleSize: 30,
-        verticalGap: 15,
+        verticalGap: 6,
         totalPossibleClasses: 0,
         totalHeight: 0,
         availableHeight: 0,
@@ -1479,7 +1479,9 @@ function inicializarClassification() {
     // ✅ Inicializa cache uma vez
     (function initRenderClassesCache() {
         renderClassesCache.totalPossibleClasses = state.classesOvos.length;
-        renderClassesCache.totalHeight = (renderClassesCache.totalPossibleClasses * renderClassesCache.circleSize) + 
+        // Ajusta cálculo de altura considerando formato de ovo (altura maior)
+        const eggHeight = Math.round(renderClassesCache.circleSize * 1.27);
+        renderClassesCache.totalHeight = (renderClassesCache.totalPossibleClasses * eggHeight) + 
             ((renderClassesCache.totalPossibleClasses - 1) * renderClassesCache.verticalGap);
         renderClassesCache.availableHeight = renderClassesCache.cardHeight - (renderClassesCache.marginSafe * 2);
         renderClassesCache.startTop = renderClassesCache.marginSafe + 
@@ -1508,7 +1510,10 @@ function inicializarClassification() {
             }
             
             // Calcula posição fixa baseada no índice na lista completa de classes
-            const top = startTop + index * (circleSize + verticalGap);
+            // Formato de ovo: altura maior que largura (proporção ~1.27:1)
+            const eggWidth = circleSize;
+            const eggHeight = Math.round(circleSize * 1.27);
+            const top = startTop + index * (eggHeight + verticalGap);
             
             let extraStyle = '';
             // ✅ Para CRACK e VISIO, quando tipo é "misto", mostrar visualmente como "branco"
@@ -1525,7 +1530,7 @@ function inicializarClassification() {
                 <div class="egg-class-item tipo-${visualTipo}" style="
                     background-color: ${selectedClass.cor};
                     top: ${top}px;
-                    height: ${circleSize}px; width: ${circleSize}px; ${extraStyle}
+                    height: ${eggHeight}px; width: ${eggWidth}px; ${extraStyle}
                 "></div>
             `;
         }

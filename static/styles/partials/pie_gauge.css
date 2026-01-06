@@ -1,4 +1,4 @@
-/* Pie chart gauge for grid buttons */
+/* Pie chart gauge for grid buttons - Responsivo DINÂMICO */
 .pie-gauge {
     --pct: 0%;
     --stop1: 33%;
@@ -7,37 +7,36 @@
     --c-yellow: #ffdd00;
     --c-green: #00c853;
     --bg: #e6e6e6;
-    margin-top: 38px; /* ajuste o valor conforme desejar */
     position: relative;
-    width: 140px;
-    height: 140px;
-    min-width: 0;
-    min-height: 0;
+    /* DINÂMICO: Tamanho baseado na altura disponível */
+    width: min(clamp(65px, 11vmin, 130px), 85%);
+    height: auto;
+    /* CRÍTICO: aspect-ratio garante que fique sempre redondo */
+    aspect-ratio: 1 / 1 !important;
+    min-width: 55px;
     border-radius: 50%;
     background: var(--bg);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 10px auto 0px auto; /* desce o gráfico */
+    margin: clamp(2px, 0.5vh, 6px) auto;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     overflow: visible;
+    flex-shrink: 1;
+    max-width: 100%;
 }
 
-/* Colored arc up to the current percentage.
-   We build the arc using a pseudo-element with a conic-gradient
-   where color stops are driven by CSS variables set from JS. */
+/* Colored arc up to the current percentage */
 .pie-gauge::before {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    /* Draw a single-color arc (color provided by --fill-color) from 0 to --p,
-       then transparent from --p to 100% so the arc is clipped. */
     background: conic-gradient(var(--fill-color, var(--c-green)) 0% var(--p,0%), transparent var(--p,0%) 100%);
     z-index: 10;
 }
 
-/* Inner disk to create a donut look (keeps center label readable) */
+/* Inner disk to create a donut look */
 .pie-gauge::after {
     content: '';
     position: absolute;
@@ -50,20 +49,54 @@
 }
 
 .pie-gauge-value {
-    position: relative; /* above ::after */
+    position: relative;
     z-index: 20;
-    font-size: 1.1em;
+    font-size: clamp(0.7em, 1.3vw, 1em);
     font-weight: 700;
     color: #222;
+    text-align: center;
 }
 
 .pie-gauge-label {
     position: absolute;
     width: 100%;
     left: 0;
-    bottom: -18px;
+    bottom: clamp(-14px, -2vh, -18px);
     text-align: center;
-    font-size: 0.95em;
+    font-size: clamp(0.75em, 1.2vw, 0.95em);
     color: #333;
     font-weight: 500;
+}
+
+/* Responsivo para telas menores - MANTÉM CÍRCULOS REDONDOS */
+@media screen and (max-width: 1024px) {
+    .pie-gauge {
+        width: min(clamp(55px, 9vmin, 100px), 75%);
+        height: auto;
+        aspect-ratio: 1 / 1 !important;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .pie-gauge {
+        width: min(clamp(52px, 8.5vmin, 85px), 70%);
+        height: auto;
+        aspect-ratio: 1 / 1 !important;
+    }
+    
+    .pie-gauge-value {
+        font-size: clamp(0.7em, 1.7vw, 1em);
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .pie-gauge {
+        width: min(clamp(48px, 8vmin, 75px), 65%);
+        height: auto;
+        aspect-ratio: 1 / 1 !important;
+    }
+    
+    .pie-gauge-value {
+        font-size: clamp(0.65em, 2.4vw, 0.9em);
+    }
 }

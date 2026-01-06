@@ -1,18 +1,18 @@
 .login-container {
     position: fixed;
-    right: 10px;
-    bottom: 10px; /* Aumente o valor para descer o bloco inteiro */
+    right: clamp(8px, 2vw, 19px);
+    bottom: clamp(20px, 4vh, 36px);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: clamp(4px, 0.8vh, 6px);
     z-index: 3000;
 }
 
 #login-fixed-block {
     position: fixed;
-    right: 25px;
-    bottom: 12px;
+    right: clamp(15px, 3vw, 25px);
+    bottom: clamp(8px, 2vh, 12px);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -21,18 +21,19 @@
 }
 
 #login-btn {
-    width: 45px;
-    height: 45px;
-    background: #fff;
+    width: clamp(35px, 5vw, 50px);
+    height: clamp(35px, 5vw, 50px);
+    background: linear-gradient(145deg, #ffffff, #f0f0f0);
     border: none;
     border-radius: 50%;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     margin-bottom: 2px;
     position: relative;
+    transition: all 0.3s ease;
 }
 
 #login-btn:hover {
@@ -54,8 +55,8 @@
 }
 
 #login-btn img {
-    width: 28px;
-    height: 28px;
+    width: clamp(18px, 3vw, 28px);
+    height: clamp(18px, 3vw, 28px);
     object-fit: contain;
     z-index: 1;
 }
@@ -68,18 +69,20 @@
 }
 
 .user-name {
-    font-size: 15px;
+    font-size: clamp(10px, 1.5vw, 15px);
     font-weight: 600;
     color: #111;
     margin-top: -2px;
-    min-width: 70px;
+    min-width: clamp(50px, 8vw, 70px);
     text-align: center;
     transition: transform 0.3s ease;
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.8);
 }
 
 .logout-btn {
-    font-size: 12px;
-    padding: 2px 10px;
+    font-size: clamp(10px, 1.3vw, 12px);
+    padding: clamp(2px, 0.3vh, 3px) clamp(6px, 1vw, 10px);
     border: 1px solid #ddd;
     border-radius: 4px;
     background: #fff;
@@ -88,11 +91,29 @@
     margin-top: 2px;
     display: none;
     z-index: 3000;
-
 }
 
 .logout-btn:hover {
     background: #fee2e2;
+}
+
+/* Modal de Login */
+#login-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(3px);
+}
+
+#login-modal.show {
+    display: flex;
 }
 
 #login-modal .modal-content {
@@ -100,26 +121,26 @@
     flex-direction: column;
     align-items: stretch;
     position: relative;
-    min-width: 300px;
+    min-width: clamp(280px, 90vw, 350px);
     max-width: 350px;
     width: 92vw;
     box-sizing: border-box;
     background: #fff;
-    border-radius: 14px;
+    border-radius: clamp(10px, 2vw, 14px);
     box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-    padding: 32px 28px 24px 28px;
-    gap: 18px;
+    padding: clamp(20px, 4vw, 32px) clamp(18px, 3vw, 28px) clamp(18px, 3vw, 24px) clamp(18px, 3vw, 28px);
+    gap: clamp(12px, 2vh, 18px);
 }
 
 #login-modal .modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: clamp(6px, 1vh, 10px);
 }
 
 #login-modal .modal-header h2 {
-    font-size: 1.5rem;
+    font-size: clamp(1.2rem, 4vw, 1.5rem);
     font-weight: 700;
     color: #222;
     margin: 0;
@@ -129,12 +150,13 @@
 #login-modal .close-btn {
     background: none;
     border: none;
-    font-size: 1.7rem;
+    font-size: clamp(1.4rem, 4vw, 1.7rem);
     color: #888;
     cursor: pointer;
     transition: color 0.2s;
     padding: 0 4px;
 }
+
 #login-modal .close-btn:hover {
     color: #ef4444;
 }
@@ -143,11 +165,11 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    margin-bottom: 12px;
+    margin-bottom: clamp(8px, 1.5vh, 12px);
 }
 
 #login-modal label {
-    font-size: 1rem;
+    font-size: clamp(0.9rem, 2.5vw, 1rem);
     color: #444;
     font-weight: 500;
     margin-bottom: 2px;
@@ -157,16 +179,17 @@
 #login-modal input[type="text"],
 #login-modal input[type="password"] {
     width: 100%;
-    padding: 10px 12px;
+    padding: clamp(8px, 1.5vh, 10px) clamp(10px, 2vw, 12px);
     border: 1.5px solid #e5e7eb;
     border-radius: 6px;
-    font-size: 1rem;
+    font-size: clamp(0.9rem, 2.5vw, 1rem);
     background: #f9fafb;
     color: #222;
     transition: border 0.2s, box-shadow 0.2s;
     outline: none;
     margin-bottom: 2px;
 }
+
 #login-modal input[type="text"]:focus,
 #login-modal input[type="password"]:focus {
     border-color: #3b82f6;
@@ -176,33 +199,34 @@
 
 .login-submit-btn {
     width: 100%;
-    padding: 10px 0;
+    padding: clamp(8px, 1.5vh, 10px) 0;
     background: linear-gradient(90deg, #3b82f6 60%, #2563eb 100%);
     color: #fff;
     border: none;
     border-radius: 6px;
-    font-size: 1.08rem;
+    font-size: clamp(0.95rem, 2.5vw, 1.08rem);
     font-weight: 600;
     cursor: pointer;
     margin-top: 8px;
     box-shadow: 0 2px 8px rgba(59,130,246,0.08);
     transition: background 0.2s, box-shadow 0.2s;
 }
+
 .login-submit-btn:hover {
     background: linear-gradient(90deg, #2563eb 60%, #3b82f6 100%);
     box-shadow: 0 4px 16px rgba(59,130,246,0.13);
 }
 
 .logout-btn-modal {
-    font-size: 1rem;
-    padding: 8px 22px;
+    font-size: clamp(0.9rem, 2.5vw, 1rem);
+    padding: clamp(6px, 1vh, 8px) clamp(16px, 3vw, 22px);
     border: 1.5px solid #ef4444;
     border-radius: 6px;
     background: #fff;
     cursor: pointer;
     color: #ef4444;
     margin: 0;
-    margin-top: 18px;
+    margin-top: clamp(12px, 2vh, 18px);
     margin-left: auto;
     margin-right: 0;
     display: none;
@@ -211,10 +235,34 @@
     font-weight: 600;
     transition: background 0.2s, color 0.2s, border 0.2s;
 }
+
 .logout-btn-modal:hover {
     background: #fee2e2;
     color: #b91c1c;
     border-color: #b91c1c;
+}
+
+/* Responsivo para mobile */
+@media screen and (max-width: 768px) {
+    .login-container {
+        bottom: calc(var(--menu-height, 90px) + 15px);
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .login-container {
+        bottom: calc(var(--menu-height, 80px) + 10px);
+    }
+    
+    #login-modal .modal-content {
+        margin: 10px;
+    }
+}
+
+@media screen and (max-width: 320px) {
+    .login-container {
+        bottom: calc(var(--menu-height, 70px) + 8px);
+    }
 }
 
 /* Mostra o botão de logoff apenas quando logado como técnico (feito via JS) */

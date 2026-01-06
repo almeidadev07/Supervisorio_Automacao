@@ -199,10 +199,10 @@
 .egg-class-item {
     position: absolute;
     width: 30px;
-    height: 30px;
+    height: 38px;
     left: 50%;
     transform: translateX(-50%);
-    border-radius: 50%;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
     box-sizing: border-box; /* considera bordas dentro do tamanho */
     z-index: 1; /* acima da marca d'água do card */
 }
@@ -252,7 +252,7 @@
             #ef4444 180deg,
             #ef4444 360deg
         );
-    border-radius: 50%;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
     -webkit-mask: 
         linear-gradient(#fff 0 0) content-box, 
         linear-gradient(#fff 0 0);
