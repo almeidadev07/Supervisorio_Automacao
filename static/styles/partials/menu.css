@@ -308,7 +308,7 @@
     width: var(--menu-icon-size);
     height: var(--menu-icon-size);
     object-fit: contain;
-    margin-bottom: 4px;
+    margin-bottom: clamp(4px, 0.5vh, 6px);
     display: block;
     position: relative;
     z-index: 2;
@@ -328,6 +328,8 @@
     display: block;
     position: relative;
     z-index: 2;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 /* Botão hamburger para mobile */
@@ -453,11 +455,114 @@
 /* Telas grandes (1920px+) */
 @media screen and (min-width: 1920px) {
     :root {
-        --menu-height: 110px;
-        --menu-btn-size: 90px;
-        --menu-icon-size: 36px;
-        --menu-text-size: 11px;
+        --menu-height: 100px;
+        --menu-btn-size: 85px;
+        --menu-icon-size: 38px;
+        --menu-text-size: 12px;
         --menu-gap: 10px;
+    }
+    
+    .menu-btn {
+        width: clamp(90px, 7vw, 120px);
+        min-width: clamp(90px, 7vw, 120px);
+        padding: 0 8px;
+    }
+    
+    .menu-btn::before {
+        border-radius: clamp(10px, 1.2vw, 14px);
+    }
+    
+    .menu-icon {
+        width: clamp(36px, 3vw, 48px);
+        height: clamp(36px, 3vw, 48px);
+        margin-bottom: clamp(5px, 0.6vh, 8px);
+    }
+    
+    .menu-text {
+        font-size: clamp(11px, 0.9vw, 14px);
+        font-weight: 700;
+    }
+    
+    .logo-btn,
+    .logo-btn img {
+        width: 90px;
+        height: 90px;
+    }
+}
+
+/* Telas 2K/QHD (2560px+) */
+@media screen and (min-width: 2560px) {
+    :root {
+        --menu-height: 110px;
+        --menu-btn-size: 95px;
+        --menu-icon-size: 44px;
+        --menu-text-size: 14px;
+        --menu-gap: 12px;
+    }
+    
+    .menu-btn {
+        width: clamp(105px, 7.5vw, 140px);
+        min-width: clamp(105px, 7.5vw, 140px);
+        padding: 0 10px;
+    }
+    
+    .menu-btn::before {
+        border-radius: clamp(12px, 1.3vw, 16px);
+    }
+    
+    .menu-icon {
+        width: clamp(42px, 3.2vw, 56px);
+        height: clamp(42px, 3.2vw, 56px);
+        margin-bottom: clamp(6px, 0.7vh, 10px);
+    }
+    
+    .menu-text {
+        font-size: clamp(13px, 1vw, 17px);
+        font-weight: 700;
+    }
+    
+    .logo-btn,
+    .logo-btn img {
+        width: 100px;
+        height: 100px;
+    }
+}
+
+/* Telas 4K (3840px+) */
+@media screen and (min-width: 3840px) {
+    :root {
+        --menu-height: 120px;
+        --menu-btn-size: 105px;
+        --menu-icon-size: 52px;
+        --menu-text-size: 16px;
+        --menu-gap: 14px;
+    }
+    
+    .menu-btn {
+        width: clamp(125px, 8vw, 170px);
+        min-width: clamp(125px, 8vw, 170px);
+        padding: 0 12px;
+    }
+    
+    .menu-btn::before {
+        border-radius: clamp(14px, 1.4vw, 18px);
+    }
+    
+    .menu-icon {
+        width: clamp(50px, 3.5vw, 68px);
+        height: clamp(50px, 3.5vw, 68px);
+        margin-bottom: clamp(7px, 0.8vh, 12px);
+    }
+    
+    .menu-text {
+        font-size: clamp(15px, 1.1vw, 20px);
+        font-weight: 700;
+    }
+    
+    .logo-btn,
+    .logo-btn img {
+        width: 110px;
+        height: 110px;
     }
 }
 
