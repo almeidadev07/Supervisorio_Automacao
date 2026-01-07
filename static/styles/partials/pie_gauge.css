@@ -68,6 +68,67 @@
     font-weight: 500;
 }
 
+/* ========== TELAS GRANDES ========== */
+
+/* Full HD+ (1920px+) */
+@media screen and (min-width: 1920px) {
+    .pie-gauge {
+        width: min(clamp(75px, 10vmin, 140px), 85%);
+        height: auto;
+        aspect-ratio: 1 / 1 !important;
+        min-width: 65px;
+    }
+    
+    .pie-gauge-value {
+        font-size: clamp(0.85em, 1.3vw, 1.2em);
+    }
+    
+    .pie-gauge-label {
+        bottom: clamp(-14px, -1.8vh, -20px);
+        font-size: clamp(0.8em, 1.1vw, 1.1em);
+    }
+}
+
+/* 2K/QHD (2560px+) */
+@media screen and (min-width: 2560px) {
+    .pie-gauge {
+        width: min(clamp(90px, 11vmin, 170px), 88%);
+        height: auto;
+        aspect-ratio: 1 / 1 !important;
+        min-width: 78px;
+    }
+    
+    .pie-gauge-value {
+        font-size: clamp(1em, 1.5vw, 1.5em);
+    }
+    
+    .pie-gauge-label {
+        bottom: clamp(-16px, -2vh, -26px);
+        font-size: clamp(0.9em, 1.3vw, 1.3em);
+    }
+}
+
+/* 4K (3840px+) */
+@media screen and (min-width: 3840px) {
+    .pie-gauge {
+        width: min(clamp(110px, 12vmin, 210px), 90%);
+        height: auto;
+        aspect-ratio: 1 / 1 !important;
+        min-width: 95px;
+    }
+    
+    .pie-gauge-value {
+        font-size: clamp(1.2em, 1.8vw, 1.9em);
+    }
+    
+    .pie-gauge-label {
+        bottom: clamp(-20px, -2.5vh, -32px);
+        font-size: clamp(1.05em, 1.5vw, 1.6em);
+    }
+}
+
+/* ========== TELAS MENORES ========== */
+
 /* Responsivo para telas menores - MANTÉM CÍRCULOS REDONDOS */
 @media screen and (max-width: 1024px) {
     .pie-gauge {

@@ -198,6 +198,12 @@ function scrollCarouselRight() {
 document.addEventListener('mousedown', function(event) {
     const carouselWrapper = document.getElementById('menu-carousel-wrapper');
     const isClickOnCarousel = carouselWrapper && carouselWrapper.contains(event.target);
+    const menuToggleBtn = document.querySelector('.menu-toggle');
+    const logoBtn = document.querySelector('.logo-btn');
+    
+    // Ignora cliques no botão de toggle do menu ou logo
+    if (menuToggleBtn && menuToggleBtn.contains(event.target)) return;
+    if (logoBtn && logoBtn.contains(event.target)) return;
     
     // Verifica se o menu está aberto e se o clique foi fora do menu e do carrossel
     if (isMenuOpen && menu && !menu.contains(event.target) && !event.target.classList.contains('menu-btn') && !isClickOnCarousel) {

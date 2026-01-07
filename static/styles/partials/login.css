@@ -1,12 +1,18 @@
+/* Container do login - posicionamento espelhado ao botão de desligar */
 .login-container {
     position: fixed;
-    right: clamp(8px, 2vw, 19px);
+    right: clamp(10px, 2vw, 19px);
     bottom: clamp(20px, 4vh, 36px);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: clamp(4px, 0.8vh, 6px);
     z-index: 3000;
+    /* Permite posicionamento absoluto dos filhos */
+}
+
+/* Wrapper para botão e texto ficarem alinhados */
+.login-container #login-btn {
+    position: relative;
 }
 
 #login-fixed-block {
@@ -31,7 +37,7 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    margin-bottom: 2px;
+    margin: 0;
     position: relative;
     transition: all 0.3s ease;
 }
@@ -69,15 +75,15 @@
 }
 
 .user-name {
-    font-size: clamp(10px, 1.5vw, 15px);
-    font-weight: 600;
-    color: #111;
-    margin-top: -2px;
+    font-size: clamp(9px, 1.2vw, 12px);
+    font-weight: 700;
+    color: #000;
+    margin-top: 6px;
     min-width: clamp(50px, 8vw, 70px);
     text-align: center;
     transition: transform 0.3s ease;
     white-space: nowrap;
-    text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+    text-shadow: 0 1px 3px rgba(255,255,255,0.9);
 }
 
 .logout-btn {

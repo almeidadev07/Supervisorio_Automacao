@@ -17,8 +17,7 @@ class MenuAnimationController {
      * Abre o menu com animação de expansão do centro para os cantos
      */
     openMenu() {
-        if (this.isTransitioning) return;
-        
+        // Remove o bloqueio de transição para evitar cliques ignorados
         this.isTransitioning = true;
         this.isOpen = true;
         
@@ -37,16 +36,15 @@ class MenuAnimationController {
             setTimeout(() => {
                 this.menu.classList.remove('expanding');
                 this.isTransitioning = false;
-            }, 1000); // Duração da animação + 200ms de buffer
-        }, 50);
+            }, 600); // Reduzido para resposta mais rápida
+        }, 30);
     }
 
     /**
      * Fecha o menu com animação de retorno ao centro
      */
     closeMenu() {
-        if (this.isTransitioning) return;
-        
+        // Remove o bloqueio de transição para evitar cliques ignorados
         this.isTransitioning = true;
         this.isOpen = false;
         
@@ -61,13 +59,19 @@ class MenuAnimationController {
             this.menu.classList.remove('closing', 'transitioning');
             this.menu.classList.add('closed');
             this.isTransitioning = false;
-        }, 500); // Duração da animação de fechamento
+        }, 400); // Reduzido para resposta mais rápida
     }
 
     /**
      * Alterna o estado do menu
      */
     toggleMenu() {
+        // Cancela transição pendente se houver e força toggle imediato
+        if (this.isTransitioning) {
+            // Limpa estado e força toggle
+            this.isTransitioning = false;
+        }
+        
         if (this.isOpen) {
             this.closeMenu();
         } else {
@@ -89,41 +93,10 @@ class MenuAnimationController {
     }
 }
 
-// Exemplo de uso:
-document.addEventListener('DOMContentLoaded', function() {
-    const menuElement = document.getElementById('menu');
-    if (menuElement) {
-        const menuController = new MenuAnimationController(menuElement);
-        
-        // Inicializa o menu fechado
-        menuElement.classList.add('closed');
-        
-        // Adiciona evento de clique no logo para abrir/fechar
-        const logoBtn = menuElement.querySelector('.logo-btn');
-        if (logoBtn) {
-            logoBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                menuController.clickLogo();
-                menuController.toggleMenu();
-            });
-        }
-        
-        // Adiciona eventos de clique nos botões do menu
-        const menuBtns = menuElement.querySelectorAll('.menu-btn');
-        menuBtns.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                // Aqui você pode adicionar a lógica para cada botão
-                console.log('Botão clicado:', this.dataset.action || 'sem ação definida');
-            });
-        });
-        
-        // Exemplo: abrir menu automaticamente após 2 segundos
-        // setTimeout(() => {
-        //     menuController.openMenu();
-        // }, 2000);
-    }
-});
+// Nota: O controle principal do menu é feito pelo menu.js
+// Este arquivo fornece apenas a classe auxiliar MenuAnimationController
+// para uso opcional em animações mais complexas.
+// O evento de clique no logo é gerenciado pelo menu.js para evitar conflitos.
 
 // Exportar para uso em outros scripts
 if (typeof module !== 'undefined' && module.exports) {
