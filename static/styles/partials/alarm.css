@@ -24,7 +24,7 @@ html, body {
     gap: 24px;
     height: 100%;
     width: 100%;
-    max-width: 1400px;
+    max-width: 100%;
     margin: 0 auto;
     border-radius: 16px;
     box-sizing: border-box;
@@ -787,5 +787,148 @@ html, body {
     .control-box {
         padding: 10px;
         margin-bottom: 10px;
+    }
+}
+
+/* ========== TELAS GRANDES ========== */
+
+/* Full HD+ (1920px+) */
+@media screen and (min-width: 1920px) {
+    #alarmScreen {
+        padding: 15px;
+        height: calc(100vh - var(--menu-height, 100px) - 30px);
+    }
+    
+    .alarm-container {
+        gap: 20px;
+        max-width: 100%;
+    }
+    
+    .alarm-list-container {
+        flex: 0 0 82%;
+    }
+    
+    .alarm-controls {
+        flex: 0 0 18%;
+        min-width: 220px;
+        max-width: 320px;
+    }
+    
+    .filtro-btn {
+        font-size: 15px;
+        padding: 14px 22px;
+    }
+    
+    .alarm-time, .alarm-description {
+        font-size: 17px;
+    }
+    
+    .toggle-text {
+        font-size: 17px;
+    }
+    
+    .priority-legend h3 {
+        font-size: 20px;
+    }
+    
+    .legend-text {
+        font-size: 15px;
+    }
+}
+
+/* 2K/QHD (2560px+) */
+@media screen and (min-width: 2560px) {
+    #alarmScreen {
+        padding: 18px;
+    }
+    
+    .alarm-container {
+        gap: 24px;
+    }
+    
+    .alarm-controls {
+        min-width: 260px;
+        max-width: 380px;
+    }
+    
+    .filtro-btn {
+        font-size: 17px;
+        padding: 16px 26px;
+    }
+    
+    .alarm-time, .alarm-description {
+        font-size: 19px;
+    }
+    
+    .toggle-text {
+        font-size: 19px;
+    }
+    
+    .priority-legend h3 {
+        font-size: 22px;
+    }
+    
+    .legend-text {
+        font-size: 17px;
+    }
+    
+    .qa-icon {
+        width: 52px;
+        height: 52px;
+    }
+    
+    .qa-label {
+        font-size: 16px;
+    }
+}
+
+/* 4K (3840px+) */
+@media screen and (min-width: 3840px) {
+    #alarmScreen {
+        padding: 22px;
+    }
+    
+    .alarm-container {
+        gap: 30px;
+    }
+    
+    .alarm-controls {
+        min-width: 320px;
+        max-width: 460px;
+    }
+    
+    .filtro-btn {
+        font-size: 20px;
+        padding: 20px 32px;
+    }
+    
+    .alarm-time, .alarm-description {
+        font-size: 22px;
+    }
+    
+    .toggle-text {
+        font-size: 22px;
+    }
+    
+    .priority-legend h3 {
+        font-size: 26px;
+    }
+    
+    .legend-text {
+        font-size: 20px;
+    }
+    
+    .qa-icon {
+        width: 64px;
+        height: 64px;
+    }
+    
+    .qa-label {
+        font-size: 19px;
+    }
+    
+    .alarm-header {
+        height: 45px;
+        font-size: 17px;
     }
 }

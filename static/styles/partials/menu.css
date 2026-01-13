@@ -367,10 +367,11 @@
 /* Botão de desligar */
 .shutdown-btn {
     position: fixed;
-    bottom: clamp(20px, 4vh, 36px);
+    bottom: calc(var(--menu-height, 100px) / 2 + 15px);
     left: clamp(10px, 2vw, 19px);
-    width: clamp(35px, 5vw, 50px);
-    height: clamp(35px, 5vw, 50px);
+    transform: translateY(50%);
+    width: clamp(38px, 5vw, 50px);
+    height: clamp(38px, 5vw, 50px);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -401,7 +402,7 @@
 }
 
 .shutdown-btn:hover {
-    transform: translateY(-2px);
+    transform: translateY(calc(50% - 2px));
     box-shadow: 
         0 6px 12px rgba(220, 38, 38, 0.4),
         0 4px 8px rgba(0, 0, 0, 0.3);
@@ -412,17 +413,146 @@
 }
 
 .shutdown-btn:active {
-    transform: translateY(0);
+    transform: translateY(50%);
     box-shadow: 
         0 2px 4px rgba(127, 29, 29, 0.3),
         0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .shutdown-icon {
-    width: clamp(16px, 2.5vw, 24px);
-    height: clamp(16px, 2.5vw, 24px);
+    width: clamp(18px, 2.5vw, 26px) !important;
+    height: clamp(18px, 2.5vw, 26px) !important;
     object-fit: contain;
     filter: brightness(0) invert(1);
+}
+
+/* Botão de configuração (apenas para Técnico) */
+.config-btn {
+    position: fixed;
+    bottom: calc(var(--menu-height, 100px) / 2 + 15px);
+    left: clamp(90px, 12vw, 130px);
+    transform: translateY(50%);
+    width: clamp(38px, 5vw, 50px);
+    height: clamp(38px, 5vw, 50px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(145deg, #4b5563, #374151);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 
+        0 4px 8px rgba(55, 65, 81, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 1001;
+}
+
+.config-btn::after {
+    content: 'Configuração';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: clamp(9px, 1.2vw, 12px);
+    color: #000;
+    font-weight: 700;
+    margin-top: 6px;
+    white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(255,255,255,0.9);
+    transition: transform 0.3s ease;
+}
+
+.config-btn:hover {
+    transform: translateY(calc(50% - 2px));
+    box-shadow: 
+        0 6px 12px rgba(75, 85, 99, 0.4),
+        0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.config-btn:hover::after {
+    transform: translateX(-50%) translateY(-2px);
+}
+
+.config-btn:active {
+    transform: translateY(50%);
+    box-shadow: 
+        0 2px 4px rgba(55, 65, 81, 0.3),
+        0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.config-icon {
+    width: clamp(18px, 2.5vw, 26px) !important;
+    height: clamp(18px, 2.5vw, 26px) !important;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+
+/* Botão de reset (apenas para Técnico) */
+.reset-btn {
+    position: fixed;
+    bottom: calc(var(--menu-height, 100px) / 2 + 15px);
+    left: clamp(160px, 23vw, 220px);
+    transform: translateY(50%);
+    width: clamp(38px, 5vw, 50px);
+    height: clamp(38px, 5vw, 50px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(145deg, #4b5563, #374151);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 
+        0 4px 8px rgba(55, 65, 81, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 1001;
+    padding: 0;
+}
+
+.reset-btn::after {
+    content: 'Reset Grid';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: clamp(9px, 1.2vw, 12px);
+    color: #000;
+    font-weight: 700;
+    margin-top: 6px;
+    white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(255,255,255,0.9);
+    transition: transform 0.3s ease;
+}
+
+.reset-btn:hover {
+    transform: translateY(calc(50% - 2px));
+    box-shadow: 
+        0 6px 12px rgba(75, 85, 99, 0.4),
+        0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.reset-btn:hover::after {
+    transform: translateX(-50%) translateY(-2px);
+}
+
+.reset-btn:active {
+    transform: translateY(50%);
+    box-shadow: 
+        0 2px 4px rgba(55, 65, 81, 0.3),
+        0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.reset-icon {
+    width: clamp(18px, 2.5vw, 26px);
+    height: clamp(18px, 2.5vw, 26px);
+    display: block;
+    line-height: 1;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
 }
 
 /* Estados de transição */
@@ -488,6 +618,35 @@
         width: 90px;
         height: 90px;
     }
+    
+    /* Botões laterais maiores */
+    .shutdown-btn {
+        width: clamp(38px, 3.5vw, 50px);
+        height: clamp(38px, 3.5vw, 50px);
+    }
+    
+    .shutdown-icon {
+        width: clamp(18px, 2.2vw, 24px) !important;
+        height: clamp(18px, 2.2vw, 24px) !important;
+    }
+    
+    .shutdown-btn::after {
+        font-size: clamp(11px, 1vw, 14px);
+    }
+    
+    .login-btn {
+        width: clamp(45px, 4vw, 60px);
+        height: clamp(45px, 4vw, 60px);
+    }
+    
+    .login-btn-icon {
+        width: clamp(20px, 2vw, 28px);
+        height: clamp(20px, 2vw, 28px);
+    }
+    
+    .login-label {
+        font-size: clamp(11px, 1vw, 14px);
+    }
 }
 
 /* Telas 2K/QHD (2560px+) */
@@ -526,6 +685,35 @@
         width: 100px;
         height: 100px;
     }
+    
+    /* Botões laterais maiores */
+    .shutdown-btn {
+        width: clamp(45px, 4vw, 60px);
+        height: clamp(45px, 4vw, 60px);
+    }
+    
+    .shutdown-icon {
+        width: clamp(20px, 2.3vw, 28px) !important;
+        height: clamp(20px, 2.3vw, 28px) !important;
+    }
+    
+    .shutdown-btn::after {
+        font-size: clamp(13px, 1.2vw, 17px);
+    }
+    
+    .login-btn {
+        width: clamp(55px, 4.5vw, 75px);
+        height: clamp(55px, 4.5vw, 75px);
+    }
+    
+    .login-btn-icon {
+        width: clamp(26px, 2.4vw, 36px);
+        height: clamp(26px, 2.4vw, 36px);
+    }
+    
+    .login-label {
+        font-size: clamp(13px, 1.2vw, 17px);
+    }
 }
 
 /* Telas 4K (3840px+) */
@@ -563,6 +751,35 @@
     .logo-btn img {
         width: 110px;
         height: 110px;
+    }
+    
+    /* Botões laterais maiores */
+    .shutdown-btn {
+        width: clamp(55px, 4.5vw, 75px);
+        height: clamp(55px, 4.5vw, 75px);
+    }
+    
+    .shutdown-icon {
+        width: clamp(22px, 2.5vw, 32px) !important;
+        height: clamp(22px, 2.5vw, 32px) !important;
+    }
+    
+    .shutdown-btn::after {
+        font-size: clamp(16px, 1.4vw, 22px);
+    }
+    
+    .login-btn {
+        width: clamp(68px, 5vw, 95px);
+        height: clamp(68px, 5vw, 95px);
+    }
+    
+    .login-btn-icon {
+        width: clamp(32px, 2.8vw, 46px);
+        height: clamp(32px, 2.8vw, 46px);
+    }
+    
+    .login-label {
+        font-size: clamp(16px, 1.4vw, 22px);
     }
 }
 
@@ -871,14 +1088,14 @@
     }
     
     .shutdown-btn {
-        width: 38px;
-        height: 38px;
+        width: 32px;
+        height: 32px;
         bottom: calc(var(--menu-height) + 8px);
     }
     
     .shutdown-icon {
-        width: 16px;
-        height: 16px;
+        width: 14px !important;
+        height: 14px !important;
     }
 }
 
@@ -900,14 +1117,14 @@
     }
     
     .shutdown-btn {
-        width: 34px;
-        height: 34px;
+        width: 28px;
+        height: 28px;
         bottom: calc(var(--menu-height) + 5px);
     }
     
     .shutdown-icon {
-        width: 14px;
-        height: 14px;
+        width: 12px !important;
+        height: 12px !important;
     }
 }
 
@@ -932,14 +1149,14 @@
     }
     
     .shutdown-btn {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
         bottom: 8px;
     }
     
     .shutdown-icon {
-        width: 14px;
-        height: 14px;
+        width: 12px !important;
+        height: 12px !important;
     }
 }
 
@@ -976,9 +1193,9 @@
     right: clamp(10px, 2vw, 19px);
     z-index: 1001;
     display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
 }
 
 .login-btn {
@@ -1022,8 +1239,31 @@
 /* Ajustes para mobile nos botões laterais */
 @media screen and (max-width: 768px) {
     .login-container,
-    .shutdown-btn {
-        bottom: calc(var(--menu-height) + 15px);
+    .shutdown-btn,
+    .config-btn,
+    .reset-btn {
+        bottom: calc(var(--menu-height) / 2 + 15px);
+        transform: translateY(50%);
+    }
+    
+    .shutdown-btn:hover,
+    .config-btn:hover,
+    .reset-btn:hover {
+        transform: translateY(calc(50% - 2px));
+    }
+    
+    .shutdown-btn:active,
+    .config-btn:active,
+    .reset-btn:active {
+        transform: translateY(50%);
+    }
+    
+    .config-btn {
+        left: clamp(80px, 11vw, 110px);
+    }
+    
+    .reset-btn {
+        left: clamp(190px, 26vw, 260px);
     }
 }
 

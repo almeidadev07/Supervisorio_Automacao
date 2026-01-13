@@ -1,7 +1,7 @@
 #balanceScreen {
     display: flex;
     height: calc(100vh - var(--menu-height, 100px) - 20px);
-    padding: 20px;
+    padding: clamp(10px, 1.5vw, 20px);
     margin: 0;
     background: #f8f9fa;
     position: relative;
@@ -11,11 +11,11 @@
 
 .balance-container {
     display: flex;
-    gap: 24px;
+    gap: clamp(12px, 1.5vw, 24px);
     height: 100%;
     width: 100%;
-    max-width: 1400px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
     border-radius: 16px;
     box-sizing: border-box;
     overflow: hidden;
@@ -37,7 +37,7 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
     overflow: hidden;
     box-sizing: border-box;
-    padding: 20px;
+    padding: clamp(12px, 1.5vw, 20px);
 }
 
 .balance-header {
@@ -73,25 +73,28 @@
 .balance-grid {
     display: grid;
     /* Número de colunas é definido dinamicamente via JavaScript baseado na quantidade de linhas */
-    grid-template-columns: repeat(6, 1fr);
-    gap: 16px;
-    justify-content: center;
-    align-content: center;
+    grid-template-columns: repeat(var(--balance-cols, 6), 1fr);
+    gap: clamp(10px, 1.2vw, 20px);
+    justify-content: stretch;
+    align-content: stretch;
     flex: 1;
+    width: 100%;
 }
 
 .balance-card {
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 16px;
-    padding: 16px;
+    padding: clamp(12px, 1.5vw, 20px);
     text-align: center;
     background: rgba(255, 255, 255, 0.95);
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
-    height: 260px;
+    min-height: clamp(200px, 30vh, 300px);
+    height: auto;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+    flex: 1;
 }
 
 .calibrate-actions { 
@@ -598,5 +601,133 @@ html body #loading-modal .loading-content .loading-progress .progress-bar #loadi
 @media (max-width: 1024px) {
     .balance-grid {
         grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+/* ========== TELAS GRANDES ========== */
+
+/* Full HD+ (1920px+) */
+@media screen and (min-width: 1920px) {
+    #balanceScreen {
+        padding: 12px;
+        height: calc(100vh - var(--menu-height, 100px) - 25px);
+    }
+    
+    .balance-container {
+        gap: clamp(15px, 1.8vw, 28px);
+    }
+    
+    .balance-panel {
+        padding: clamp(15px, 1.8vw, 25px);
+    }
+    
+    .balance-grid {
+        gap: clamp(12px, 1.5vw, 24px);
+    }
+    
+    .balance-card {
+        min-height: clamp(240px, 35vh, 350px);
+        padding: clamp(15px, 1.8vw, 24px);
+    }
+    
+    .balance-card h3 {
+        font-size: clamp(16px, 1.2vw, 22px);
+    }
+    
+    .weight-value {
+        font-size: clamp(38px, 3vw, 55px);
+    }
+    
+    #unit {
+        font-size: clamp(32px, 2.5vw, 45px) !important;
+    }
+    
+    .calibrate-btn img {
+        width: clamp(90px, 7vw, 120px);
+        height: clamp(80px, 6vw, 100px);
+    }
+}
+
+/* 2K/QHD (2560px+) */
+@media screen and (min-width: 2560px) {
+    #balanceScreen {
+        padding: 15px;
+        height: calc(100vh - var(--menu-height, 110px) - 22px);
+    }
+    
+    .balance-container {
+        gap: clamp(18px, 2vw, 35px);
+    }
+    
+    .balance-panel {
+        padding: clamp(18px, 2vw, 30px);
+    }
+    
+    .balance-grid {
+        gap: clamp(15px, 1.8vw, 30px);
+    }
+    
+    .balance-card {
+        min-height: clamp(280px, 38vh, 420px);
+        padding: clamp(18px, 2vw, 28px);
+    }
+    
+    .balance-card h3 {
+        font-size: clamp(18px, 1.4vw, 28px);
+    }
+    
+    .weight-value {
+        font-size: clamp(45px, 3.5vw, 70px);
+    }
+    
+    #unit {
+        font-size: clamp(38px, 3vw, 55px) !important;
+    }
+    
+    .calibrate-btn img {
+        width: clamp(100px, 8vw, 150px);
+        height: clamp(90px, 7vw, 130px);
+    }
+}
+
+/* 4K (3840px+) */
+@media screen and (min-width: 3840px) {
+    #balanceScreen {
+        padding: 18px;
+        height: calc(100vh - var(--menu-height, 120px) - 20px);
+    }
+    
+    .balance-container {
+        gap: clamp(22px, 2.2vw, 45px);
+    }
+    
+    .balance-panel {
+        padding: clamp(22px, 2.2vw, 38px);
+    }
+    
+    .balance-grid {
+        gap: clamp(18px, 2vw, 38px);
+    }
+    
+    .balance-card {
+        min-height: clamp(320px, 42vh, 520px);
+        padding: clamp(22px, 2.2vw, 35px);
+    }
+    
+    .balance-card h3 {
+        font-size: clamp(22px, 1.6vw, 36px);
+    }
+    
+    .weight-value {
+        font-size: clamp(55px, 4vw, 90px);
+    }
+    
+    #unit {
+        font-size: clamp(45px, 3.5vw, 70px) !important;
+    }
+    
+    .calibrate-btn img {
+        width: clamp(120px, 9vw, 180px);
+        height: clamp(100px, 8vw, 160px);
     }
 }

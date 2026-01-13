@@ -3240,6 +3240,9 @@ function handleResetClick(e) {
     }
 }
 
+// Exporta função para uso global
+window.handleResetClick = handleResetClick;
+
 // Salva posições quando a página for fechada ou recarregada
 window.addEventListener('beforeunload', () => {
     saveGridPositions();

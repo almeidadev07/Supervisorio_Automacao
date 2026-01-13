@@ -2,7 +2,8 @@
 .login-container {
     position: fixed;
     right: clamp(10px, 2vw, 19px);
-    bottom: clamp(20px, 4vh, 36px);
+    bottom: calc(var(--menu-height, 100px) / 2);
+    transform: translateY(50%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -27,8 +28,8 @@
 }
 
 #login-btn {
-    width: clamp(35px, 5vw, 50px);
-    height: clamp(35px, 5vw, 50px);
+    width: clamp(45px, 6vw, 60px);
+    height: clamp(45px, 6vw, 60px);
     background: linear-gradient(145deg, #ffffff, #f0f0f0);
     border: none;
     border-radius: 50%;
@@ -61,8 +62,8 @@
 }
 
 #login-btn img {
-    width: clamp(18px, 3vw, 28px);
-    height: clamp(18px, 3vw, 28px);
+    width: clamp(24px, 3.5vw, 36px);
+    height: clamp(24px, 3.5vw, 36px);
     object-fit: contain;
     z-index: 1;
 }
@@ -74,16 +75,23 @@
     gap: 2px;
 }
 
-.user-name {
-    font-size: clamp(9px, 1.2vw, 12px);
-    font-weight: 700;
-    color: #000;
-    margin-top: 6px;
-    min-width: clamp(50px, 8vw, 70px);
-    text-align: center;
+.user-name,
+#user-display,
+#user-display.user-name,
+.login-container .user-name,
+.login-container #user-display,
+span#user-display,
+span.user-name {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: #000 !important;
+    margin-top: 8px;
+    min-width: 60px !important;
+    text-align: center !important;
     transition: transform 0.3s ease;
     white-space: nowrap;
-    text-shadow: 0 1px 3px rgba(255,255,255,0.9);
+    text-shadow: 0 1px 3px rgba(255,255,255,0.9) !important;
+    display: inline-block !important;
 }
 
 .logout-btn {
@@ -251,13 +259,15 @@
 /* Responsivo para mobile */
 @media screen and (max-width: 768px) {
     .login-container {
-        bottom: calc(var(--menu-height, 90px) + 15px);
+        bottom: calc(var(--menu-height, 90px) / 2);
+        transform: translateY(50%);
     }
 }
 
 @media screen and (max-width: 480px) {
     .login-container {
-        bottom: calc(var(--menu-height, 80px) + 10px);
+        bottom: calc(var(--menu-height, 80px) / 2);
+        transform: translateY(50%);
     }
     
     #login-modal .modal-content {
@@ -267,8 +277,17 @@
 
 @media screen and (max-width: 320px) {
     .login-container {
-        bottom: calc(var(--menu-height, 70px) + 8px);
+        bottom: calc(var(--menu-height, 70px) / 2);
+        transform: translateY(50%);
     }
 }
 
 /* Mostra o botão de logoff apenas quando logado como técnico (feito via JS) */
+
+/* Garantir que o texto Operador tenha o mesmo tamanho do texto Desligar */
+span#user-display.user-name,
+.login-container span#user-display,
+.login-container .user-name {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+}

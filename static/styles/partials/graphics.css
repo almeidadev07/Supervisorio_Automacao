@@ -99,10 +99,10 @@
     flex-direction: column;
     background: rgba(255, 255, 255, 0.95);
     border-radius: 20px;
-    padding: 20px;
+    padding: 15px;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
-    margin-bottom: 15px;
+    margin-bottom: 8px;
     min-height: 0; /* Permite que o flex item encolha */
 }
 
@@ -111,11 +111,10 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 300px;
-    max-height: 400px;
+    min-height: 250px;
     background: rgba(248, 249, 250, 0.8);
     border-radius: 15px;
-    padding: 15px;
+    padding: 10px;
     position: relative;
     overflow: hidden;
 }
@@ -132,8 +131,9 @@
     justify-content: center;
     align-items: center; /* centraliza conteúdo no eixo vertical */
     gap: 28px; /* gap um pouco menor para reduzir largura/altura visual */
-    margin-top: 8px;
-    padding: 6px 10px; /* reduz altura do container cinza */
+    margin-top: 6px;
+    margin-bottom: 0;
+    padding: 5px 10px; /* reduz altura do container cinza */
     background: rgba(240, 242, 245, 0.8);
     border-radius: 10px;
     flex-shrink: 0;
@@ -401,5 +401,94 @@
     /* Em telas muito pequenas, mantém quebra de linha das classes */
     .graphics-info .classes-legend {
         flex-wrap: wrap;
+    }
+}
+
+/* ========== TELAS GRANDES ========== */
+
+/* Full HD+ (1920px+) */
+@media screen and (min-width: 1920px) {
+    .graphics-container {
+        padding: 15px;
+        height: calc(100vh - var(--menu-height, 100px) - 25px);
+    }
+    
+    .graphics-header h1 {
+        font-size: clamp(1.8rem, 2.2vw, 2.8rem);
+    }
+    
+    .graphics-controls .control-btn {
+        padding: clamp(12px, 1.2vw, 18px) clamp(20px, 2vw, 32px);
+        font-size: clamp(1rem, 1.1vw, 1.3rem);
+    }
+    
+    .chart-container {
+        min-height: 280px;
+    }
+    
+    .legend-item {
+        font-size: clamp(1rem, 1.1vw, 1.4rem);
+    }
+    
+    .info-value {
+        font-size: clamp(1.2rem, 1.3vw, 1.7rem);
+    }
+}
+
+/* 2K/QHD (2560px+) */
+@media screen and (min-width: 2560px) {
+    .graphics-container {
+        padding: 18px;
+        height: calc(100vh - var(--menu-height, 110px) - 22px);
+    }
+    
+    .graphics-header h1 {
+        font-size: clamp(2.2rem, 2.5vw, 3.5rem);
+    }
+    
+    .graphics-controls .control-btn {
+        padding: clamp(14px, 1.4vw, 22px) clamp(24px, 2.2vw, 40px);
+        font-size: clamp(1.1rem, 1.2vw, 1.5rem);
+    }
+    
+    .chart-container {
+        min-height: 320px;
+    }
+    
+    .legend-item {
+        font-size: clamp(1.1rem, 1.2vw, 1.6rem);
+    }
+    
+    .info-value {
+        font-size: clamp(1.4rem, 1.5vw, 2rem);
+    }
+}
+
+/* 4K (3840px+) */
+@media screen and (min-width: 3840px) {
+    .graphics-container {
+        padding: 22px;
+        height: calc(100vh - var(--menu-height, 120px) - 20px);
+    }
+    
+    .graphics-header h1 {
+        font-size: clamp(2.6rem, 3vw, 4.5rem);
+    }
+    
+    .graphics-controls .control-btn {
+        padding: clamp(16px, 1.6vw, 28px) clamp(28px, 2.5vw, 50px);
+        font-size: clamp(1.2rem, 1.4vw, 1.8rem);
+    }
+    
+    .chart-container {
+        min-height: 400px;
+    }
+    
+    .legend-item {
+        font-size: clamp(1.3rem, 1.4vw, 2rem);
+    }
+    
+    .info-value {
+        font-size: clamp(1.6rem, 1.8vw, 2.5rem);
     }
 }

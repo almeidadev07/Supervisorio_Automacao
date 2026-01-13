@@ -120,19 +120,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Função para salvar configurações de visibilidade
   function saveVisibilitySettings() {
+    // Busca os elementos diretamente do DOM para garantir que estejam disponíveis
+    const checkboxMagnaOvoscopiaEl = document.getElementById('checkbox-magna-ovoscopia');
+    const checkboxCrackEl = document.getElementById('checkbox-crack');
+    const checkboxNebulizadorEl = document.getElementById('checkbox-nebulizador');
+    const checkboxLampadaUVEl = document.getElementById('checkbox-lampada-uv');
+    const checkboxEscovaEl = document.getElementById('checkbox-escova');
+    const embaladoraQuantityEl = document.getElementById('embaladora-quantity');
+    
     const settings = {
       perifericos: true, // Sempre true, pois o botão de periféricos sempre existe
-      magnaOvoscopia: checkboxMagnaOvoscopia?.checked ?? true,
-      crack: checkboxCrack?.checked ?? true,
-      nebulizador: checkboxNebulizador?.checked ?? true,
-      lampadaUV: checkboxLampadaUV?.checked ?? true,
-      escova: checkboxEscova?.checked ?? true
+      magnaOvoscopia: checkboxMagnaOvoscopiaEl?.checked ?? true,
+      crack: checkboxCrackEl?.checked ?? true,
+      nebulizador: checkboxNebulizadorEl?.checked ?? true,
+      lampadaUV: checkboxLampadaUVEl?.checked ?? true,
+      escova: checkboxEscovaEl?.checked ?? true
     };
     localStorage.setItem(GRID_VISIBILITY_KEY, JSON.stringify(settings));
     
     // Salva quantidade de embaladora
-    if (embaladoraQuantity) {
-      localStorage.setItem(EMBALADORA_QUANTITY_KEY, embaladoraQuantity.value);
+    if (embaladoraQuantityEl) {
+      localStorage.setItem(EMBALADORA_QUANTITY_KEY, embaladoraQuantityEl.value);
     }
     
     // Aplica as configurações no grid
@@ -145,20 +153,29 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Função para restaurar valores iniciais (usado no cancelar)
   function restoreInitialSettings() {
+    // Busca os elementos diretamente do DOM para garantir que estejam disponíveis
+    const checkboxMagnaOvoscopiaEl = document.getElementById('checkbox-magna-ovoscopia');
+    const checkboxCrackEl = document.getElementById('checkbox-crack');
+    const checkboxNebulizadorEl = document.getElementById('checkbox-nebulizador');
+    const checkboxLampadaUVEl = document.getElementById('checkbox-lampada-uv');
+    const checkboxEscovaEl = document.getElementById('checkbox-escova');
+    const embaladoraQuantityEl = document.getElementById('embaladora-quantity');
+    const selectEl = document.getElementById('machine-select');
+    
     if (initialSettings) {
-      if (checkboxMagnaOvoscopia) checkboxMagnaOvoscopia.checked = initialSettings.magnaOvoscopia;
-      if (checkboxCrack) checkboxCrack.checked = initialSettings.crack;
-      if (checkboxNebulizador) checkboxNebulizador.checked = initialSettings.nebulizador;
-      if (checkboxLampadaUV) checkboxLampadaUV.checked = initialSettings.lampadaUV;
-      if (checkboxEscova) checkboxEscova.checked = initialSettings.escova;
+      if (checkboxMagnaOvoscopiaEl) checkboxMagnaOvoscopiaEl.checked = initialSettings.magnaOvoscopia;
+      if (checkboxCrackEl) checkboxCrackEl.checked = initialSettings.crack;
+      if (checkboxNebulizadorEl) checkboxNebulizadorEl.checked = initialSettings.nebulizador;
+      if (checkboxLampadaUVEl) checkboxLampadaUVEl.checked = initialSettings.lampadaUV;
+      if (checkboxEscovaEl) checkboxEscovaEl.checked = initialSettings.escova;
     }
     
-    if (initialQuantity && embaladoraQuantity) {
-      embaladoraQuantity.value = initialQuantity;
+    if (initialQuantity && embaladoraQuantityEl) {
+      embaladoraQuantityEl.value = initialQuantity;
     }
     
-    if (initialMachine && select) {
-      select.value = initialMachine;
+    if (initialMachine && selectEl) {
+      selectEl.value = initialMachine;
     }
     
     console.log('[MACHINE_SELECT] Valores iniciais restaurados');
@@ -166,16 +183,25 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Função para capturar valores iniciais quando o modal abre
   function captureInitialSettings() {
+    // Busca os elementos diretamente do DOM para garantir que estejam disponíveis
+    const checkboxMagnaOvoscopiaEl = document.getElementById('checkbox-magna-ovoscopia');
+    const checkboxCrackEl = document.getElementById('checkbox-crack');
+    const checkboxNebulizadorEl = document.getElementById('checkbox-nebulizador');
+    const checkboxLampadaUVEl = document.getElementById('checkbox-lampada-uv');
+    const checkboxEscovaEl = document.getElementById('checkbox-escova');
+    const embaladoraQuantityEl = document.getElementById('embaladora-quantity');
+    const selectEl = document.getElementById('machine-select');
+    
     initialSettings = {
-      magnaOvoscopia: checkboxMagnaOvoscopia?.checked ?? true,
-      crack: checkboxCrack?.checked ?? true,
-      nebulizador: checkboxNebulizador?.checked ?? true,
-      lampadaUV: checkboxLampadaUV?.checked ?? true,
-      escova: checkboxEscova?.checked ?? true
+      magnaOvoscopia: checkboxMagnaOvoscopiaEl?.checked ?? true,
+      crack: checkboxCrackEl?.checked ?? true,
+      nebulizador: checkboxNebulizadorEl?.checked ?? true,
+      lampadaUV: checkboxLampadaUVEl?.checked ?? true,
+      escova: checkboxEscovaEl?.checked ?? true
     };
     
-    initialQuantity = embaladoraQuantity?.value || '24';
-    initialMachine = select?.value || null;
+    initialQuantity = embaladoraQuantityEl?.value || '24';
+    initialMachine = selectEl?.value || null;
     
     console.log('[MACHINE_SELECT] Valores iniciais capturados:', {
       settings: initialSettings,
@@ -187,57 +213,121 @@ document.addEventListener('DOMContentLoaded', () => {
   // Função para carregar configurações de visibilidade
   function loadVisibilitySettings() {
     try {
+      // Busca os elementos diretamente do DOM para garantir que estejam disponíveis
+      const checkboxMagnaOvoscopiaEl = document.getElementById('checkbox-magna-ovoscopia');
+      const checkboxCrackEl = document.getElementById('checkbox-crack');
+      const checkboxNebulizadorEl = document.getElementById('checkbox-nebulizador');
+      const checkboxLampadaUVEl = document.getElementById('checkbox-lampada-uv');
+      const checkboxEscovaEl = document.getElementById('checkbox-escova');
+      const embaladoraQuantityEl = document.getElementById('embaladora-quantity');
+      
+      console.log('[MACHINE_SELECT] Elementos encontrados:', {
+        magnaOvoscopia: !!checkboxMagnaOvoscopiaEl,
+        crack: !!checkboxCrackEl,
+        nebulizador: !!checkboxNebulizadorEl,
+        lampadaUV: !!checkboxLampadaUVEl,
+        escova: !!checkboxEscovaEl,
+        embaladoraQuantity: !!embaladoraQuantityEl
+      });
+      
       const saved = localStorage.getItem(GRID_VISIBILITY_KEY);
+      const savedQuantity = localStorage.getItem(EMBALADORA_QUANTITY_KEY);
+      
+      console.log('[MACHINE_SELECT] Valores no localStorage:', {
+        visibility: saved,
+        quantity: savedQuantity
+      });
+      
       if (saved) {
         const settings = JSON.parse(saved);
-        if (checkboxMagnaOvoscopia) checkboxMagnaOvoscopia.checked = settings.magnaOvoscopia !== false;
-        if (checkboxCrack) checkboxCrack.checked = settings.crack !== false;
-        if (checkboxNebulizador) checkboxNebulizador.checked = settings.nebulizador !== false;
-        if (checkboxLampadaUV) checkboxLampadaUV.checked = settings.lampadaUV !== false;
-        if (checkboxEscova) checkboxEscova.checked = settings.escova !== false;
+        console.log('[MACHINE_SELECT] Carregando configurações salvas:', settings);
+        
+        // Aplica os valores salvos
+        if (checkboxMagnaOvoscopiaEl) {
+          checkboxMagnaOvoscopiaEl.checked = settings.magnaOvoscopia !== false;
+          console.log('[MACHINE_SELECT] ✅ Magna Ovoscopia:', checkboxMagnaOvoscopiaEl.checked);
+        }
+        if (checkboxCrackEl) {
+          checkboxCrackEl.checked = settings.crack !== false;
+          console.log('[MACHINE_SELECT] ✅ Crack:', checkboxCrackEl.checked);
+        }
+        if (checkboxNebulizadorEl) {
+          checkboxNebulizadorEl.checked = settings.nebulizador !== false;
+          console.log('[MACHINE_SELECT] ✅ Nebulizador:', checkboxNebulizadorEl.checked);
+        }
+        if (checkboxLampadaUVEl) {
+          checkboxLampadaUVEl.checked = settings.lampadaUV !== false;
+          console.log('[MACHINE_SELECT] ✅ Lâmpada UV:', checkboxLampadaUVEl.checked);
+        }
+        if (checkboxEscovaEl) {
+          checkboxEscovaEl.checked = settings.escova !== false;
+          console.log('[MACHINE_SELECT] ✅ Escova:', checkboxEscovaEl.checked);
+        }
       } else {
         // Valores padrão: todos marcados
-        if (checkboxMagnaOvoscopia) checkboxMagnaOvoscopia.checked = true;
-        if (checkboxCrack) checkboxCrack.checked = true;
-        if (checkboxNebulizador) checkboxNebulizador.checked = true;
-        if (checkboxLampadaUV) checkboxLampadaUV.checked = true;
-        if (checkboxEscova) checkboxEscova.checked = true;
+        console.log('[MACHINE_SELECT] Nenhuma configuração salva encontrada, usando valores padrão');
+        if (checkboxMagnaOvoscopiaEl) checkboxMagnaOvoscopiaEl.checked = true;
+        if (checkboxCrackEl) checkboxCrackEl.checked = true;
+        if (checkboxNebulizadorEl) checkboxNebulizadorEl.checked = true;
+        if (checkboxLampadaUVEl) checkboxLampadaUVEl.checked = true;
+        if (checkboxEscovaEl) checkboxEscovaEl.checked = true;
       }
       
       // Carrega quantidade de embaladora
-      const savedQuantity = localStorage.getItem(EMBALADORA_QUANTITY_KEY);
-      if (embaladoraQuantity && savedQuantity) {
-        embaladoraQuantity.value = savedQuantity;
-      } else if (embaladoraQuantity) {
+      if (embaladoraQuantityEl && savedQuantity) {
+        embaladoraQuantityEl.value = savedQuantity;
+        console.log('[MACHINE_SELECT] ✅ Quantidade de embaladora carregada:', savedQuantity);
+      } else if (embaladoraQuantityEl) {
         // Valor padrão: 24
-        embaladoraQuantity.value = '24';
+        embaladoraQuantityEl.value = '24';
+        console.log('[MACHINE_SELECT] Usando quantidade padrão de embaladora: 24');
+      } else {
+        console.warn('[MACHINE_SELECT] ⚠️ Elemento embaladora-quantity não encontrado');
       }
+      
+      // Verifica se os valores foram aplicados corretamente
+      setTimeout(() => {
+        console.log('[MACHINE_SELECT] Verificação final dos valores aplicados:', {
+          magnaOvoscopia: checkboxMagnaOvoscopiaEl?.checked,
+          crack: checkboxCrackEl?.checked,
+          nebulizador: checkboxNebulizadorEl?.checked,
+          lampadaUV: checkboxLampadaUVEl?.checked,
+          escova: checkboxEscovaEl?.checked,
+          quantity: embaladoraQuantityEl?.value
+        });
+      }, 100);
     } catch (error) {
-      console.error('Erro ao carregar configurações de visibilidade:', error);
+      console.error('[MACHINE_SELECT] ❌ Erro ao carregar configurações de visibilidade:', error);
     }
   }
   
-  // Função para mostrar o modal
+  // Função para mostrar o modal (apenas abre, sem carregar dados)
   function showModal() {
-    if (modal) {
-      // Carrega as configurações salvas primeiro
-      loadVisibilitySettings();
-      
-      // Captura os valores iniciais ANTES de permitir alterações
-      captureInitialSettings();
-      
-      modal.classList.remove('hidden');
-      modal.classList.add('show');
-      modal.style.display = 'block';
+    // Busca o modal novamente caso não esteja disponível
+    const modalEl = modal || document.getElementById('machine-modal');
+    if (modalEl) {
+      modalEl.classList.remove('hidden');
+      modalEl.classList.add('show');
+      modalEl.style.display = 'flex';
       
       // Garante que o botão de confirmar está habilitado quando o modal abre
-      if (btnConfirm) {
-        btnConfirm.disabled = false;
-        btnConfirm.style.opacity = '1';
-        btnConfirm.style.cursor = 'pointer';
+      const confirmBtn = btnConfirm || document.getElementById('btn-confirm-machine');
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+        confirmBtn.style.cursor = 'pointer';
       }
     }
   }
+  
+  // Exporta showModal também para uso direto
+  window.showModal = showModal;
+  
+  // Exporta função básica (será sobrescrita abaixo com a versão completa)
+  // window.showMachineModal será definido após openModalWithData
+  
+  // Também exporta como showModal para compatibilidade
+  window.showModal = showModal;
 
   // Função para esconder o modal
   function hideModal(restoreValues = false) {
@@ -462,11 +552,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Eventos do modal
-  btnChangeMachine.addEventListener('click', async () => {
+  // Função auxiliar para abrir modal com todas as configurações
+  async function openModalWithData() {
+    console.log('[MACHINE_SELECT] Abrindo modal com dados...');
+    
+    // Primeiro abre o modal para garantir que os elementos estejam no DOM
     showModal();
+    
+    // Aguarda múltiplos frames para garantir que o DOM esteja completamente atualizado
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    
+    // Agora carrega as configurações salvas do localStorage
+    console.log('[MACHINE_SELECT] Carregando configurações salvas no modal...');
+    loadVisibilitySettings();
+    
+    // Aguarda mais um pouco para garantir que os valores foram aplicados
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    // Captura os valores iniciais DEPOIS de carregar (para restaurar no cancelar)
+    captureInitialSettings();
+    
+    // Carrega as máquinas e a máquina atual
     await loadMachines();
     await loadCurrentMachine();
+    
     // Destaque visual na opção conectada e evita reconfirmação desnecessária
     try {
       const cur = await fetch('/api/current').then(r => r.json()).catch(()=>null);
@@ -500,7 +609,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { once: true });
       }
     } catch(_) {}
-  });
+  }
+
+  // Eventos do modal - apenas se o botão do topo ainda existir
+  if (btnChangeMachine) {
+    btnChangeMachine.addEventListener('click', openModalWithData);
+  }
+  
+  // Atualiza a função exportada para usar a nova função auxiliar
+  // Usa uma função wrapper para garantir que funcione mesmo se chamada antes do DOM estar pronto
+  window.showMachineModal = async function() {
+    try {
+      // Verifica se os elementos necessários existem
+      if (!modal || !select) {
+        console.warn('Elementos do modal não encontrados, tentando abrir modal diretamente...');
+        const modalEl = document.getElementById('machine-modal');
+        if (modalEl) {
+          modalEl.classList.remove('hidden');
+          modalEl.classList.add('show');
+          modalEl.style.display = 'flex';
+        }
+        return;
+      }
+      
+      // Chama a função completa
+      await openModalWithData();
+    } catch (error) {
+      console.error('Erro ao abrir modal de configuração:', error);
+      // Fallback: tenta abrir o modal diretamente
+      const modalEl = document.getElementById('machine-modal');
+      if (modalEl) {
+        modalEl.classList.remove('hidden');
+        modalEl.classList.add('show');
+        modalEl.style.display = 'flex';
+      }
+    }
+  };
 
   if (btnCancel) {
     btnCancel.addEventListener('click', () => {
@@ -543,17 +687,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const machineChanged = (machineName !== initialMachine);
         
         // Verifica se há alterações nos checkboxes ou quantidade
+        // Busca os elementos diretamente do DOM para garantir que estejam disponíveis
+        const checkboxMagnaOvoscopiaEl = document.getElementById('checkbox-magna-ovoscopia');
+        const checkboxCrackEl = document.getElementById('checkbox-crack');
+        const checkboxNebulizadorEl = document.getElementById('checkbox-nebulizador');
+        const checkboxLampadaUVEl = document.getElementById('checkbox-lampada-uv');
+        const checkboxEscovaEl = document.getElementById('checkbox-escova');
+        const embaladoraQuantityEl = document.getElementById('embaladora-quantity');
+        
         const currentSettings = {
-          magnaOvoscopia: checkboxMagnaOvoscopia?.checked ?? true,
-          crack: checkboxCrack?.checked ?? true,
-          nebulizador: checkboxNebulizador?.checked ?? true,
-          lampadaUV: checkboxLampadaUV?.checked ?? true,
-          escova: checkboxEscova?.checked ?? true
+          magnaOvoscopia: checkboxMagnaOvoscopiaEl?.checked ?? true,
+          crack: checkboxCrackEl?.checked ?? true,
+          nebulizador: checkboxNebulizadorEl?.checked ?? true,
+          lampadaUV: checkboxLampadaUVEl?.checked ?? true,
+          escova: checkboxEscovaEl?.checked ?? true
         };
         const settingsChanged = !initialSettings || 
           JSON.stringify(currentSettings) !== JSON.stringify(initialSettings);
         
-        const quantityChanged = (embaladoraQuantity?.value || '24') !== (initialQuantity || '24');
+        const quantityChanged = (embaladoraQuantityEl?.value || '24') !== (initialQuantity || '24');
         
         const hasChanges = machineChanged || settingsChanged || quantityChanged;
         
@@ -660,4 +812,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Inicializa
   loadMachines();
+  
+  // Carrega as configurações salvas quando a página carrega
+  // Usa um pequeno delay para garantir que todos os elementos do DOM estejam prontos
+  setTimeout(() => {
+    console.log('[MACHINE_SELECT] Carregando configurações salvas na inicialização...');
+    loadVisibilitySettings();
+  }, 100);
 });

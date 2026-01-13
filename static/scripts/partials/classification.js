@@ -1,4 +1,9 @@
 function inicializarClassification() {
+    // ✅ Guard global: evita múltiplas instâncias em SPA
+    if (window._classificationInitialized) {
+        console.warn('[CLASSIFICATION] inicializarClassification chamado com tela já inicializada. Ignorando para evitar vazamento.');
+        return;
+    }
     // ✅ Sistema de log controlado (desativa logs frequentes para evitar vazamento de memória)
     const DEBUG_CLASSIFICATION = false; // Mude para true apenas para debug
     const logDebug = DEBUG_CLASSIFICATION ? console.log.bind(console) : () => {};
@@ -95,6 +100,8 @@ function inicializarClassification() {
     // ✅ Handlers de eventos globais para remoção adequada
     let storageEventHandler = null;
     let visibilityChangeHandler = null;
+    let resizeHandler = null;
+    let resizeTimeout = null;
     
     // ✅ Map para armazenar TODOS os event listeners criados em setupEventListeners
     const setupEventListenersHandlers = new Map();
@@ -114,12 +121,12 @@ function inicializarClassification() {
         console.log('[CLASSIFICATION] 🧹 Todos os listeners de setupEventListeners removidos');
     }
     
-    // ✅ Constantes de intervalo para reuso
-    const LABEL_REFRESH_MS = 2000;
-    const SELECTION_REFRESH_MS = 50000;
+    // ✅ Constantes de intervalo para reuso (valores maiores = menos uso de memória)
+    const LABEL_REFRESH_MS = 3000; // 3s entre leituras de labels
+    const SELECTION_REFRESH_MS = 60000; // 60s entre leituras de seleções (raramente muda)
     // Alertas e garras precisam responder rápido à mudança de bits no PLC
-    // ✅ Aumentado para 500ms para reduzir carga na memória (evita vazamento)
-    const ALERT_REFRESH_MS = 500; // 500ms entre leituras (balanceado entre resposta e uso de memória)
+    // ✅ Aumentado para 750ms para reduzir carga na memória (evita vazamento)
+    const ALERT_REFRESH_MS = 1000; // 1s entre leituras (evita overlap/abort e reduz consumo de memória)
     
     // ✅ Variáveis de estado para alertas (escopo global para evitar perda de referência)
     let lastAlertText = '';
@@ -510,23 +517,17 @@ function inicializarClassification() {
     // ✅ CRÍTICO: Variável global para cancelar requisição anterior (evita acúmulo)
     let currentAlertRequestController = null;
     let currentAlertRequestPromise = null;
+    let lastAlertResult = { rawAlert: 0, rawStatus: 0 }; // cache do último valor válido
     
     async function getAlertAndStatus() {
         const TAG_ALERT = 'XLCLASS_DB1_PRINCIPAL_ALARME_CLASSIFICADORA';
         const TAG_STATUS = 'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_01';
         const names = `${TAG_ALERT},${TAG_STATUS}`;
         
-        // ✅ CRÍTICO: Cancela requisição anterior se ainda estiver pendente (evita acúmulo)
-        if (currentAlertRequestController) {
-            try {
-                currentAlertRequestController.abort();
-            } catch (_) {}
-            currentAlertRequestController = null;
-        }
-        
-        // ✅ Limpa promise anterior para evitar referências mantidas em memória
+        // ✅ CRÍTICO: Se já existe uma requisição em andamento, NÃO cria outra e NÃO aborta.
+        // Abortar em loop (intervalo < timeout/rede) pode causar crescimento de memória e travamento.
         if (currentAlertRequestPromise) {
-            currentAlertRequestPromise = null;
+            return lastAlertResult;
         }
         
         // ✅ AbortController para timeout
@@ -536,7 +537,7 @@ function inicializarClassification() {
             try {
                 controller.abort();
             } catch (_) {}
-        }, 800); // 800ms timeout (maior que o intervalo do timer)
+        }, 700); // timeout menor que o intervalo do timer (evita overlap)
         
         try {
             // ✅ Cria promise e armazena referência (para poder cancelar depois)
@@ -573,7 +574,8 @@ function inicializarClassification() {
             // ✅ Força limpeza de referências grandes
             data.values = null;
             
-            return { rawAlert, rawStatus };
+            lastAlertResult = { rawAlert, rawStatus };
+            return lastAlertResult;
         } catch (e) {
             // ✅ Apenas loga erros não-abort (AbortError é esperado quando cancela requisição anterior)
             if (e.name !== 'AbortError' && e.name !== 'TypeError') {
@@ -583,16 +585,15 @@ function inicializarClassification() {
                     window._lastAlertErrorLog = Date.now();
                 }
             }
-            return { rawAlert: 0, rawStatus: 0 };
+            // mantém o último valor válido para não “piscar” em 0 quando houver instabilidade de rede
+            return lastAlertResult;
         } finally {
             clearTimeout(timeoutId);
             // ✅ Limpa referências se esta requisição foi concluída
             if (currentAlertRequestController === controller) {
                 currentAlertRequestController = null;
             }
-            if (currentAlertRequestPromise) {
-                currentAlertRequestPromise = null;
-            }
+            currentAlertRequestPromise = null;
         }
     }
     function computeAlertText(rawValue) {
@@ -1217,41 +1218,53 @@ function inicializarClassification() {
     function updateGridColumns(quantity) {
         // Total de colunas: 1 (IND - sempre) + quantity (E01..E[quantity] - filtradas) + 1 (SPJ - sempre) = quantity + 2
         const totalColumns = quantity + 2;
-        const GAP = '15px'; // Gap deve ser o mesmo para todos os grids
+        const GAP = 'clamp(6px, 0.8vw, 12px)'; // Gap deve ser o mesmo para todos os grids
         
         const grid = document.getElementById('embaladora-grid');
         const statusRow = document.getElementById('status-row');
         const headerRow = document.getElementById('header-row');
         
-        // Atualiza o grid de embaladoras
+        // Atualiza o grid de embaladoras - colunas flexíveis
         if (grid) {
-            grid.style.gridTemplateColumns = `repeat(${totalColumns}, minmax(48px, 1fr))`;
+            grid.style.gridTemplateColumns = `repeat(${totalColumns}, 1fr)`;
             grid.style.gap = GAP;
-            grid.style.width = 'fit-content';
+            grid.style.width = '100%';
             grid.style.margin = '0 auto';
+            grid.style.padding = '0 15px';
+            grid.style.boxSizing = 'border-box';
+            grid.style.maxWidth = '100%';
+            grid.style.margin = '0';
         }
         
         // Atualiza a linha de status (deve ter o mesmo número de colunas e gap)
         if (statusRow) {
-            statusRow.style.gridTemplateColumns = `repeat(${totalColumns}, minmax(48px, 1fr))`;
+            statusRow.style.gridTemplateColumns = `repeat(${totalColumns}, 1fr)`;
             statusRow.style.gap = GAP;
-            statusRow.style.width = 'fit-content';
+            statusRow.style.width = '100%';
             statusRow.style.margin = '0 auto';
+            statusRow.style.padding = '0 15px';
+            statusRow.style.boxSizing = 'border-box';
+            statusRow.style.maxWidth = '100%';
+            statusRow.style.margin = '0';
         }
         
         // Atualiza a linha de headers (deve ter o mesmo número de colunas e gap)
         if (headerRow) {
-            headerRow.style.gridTemplateColumns = `repeat(${totalColumns}, minmax(48px, 1fr))`;
+            headerRow.style.gridTemplateColumns = `repeat(${totalColumns}, 1fr)`;
             headerRow.style.gap = GAP;
-            headerRow.style.width = 'fit-content';
+            headerRow.style.width = '100%';
             headerRow.style.margin = '0 auto';
+            headerRow.style.padding = '0 15px';
+            headerRow.style.boxSizing = 'border-box';
+            headerRow.style.maxWidth = '100%';
+            headerRow.style.margin = '0';
         }
         
-        // Centraliza o container principal
+        // Container principal - estica para ocupar toda a largura
         const embaladoraGrid = document.querySelector('.embaladora-grid');
         if (embaladoraGrid) {
-            embaladoraGrid.style.justifyContent = 'center';
-            embaladoraGrid.style.alignItems = 'center';
+            embaladoraGrid.style.justifyContent = 'stretch';
+            embaladoraGrid.style.alignItems = 'stretch';
         }
     }
     
@@ -1328,12 +1341,29 @@ function inicializarClassification() {
         // ✅ Limpa innerHTML antes de popular (força garbage collection)
         grid.innerHTML = '';
         
-        // ✅ Cria novo HTML
+        // ✅ Cria os cards primeiro (sem conteúdo) para poder medir a altura real
         grid.innerHTML = state.embaladoras.map(emb => `
-            <div class="embaladora-column" data-id="${emb.id}">
-                ${renderClasses(emb.classes)}
-            </div>
+            <div class="embaladora-column" data-id="${emb.id}"></div>
         `).join('');
+        
+        // ✅ FORÇA REFLOW para garantir que o CSS seja aplicado antes de medir
+        const firstCol = grid.querySelector('.embaladora-column');
+        if (firstCol) {
+            // Leitura de offsetHeight força o navegador a calcular o layout
+            void firstCol.offsetHeight;
+        }
+        
+        // ✅ Recalcula tamanhos dos ovos baseado na altura real dos cards
+        recalculateEggSizes();
+        
+        // ✅ Agora renderiza as classes com os tamanhos corretos
+        const columns = grid.querySelectorAll('.embaladora-column');
+        columns.forEach((column, index) => {
+            const emb = state.embaladoras[index];
+            if (emb) {
+                column.innerHTML = renderClasses(emb.classes);
+            }
+        });
         
         // ✅ Adiciona novos listeners e armazena referências
         const newColumns = document.querySelectorAll('.embaladora-column');
@@ -1465,28 +1495,69 @@ function inicializarClassification() {
         }
     }
     // ✅ CRÍTICO: Cache de cálculos para evitar recalcular a cada renderização
+    // ✅ Valores responsivos baseados na altura real do card
     let renderClassesCache = {
-        cardHeight: 450,
-        marginSafe: 15,
-        circleSize: 30,
-        verticalGap: 6,
+        marginSafe: 16, // folga no topo/baixo para não cortar C1/visio
         totalPossibleClasses: 0,
+        circleSize: 0,
+        verticalGap: 0,
         totalHeight: 0,
         availableHeight: 0,
         startTop: 0
     };
     
-    // ✅ Inicializa cache uma vez
-    (function initRenderClassesCache() {
+    // ✅ Função para recalcular tamanhos baseado na altura real do card
+    function recalculateEggSizes() {
+        // Pega a altura real do primeiro card disponível
+        const firstColumn = document.querySelector('.embaladora-column');
+        let cardHeight = 400; // fallback
+        
+        if (firstColumn) {
+            cardHeight = firstColumn.offsetHeight || firstColumn.clientHeight || 400;
+        } else {
+            // Fallback: estima baseado na tela
+            const screenHeight = window.innerHeight;
+            cardHeight = Math.round(screenHeight * 0.52);
+        }
+        
+        // Área disponível para os ovos (descontando margem de segurança)
+        renderClassesCache.availableHeight = cardHeight - (renderClassesCache.marginSafe * 2);
         renderClassesCache.totalPossibleClasses = state.classesOvos.length;
-        // Ajusta cálculo de altura considerando formato de ovo (altura maior)
+        
+        if (renderClassesCache.totalPossibleClasses === 0) {
+            renderClassesCache.circleSize = 30;
+            renderClassesCache.verticalGap = 8;
+            return;
+        }
+        
+        // Calcula tamanho que cabe considerando TODAS as classes
+        // Formula: availableHeight = (numClasses * eggHeight) + ((numClasses - 1) * gap)
+        // eggHeight = circleSize * 1.27, gap = circleSize * 0.25
+        // availableHeight = numClasses * circleSize * 1.27 + (numClasses - 1) * circleSize * 0.25
+        // availableHeight = circleSize * (numClasses * 1.27 + (numClasses - 1) * 0.25)
+        const numClasses = renderClassesCache.totalPossibleClasses;
+        const totalMultiplier = (numClasses * 1.27) + ((numClasses - 1) * 0.25);
+        const calculatedSize = Math.floor(renderClassesCache.availableHeight / totalMultiplier);
+        
+        // Limites mínimo e máximo absolutos (sem depender da tela)
+        const minSize = 18; // mínimo legível
+        const maxSize = 45; // máximo estético
+        
+        // USA O TAMANHO CALCULADO, respeitando apenas os limites absolutos
+        renderClassesCache.circleSize = Math.max(minSize, Math.min(maxSize, calculatedSize));
+        renderClassesCache.verticalGap = Math.max(4, Math.round(renderClassesCache.circleSize * 0.25));
+        
+        // Recalcula altura total final com os valores ajustados
         const eggHeight = Math.round(renderClassesCache.circleSize * 1.27);
-        renderClassesCache.totalHeight = (renderClassesCache.totalPossibleClasses * eggHeight) + 
-            ((renderClassesCache.totalPossibleClasses - 1) * renderClassesCache.verticalGap);
-        renderClassesCache.availableHeight = renderClassesCache.cardHeight - (renderClassesCache.marginSafe * 2);
-        renderClassesCache.startTop = renderClassesCache.marginSafe + 
-            Math.floor((renderClassesCache.availableHeight - renderClassesCache.totalHeight) / 2);
-    })();
+        renderClassesCache.totalHeight = (numClasses * eggHeight) + ((numClasses - 1) * renderClassesCache.verticalGap);
+        
+        // Centraliza verticalmente dentro do espaço disponível
+        const extraSpace = Math.max(0, Math.floor((renderClassesCache.availableHeight - renderClassesCache.totalHeight) / 2));
+        renderClassesCache.startTop = renderClassesCache.marginSafe + extraSpace;
+    }
+    
+    // ✅ Inicializa cache
+    recalculateEggSizes();
     
     function renderClasses(classes) {
         logDebug('Renderizando classes:', classes);
@@ -2777,6 +2848,16 @@ function inicializarClassification() {
                 visibilityChangeHandler = null;
             }
             
+            // ✅ Remove listener de resize
+            if (resizeHandler) {
+                window.removeEventListener('resize', resizeHandler);
+                resizeHandler = null;
+            }
+            if (resizeTimeout) {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = null;
+            }
+            
             // ✅ Limpa todos os listeners de colunas
             document.querySelectorAll('.embaladora-column').forEach(column => {
                 const embId = column.getAttribute('data-id');
@@ -3203,6 +3284,16 @@ function inicializarClassification() {
     // Start initialization
     initialize();
     
+    // ✅ Listener para redimensionamento da janela - recalcula tamanhos dos ovos
+    resizeHandler = () => {
+        if (resizeTimeout) clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            recalculateEggSizes();
+            renderGrid();
+        }, 200);
+    };
+    window.addEventListener('resize', resizeHandler);
+    
     // ✅ Log inicial de recursos
     console.log('[CLASSIFICATION] ✅ Inicialização completa');
     console.log('[CLASSIFICATION] 💡 Use window.classificationMemoryReport() para ver status de memória');
@@ -3419,9 +3510,8 @@ if (document.readyState === 'loading') {
     setupVirtualKeyboard();
 }
 
-// Call the initialization function when the page loads
-document.addEventListener('DOMContentLoaded', function() {
-    inicializarClassification();
-});
+// ✅ IMPORTANTE (SPA): a inicialização da tela de classificação é controlada pelo menu em `static/scripts/main.js`
+// (função `showClassification`). Não inicialize aqui no DOMContentLoaded, senão cria múltiplas instâncias/timers
+// e a RAM dispara ao abrir a tela.
 
 

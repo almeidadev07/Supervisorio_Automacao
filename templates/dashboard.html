@@ -88,18 +88,7 @@
         {% include 'partials/menu.html' %}
     </header>
 
-    <!-- Botões flutuantes (canto superior esquerdo) - Responsivos -->
-    <div class="floating-controls-top" style="position:fixed; left:clamp(8px, 2vw, 16px); top:clamp(2px, 0.5vh, 5px); z-index:100000; display:flex; gap:clamp(4px, 1vw, 8px); align-items:center;">
-      <!-- Botão para trocar máquina -->
-      <button id="btn-change-machine" title="Trocar máquina" aria-label="Trocar máquina" style="background:transparent; border:none; padding:0; cursor:pointer;">
-        <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Sinc.png') }}" alt="Trocar Máquina" style="width:clamp(20px, 3vw, 28px); height:clamp(20px, 3vw, 28px); display:block; filter: grayscale(100%) brightness(0.6);">
-      </button>
-      
-      <!-- Botão para resetar posições do grid -->
-      <button id="btn-reset-grid" title="Resetar posições do grid (Ctrl+Shift+R)" aria-label="Resetar posições do grid" style="background:rgba(220, 53, 69, 0.8); border:none; padding:clamp(4px, 0.8vw, 6px) clamp(6px, 1vw, 10px); cursor:pointer; border-radius:6px; color:white; font-size:clamp(9px, 1.2vw, 11px); font-weight:bold; transition:all 0.3s ease;" onmouseover="this.style.background='rgba(220, 53, 69, 1)'" onmouseout="this.style.background='rgba(220, 53, 69, 0.8)'">
-        🔄 Reset
-      </button>
-    </div>
+    <!-- Botões flutuantes removidos - agora estão na parte inferior ao lado do botão de desligar -->
 
     <!-- Modal de parâmetros -->
     <div id="machine-modal" class="modal hidden" style="z-index:20001">

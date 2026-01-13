@@ -88,6 +88,13 @@ function updateUserDisplay() {
     if (userDisplay) {
         userDisplay.textContent = currentUser.displayName;
         userDisplay.style.color = currentUser.role === 'Tec' ? '#22c55e' : '#111';
+        // Garantir que o font-size seja aplicado igual ao texto "Desligar" (14px)
+        // NÃO remove o font-size, apenas garante que seja 14px
+        userDisplay.style.setProperty('font-size', '18px', 'important');
+        userDisplay.style.setProperty('font-weight', '700', 'important');
+        userDisplay.style.setProperty('display', 'inline-block', 'important');
+        userDisplay.style.setProperty('min-width', '60px', 'important');
+        userDisplay.style.setProperty('text-align', 'center', 'important');
     }
     if (logoutBtnModal) {
         // Mostra o botão de logoff no modal apenas se for técnico E o modal estiver aberto
@@ -113,18 +120,28 @@ function updateUIByRole() {
     const menuTecnicoLeft = document.getElementById('menu-tecnico-left');
     const menuTecnicoRight = document.getElementById('menu-tecnico-right');
     
+    // Controlar visibilidade dos botões de configuração e reset (apenas para Técnico)
+    const configBtn = document.querySelector('.config-btn');
+    const resetBtn = document.querySelector('.reset-btn');
+    
     if (currentUser.role === 'Tec') {
         // Usuário técnico: mostrar apenas menus técnicos, esconder menu operador
         if (menuOperadorLeft) menuOperadorLeft.style.display = 'none';
         if (menuOperadorRight) menuOperadorRight.style.display = 'none';
         if (menuTecnicoLeft) menuTecnicoLeft.style.display = 'flex';
         if (menuTecnicoRight) menuTecnicoRight.style.display = 'flex';
+        // Mostrar botões de configuração e reset
+        if (configBtn) configBtn.style.display = 'flex';
+        if (resetBtn) resetBtn.style.display = 'flex';
     } else {
         // Usuário operador: mostrar menu esquerdo e operador, esconder menus técnicos
         if (menuOperadorLeft) menuOperadorLeft.style.display = 'flex';
         if (menuOperadorRight) menuOperadorRight.style.display = 'flex';
         if (menuTecnicoLeft) menuTecnicoLeft.style.display = 'none';
         if (menuTecnicoRight) menuTecnicoRight.style.display = 'none';
+        // Esconder botões de configuração e reset
+        if (configBtn) configBtn.style.display = 'none';
+        if (resetBtn) resetBtn.style.display = 'none';
     }
 }
 
@@ -159,12 +176,46 @@ function loadUserFromStorage() {
     }
 }
 
+// Função para mostrar modal de configuração (máquina)
+function showMachineModal() {
+    // Tenta usar a função showMachineModal do machine_select.js se disponível
+    if (typeof window.showMachineModal === 'function') {
+        try {
+            window.showMachineModal();
+        } catch (error) {
+            console.error('Erro ao chamar showMachineModal:', error);
+            // Fallback: abre o modal diretamente
+            const modal = document.getElementById('machine-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('show');
+                modal.style.display = 'flex';
+            }
+        }
+        return;
+    }
+    
+    // Fallback: abre o modal diretamente e tenta carregar máquinas
+    const modal = document.getElementById('machine-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('show');
+        modal.style.display = 'flex';
+        
+        // Tenta carregar máquinas se a função existir
+        if (typeof window.loadMachines === 'function') {
+            window.loadMachines();
+        }
+    }
+}
+
 // Exporta funções necessárias
 window.handleLogin = handleLogin;
 window.showLoginModal = showLoginModal;
 window.hideLoginModal = hideLoginModal;
 window.isAdmin = isAdmin;
 window.handleLogout = handleLogout;
+window.showMachineModal = showMachineModal;
 
 // Fechar modal ao clicar fora
 document.addEventListener('click', function(event) {
@@ -172,6 +223,55 @@ document.addEventListener('click', function(event) {
     if (event.target === modal) {
         hideLoginModal();
     }
+});
+
+// Função para aplicar o estilo do texto Operador
+function applyUserDisplayStyle() {
+    const userDisplay = document.getElementById('user-display');
+    if (userDisplay) {
+        // Aplica o estilo de 14px (mesmo tamanho do texto Desligar)
+        userDisplay.style.setProperty('font-size', '18px', 'important');
+        userDisplay.style.setProperty('font-weight', '700', 'important');
+        userDisplay.style.setProperty('display', 'inline-block', 'important');
+        userDisplay.style.setProperty('min-width', '60px', 'important');
+        userDisplay.style.setProperty('text-align', 'center', 'important');
+    }
+}
+
+// Garantir que o estilo do texto Operador seja aplicado ao carregar a página
+document.addEventListener('DOMContentLoaded', function() {
+    applyUserDisplayStyle();
+    // Também chama updateUserDisplay para garantir
+    if (typeof updateUserDisplay === 'function') {
+        updateUserDisplay();
+    }
+    
+    // Usa MutationObserver para monitorar mudanças no elemento
+    const userDisplay = document.getElementById('user-display');
+    if (userDisplay) {
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && 
+                    (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+                    // Reaplica o estilo se algo tentar mudá-lo
+                    setTimeout(applyUserDisplayStyle, 10);
+                }
+            });
+        });
+        
+        observer.observe(userDisplay, {
+            attributes: true,
+            attributeFilter: ['style', 'class']
+        });
+    }
+});
+
+// Aplica estilo também quando a página estiver totalmente carregada
+window.addEventListener('load', function() {
+    applyUserDisplayStyle();
+    // Aplica novamente após um pequeno delay para garantir
+    setTimeout(applyUserDisplayStyle, 100);
+    setTimeout(applyUserDisplayStyle, 500);
 });
 
 // Removido: monitoramento de atividade para logout automático
