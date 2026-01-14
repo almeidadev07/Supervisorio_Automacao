@@ -90,7 +90,7 @@
 
     <!-- Menu Técnico - Direita (3 botões) -->
     <div class="menu-right" id="menu-tecnico-right" style="display: none;">
-        <button class="menu-btn menu-btn-tecnico" onclick="zoomButton(this)">
+        <button class="menu-btn menu-btn-tecnico" onclick="showPanels(event);zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Painel.png') }}" alt="Ícone Painel" class="menu-icon">
             <span class="menu-text">Painéis</span>
         </button>

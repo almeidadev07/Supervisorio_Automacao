@@ -78,6 +78,11 @@
                     {% include 'partials/samples.html' %}
                 </div>
                 
+                <!-- Panels container -->
+                <div id="panels-container" class="container" style="display: none;">
+                    {% include 'partials/panels.html' %}
+                </div>
+                
                 <!-- Componentes de interface -->
                 {% include 'partials/virtual_keyboard.html' %}
             </div>
@@ -148,5 +153,7 @@
     <script src="{{ url_for('static', filename='scripts/partials/dryer.js') }}" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/graphics.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/viewer3d.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/panels.css') }}">
+    <script src="{{ url_for('static', filename='scripts/partials/panels.js') }}" defer></script>
 </body>
 </html>

@@ -1,0 +1,502 @@
+/* panels.css - Estilos para a tela de Painéis de Conexão seguindo padrão das outras telas */
+
+/* Container principal seguindo padrão */
+#panels-container {
+    display: none; /* Escondido por padrão */
+    height: calc(100vh - var(--menu-height, 100px) - 20px) !important;
+    padding: 20px !important;
+    margin: 0 !important;
+    background: #f8f9fa !important;
+    position: relative !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+}
+
+/* Quando visível, usa flex */
+#panels-container[style*="display: block"],
+#panels-container[style*="display:flex"] {
+    display: flex !important;
+}
+
+.panels-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    margin: 0 auto;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.panels-header {
+    text-align: center;
+    margin-bottom: 0;
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 25px;
+    box-sizing: border-box;
+}
+
+.panels-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #4a5568;
+    margin: 0;
+}
+
+.panels-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 35px;
+    padding: 30px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    flex: 1;
+    overflow: hidden;
+    box-sizing: border-box;
+    justify-content: center;
+}
+
+.panel-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 15px;
+    position: relative;
+    width: 100%;
+}
+
+/* Linha horizontal principal removida para evitar duplicação.
+   As linhas tracejadas horizontais agora são desenhadas apenas
+   pelos elementos .connector-line (esquerda e direita) */
+.panel-row::before {
+    content: none;
+}
+
+.panel-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    max-width: none;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
+
+.panel-connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 110px;
+    position: relative;
+}
+
+.connector-line {
+    flex: 1;
+    height: 4px;
+    background: transparent;
+}
+
+.connector-line.left {
+    background: repeating-linear-gradient(
+        90deg,
+        #22c55e 0px,
+        #22c55e 8px,
+        transparent 8px,
+        transparent 12px
+    );
+}
+
+.connector-line.right {
+    background: repeating-linear-gradient(
+        90deg,
+        #22c55e 0px,
+        #22c55e 8px,
+        transparent 8px,
+        transparent 12px
+    );
+}
+
+/* Esconde linha da esquerda do primeiro item */
+.panel-row .panel-item:first-child .connector-line.left {
+    background: repeating-linear-gradient(
+        90deg,
+        #22c55e 0px,
+        #22c55e 8px,
+        transparent 8px,
+        transparent 12px
+    );
+}
+
+/* Esconde linha da direita do último item */
+.panel-row .panel-item:last-child .connector-line.right {
+    background: repeating-linear-gradient(
+        90deg,
+        #22c55e 0px,
+        #22c55e 8px,
+        transparent 8px,
+        transparent 12px
+    );
+}
+
+.panel-button {
+    position: relative;
+    width: 110px;
+    height: 110px;
+    cursor: pointer;
+    transition: transform 0.2s ease, filter 0.2s ease;
+    flex-shrink: 0;
+    background: #9ca3af;
+    border-radius: 16px;
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.15),
+        inset 0 2px 4px rgba(255, 255, 255, 0.3),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.panel-button:hover {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+}
+
+.panel-button:active {
+    transform: scale(0.98);
+}
+
+.panel-button img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    position: absolute;
+    transition: opacity 0.3s ease;
+}
+
+.panel-button .btn-connected {
+    opacity: 0;
+    z-index: 1;
+}
+
+.panel-button .btn-disconnected {
+    opacity: 1;
+    z-index: 2;
+}
+
+/* Estado conectado - mostra ícone verde */
+.panel-item.connected .panel-button {
+    background: linear-gradient(145deg, #22c55e, #16a34a);
+    box-shadow: 
+        0 4px 12px rgba(34, 197, 94, 0.4),
+        inset 0 2px 4px rgba(255, 255, 255, 0.3),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.panel-item.connected .panel-button .btn-connected {
+    opacity: 1;
+}
+
+.panel-item.connected .panel-button .btn-disconnected {
+    opacity: 0;
+}
+
+/* Estado desconectado - mostra ícone cinza */
+.panel-item:not(.connected) .panel-button {
+    background: linear-gradient(145deg, #9ca3af, #6b7280);
+}
+
+.panel-label {
+    margin-top: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #374151;
+    text-align: center;
+    line-height: 1.3;
+    min-height: 2.4em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Linha vertical conectando as linhas */
+.panel-row:not(:first-child) .panel-item::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 40px;
+    background: repeating-linear-gradient(
+        180deg,
+        #22c55e 0px,
+        #22c55e 8px,
+        transparent 8px,
+        transparent 12px
+    );
+    z-index: 0;
+}
+
+/* Remove linha vertical de alguns itens para criar padrão visual */
+.panel-row:nth-child(2) .panel-item:nth-child(1)::before,
+.panel-row:nth-child(3) .panel-item:nth-child(6)::before,
+.panel-row:nth-child(4) .panel-item:nth-child(1)::before,
+.panel-row:nth-child(5) .panel-item:nth-child(6)::before {
+    display: block;
+}
+
+/* Efeito de pulso para painéis conectados */
+@keyframes pulse-connected {
+    0% {
+        box-shadow: 
+            0 4px 12px rgba(34, 197, 94, 0.4),
+            0 0 0 0 rgba(34, 197, 94, 0.4);
+    }
+    50% {
+        box-shadow: 
+            0 4px 12px rgba(34, 197, 94, 0.4),
+            0 0 0 8px rgba(34, 197, 94, 0);
+    }
+    100% {
+        box-shadow: 
+            0 4px 12px rgba(34, 197, 94, 0.4),
+            0 0 0 0 rgba(34, 197, 94, 0);
+    }
+}
+
+.panel-item.connected .panel-button {
+    animation: pulse-connected 2s ease-in-out infinite;
+}
+
+/* Efeito de alerta para painéis desconectados (opcional) */
+.panel-item.alert .panel-button {
+    background: linear-gradient(145deg, #f59e0b, #d97706);
+    box-shadow: 
+        0 4px 12px rgba(245, 158, 11, 0.4),
+        inset 0 2px 4px rgba(255, 255, 255, 0.3);
+}
+
+/* Responsividade */
+@media screen and (max-width: 1400px) {
+    .panel-item {
+        min-width: 140px;
+        max-width: 180px;
+    }
+    
+    .panel-button {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .panel-button img {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .panel-row::before {
+        top: 50px;
+    }
+    
+    .panel-connector {
+        height: 100px;
+    }
+    
+    .panel-label {
+        font-size: 1.1rem;
+    }
+}
+
+@media screen and (max-width: 1200px) {
+    .panels-grid {
+        gap: 40px;
+    }
+    
+    .panel-row {
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+    
+    .panel-item {
+        min-width: 120px;
+        max-width: 160px;
+    }
+    
+    .panel-button {
+        width: 90px;
+        height: 90px;
+    }
+    
+    .panel-button img {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .panel-label {
+        font-size: 1rem;
+    }
+    
+    .panel-row::before {
+        top: 45px;
+    }
+    
+    .panel-connector {
+        height: 90px;
+    }
+}
+
+@media screen and (max-width: 900px) {
+    .panels-layout {
+        padding: 15px 20px;
+    }
+    
+    .panel-row {
+        gap: 10px;
+    }
+    
+    .panel-item {
+        min-width: 80px;
+        max-width: 100px;
+    }
+    
+    .panel-button {
+        width: 56px;
+        height: 56px;
+        border-radius: 10px;
+    }
+    
+    .panel-button img {
+        width: 38px;
+        height: 38px;
+    }
+    
+    .panel-label {
+        font-size: 0.75rem;
+        margin-top: 8px;
+    }
+    
+    .panel-row::before {
+        top: 28px;
+        height: 3px;
+    }
+    
+    .panel-connector {
+        height: 56px;
+    }
+    
+    .connector-line {
+        height: 3px;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .panels-layout {
+        padding: 10px 15px;
+    }
+    
+    .panels-title {
+        font-size: 1.4rem;
+    }
+    
+    .panels-grid {
+        gap: 20px;
+    }
+    
+    .panel-row {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 8px;
+    }
+    
+    .panel-row::before {
+        display: none;
+    }
+    
+    .connector-line {
+        display: none;
+    }
+    
+    .panel-item {
+        min-width: 70px;
+        max-width: 85px;
+    }
+    
+    .panel-item::before {
+        display: none !important;
+    }
+    
+    .panel-button {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+    }
+    
+    .panel-button img {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .panel-label {
+        font-size: 0.65rem;
+        margin-top: 6px;
+    }
+    
+    .panel-connector {
+        height: 48px;
+        justify-content: center;
+    }
+}
+
+/* Tooltip para mostrar nome completo ao passar o mouse */
+.panel-item[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f2937;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Efeito de carregamento */
+.panel-item.loading .panel-button {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.panel-item.loading .panel-button::after {
+    content: '';
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

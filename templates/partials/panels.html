@@ -1,0 +1,356 @@
+<!-- partials/panels.html - Tela de Painéis de Conexão -->
+<div class="panels-layout">
+    <div class="panels-header">
+        <h2 class="panels-title">Painéis de Conexão</h2>
+    </div>
+    
+    <div class="panels-grid">
+        <!-- Linha 1: 7 botões -->
+        <div class="panel-row">
+            <div class="panel-item" id="panel-lavadora" data-panel="lavadora">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Lavadora</span>
+            </div>
+            
+            <div class="panel-item" id="panel-esteiras" data-panel="esteiras">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Esteiras<br>Inteligentes</span>
+            </div>
+            
+            <div class="panel-item" id="panel-ovoscopia" data-panel="ovoscopia">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Ovoscopia</span>
+            </div>
+            
+            <div class="panel-item" id="panel-pre-selecionador" data-panel="pre-selecionador">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Pré -<br>Selecionador</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-01" data-panel="emb-01">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 01</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-02" data-panel="emb-02">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 02</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-03" data-panel="emb-03">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 03</span>
+            </div>
+        </div>
+        
+        <!-- Linha 2: 7 botões (Emb 04-10) -->
+        <div class="panel-row">
+            <div class="panel-item" id="panel-emb-04" data-panel="emb-04">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 04</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-05" data-panel="emb-05">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 05</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-06" data-panel="emb-06">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 06</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-07" data-panel="emb-07">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 07</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-08" data-panel="emb-08">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 08</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-09" data-panel="emb-09">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 09</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-10" data-panel="emb-10">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 10</span>
+            </div>
+        </div>
+        
+        <!-- Linha 3: 7 botões (Emb 11-17) -->
+        <div class="panel-row">
+            <div class="panel-item" id="panel-emb-11" data-panel="emb-11">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 11</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-12" data-panel="emb-12">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 12</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-13" data-panel="emb-13">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 13</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-14" data-panel="emb-14">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 14</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-15" data-panel="emb-15">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 15</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-16" data-panel="emb-16">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 16</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-17" data-panel="emb-17">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 17</span>
+            </div>
+        </div>
+        
+        <!-- Linha 4: 7 botões (Emb 18-24) -->
+        <div class="panel-row">
+            <div class="panel-item" id="panel-emb-18" data-panel="emb-18">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 18</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-19" data-panel="emb-19">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 19</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-20" data-panel="emb-20">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 20</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-21" data-panel="emb-21">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 21</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-22" data-panel="emb-22">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 22</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-23" data-panel="emb-23">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 23</span>
+            </div>
+            
+            <div class="panel-item" id="panel-emb-24" data-panel="emb-24">
+                <div class="panel-connector">
+                    <div class="connector-line left"></div>
+                    <div class="panel-button">
+                        <img class="btn-connected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_conectado.png') }}" alt="Conectado">
+                        <img class="btn-disconnected" src="{{ url_for('static', filename='images/pages/icons/comandos/botão_desconectado.png') }}" alt="Desconectado">
+                    </div>
+                    <div class="connector-line right"></div>
+                </div>
+                <span class="panel-label">Emb 24</span>
+            </div>
+        </div>
+    </div>
+</div>

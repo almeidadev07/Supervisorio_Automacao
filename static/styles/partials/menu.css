@@ -437,15 +437,26 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(145deg, #4b5563, #374151);
-    border: none;
+    background: linear-gradient(145deg, #4b5563, #374151) !important;
+    border: none !important;
     border-radius: 50%;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 
         0 4px 8px rgba(55, 65, 81, 0.3),
-        0 2px 4px rgba(0, 0, 0, 0.2);
+        0 2px 4px rgba(0, 0, 0, 0.2) !important;
     z-index: 1001;
+    outline: none !important;
+    box-sizing: border-box;
+}
+
+.config-btn:focus,
+.config-btn:focus-visible {
+    outline: none !important;
+    border: none !important;
+    box-shadow: 
+        0 4px 8px rgba(55, 65, 81, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.2) !important;
 }
 
 .config-btn::after {
@@ -467,7 +478,9 @@
     transform: translateY(calc(50% - 2px));
     box-shadow: 
         0 6px 12px rgba(75, 85, 99, 0.4),
-        0 4px 8px rgba(0, 0, 0, 0.3);
+        0 4px 8px rgba(0, 0, 0, 0.3) !important;
+    border: none !important;
+    outline: none !important;
 }
 
 .config-btn:hover::after {
@@ -478,7 +491,9 @@
     transform: translateY(50%);
     box-shadow: 
         0 2px 4px rgba(55, 65, 81, 0.3),
-        0 1px 2px rgba(0, 0, 0, 0.2);
+        0 1px 2px rgba(0, 0, 0, 0.2) !important;
+    border: none !important;
+    outline: none !important;
 }
 
 .config-icon {
@@ -499,16 +514,27 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(145deg, #4b5563, #374151);
-    border: none;
+    background: linear-gradient(145deg, #4b5563, #374151) !important;
+    border: none !important;
     border-radius: 50%;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 
         0 4px 8px rgba(55, 65, 81, 0.3),
-        0 2px 4px rgba(0, 0, 0, 0.2);
+        0 2px 4px rgba(0, 0, 0, 0.2) !important;
     z-index: 1001;
     padding: 0;
+    outline: none !important;
+    box-sizing: border-box;
+}
+
+.reset-btn:focus,
+.reset-btn:focus-visible {
+    outline: none !important;
+    border: none !important;
+    box-shadow: 
+        0 4px 8px rgba(55, 65, 81, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.2) !important;
 }
 
 .reset-btn::after {
@@ -530,7 +556,9 @@
     transform: translateY(calc(50% - 2px));
     box-shadow: 
         0 6px 12px rgba(75, 85, 99, 0.4),
-        0 4px 8px rgba(0, 0, 0, 0.3);
+        0 4px 8px rgba(0, 0, 0, 0.3) !important;
+    border: none !important;
+    outline: none !important;
 }
 
 .reset-btn:hover::after {
@@ -541,7 +569,9 @@
     transform: translateY(50%);
     box-shadow: 
         0 2px 4px rgba(55, 65, 81, 0.3),
-        0 1px 2px rgba(0, 0, 0, 0.2);
+        0 1px 2px rgba(0, 0, 0, 0.2) !important;
+    border: none !important;
+    outline: none !important;
 }
 
 .reset-icon {
@@ -552,6 +582,22 @@
     background: none;
     border: none;
     padding: 0;
+}
+
+/* Garantir que botões técnicos NUNCA tenham borda ou cor vermelha */
+.config-btn *,
+.reset-btn * {
+    border: none !important;
+    outline: none !important;
+}
+
+.config-btn::before,
+.reset-btn::before {
+    display: none !important;
+    border: none !important;
+    outline: none !important;
+    background: none !important;
+    box-shadow: none !important;
     margin: 0;
 }
 

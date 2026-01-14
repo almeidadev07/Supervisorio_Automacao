@@ -1,35 +1,67 @@
 /* windows.css - Modal Centralizado e Barra de Status Visível */
 
-/* Container principal com especificidade máxima */
+/* Container principal seguindo padrão das outras telas */
+#windows-container {
+    display: none; /* Escondido por padrão */
+    height: calc(100vh - var(--menu-height, 100px) - 20px) !important;
+    padding: 20px !important;
+    margin: 0 !important;
+    background: #f8f9fa !important;
+    position: relative !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+}
+
+/* Quando visível, usa flex */
+#windows-container[style*="display: block"],
+#windows-container[style*="display:flex"] {
+    display: flex !important;
+}
+
 #windows-container .windows-layout,
 .windows-layout {
     display: flex !important;
     flex-direction: column !important;
-    gap: 30px !important;
-    max-width: 1400px !important;
-    margin: 20px auto !important;
-    padding: 20px !important;
-    min-height: calc(100vh - 100px) !important;
-    background-color: #f8f9fa !important;
-    border-radius: 16px !important;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.1) !important;
+    gap: 24px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
 }
 
-/* BARRA DE STATUS SUPERIOR - SEMPRE VISÍVEL */
+/* Título no box branco (mesmo estilo da tela de Painéis) */
+.windows-title {
+    font-size: 2.2rem !important;
+    font-weight: 700 !important;
+    color: #4a5568 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    text-align: center !important;
+}
+
+/* BARRA DE STATUS SUPERIOR - SEMPRE VISÍVEL seguindo padrão - AUMENTADA */
 #windows-container .status-bar,
 .status-bar {
-    background: linear-gradient(135deg, #343a40 0%, #495057 100%) !important;
-    border-radius: 12px !important;
-    padding: 20px 30px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-radius: 16px !important;
+    padding: 25px 40px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.25) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
     position: relative !important;
     overflow: hidden !important;
-    margin-bottom: 25px !important;
-    min-height: 80px !important;
+    margin-bottom: 0 !important;
+    min-height: 100px !important;
     z-index: 10 !important;
+    flex: 0 0 auto !important;
+    box-sizing: border-box !important;
 }
 
 /* Seções de Status */
@@ -45,18 +77,18 @@
 
 #windows-container .status-label,
 .status-label {
-    color: #ffffff !important;
-    font-size: 14px !important;
+    color: #4a5568 !important;
+    font-size: 18px !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
     white-space: nowrap !important;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
 }
 
 #windows-container .status-pin,
 .status-pin {
-    width: 16px !important;
-    height: 16px !important;
+    width: 20px !important;
+    height: 20px !important;
     background: #6c757d !important;
     border-radius: 50% !important;
     border: 3px solid #495057 !important;
@@ -130,19 +162,24 @@
     border-color: #ffffff !important;
 }
 
-/* GRID DE BOTÕES - LAYOUT EM GRID CSS */
+/* GRID DE BOTÕES - LAYOUT EM GRID CSS seguindo padrão */
 #windows-container .capture-grid,
 .capture-grid {
     display: grid !important;
     grid-template-columns: repeat(9, 1fr) !important;
     grid-template-rows: repeat(2, auto) !important;
-    gap: 20px !important;
+    gap: 30px !important;
     justify-items: center !important;
     align-items: center !important;
-    padding: 25px !important;
-    background: white !important;
+    padding: 35px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
     border-radius: 16px !important;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    flex: 1 !important;
+    overflow: auto !important;
+    box-sizing: border-box !important;
 }
 
 /* Remove as linhas antigas */
@@ -151,15 +188,15 @@
     display: contents !important;
 }
 
-/* BOTÕES COM POSICIONAMENTO ESPECÍFICO NO GRID */
+/* BOTÕES COM POSICIONAMENTO ESPECÍFICO NO GRID - AUMENTADOS */
 #windows-container .capture-btn,
 #windows-container button.capture-btn,
 .capture-btn,
 button.capture-btn {
-    width: 120px !important;
-    height: 120px !important;
+    width: 160px !important;
+    height: 160px !important;
     border: none !important;
-    border-radius: 16px !important;
+    border-radius: 20px !important;
     background: #495057 !important;
     color: white !important;
     cursor: pointer !important;
@@ -168,21 +205,21 @@ button.capture-btn {
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 8px !important;
+    gap: 12px !important;
     box-shadow: 0 6px 16px rgba(0,0,0,0.25) !important;
     position: relative !important;
     overflow: hidden !important;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-    font-size: 13px !important;
+    font-size: 17px !important;
     font-weight: 600 !important;
     text-align: center !important;
     line-height: 1.3 !important;
-    padding: 10px !important;
+    padding: 15px !important;
     margin: 0 !important;
-    min-width: 120px !important;
-    min-height: 120px !important;
-    max-width: 120px !important;
-    max-height: 120px !important;
+    min-width: 160px !important;
+    min-height: 160px !important;
+    max-width: 160px !important;
+    max-height: 160px !important;
 }
 
 /* Posicionamento específico dos botões no grid */
@@ -302,12 +339,12 @@ button.capture-btn.completed::after {
 
 #windows-container .capture-icon,
 .capture-icon {
-    font-size: 64px !important;
+    font-size: 80px !important;
     width: 1em !important;
     height: 1em !important;
     min-width: 0 !important;
     min-height: 0 !important;
-    margin-bottom: 5px !important;
+    margin-bottom: 8px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -316,11 +353,11 @@ button.capture-btn.completed::after {
 
 #windows-container .capture-label,
 .capture-label {
-    font-size: 12px !important;
+    font-size: 18px !important;
     font-weight: 600 !important;
     text-align: center !important;
     line-height: 1.3 !important;
-    padding: 0 5px !important;
+    padding: 0 8px !important;
     display: block !important;
     word-wrap: break-word !important;
 }
@@ -352,11 +389,23 @@ button.capture-btn.completed::after {
     box-shadow: 0 25px 50px rgba(0,0,0,0.5) !important;
     z-index: 10000 !important;
     display: none !important;
-    min-width: 450px !important;
-    max-width: 600px !important;
+    min-width: 500px !important;
+    max-width: 700px !important;
     opacity: 0 !important;
     transition: all 0.3s ease !important;
     border: 2px solid #e9ecef !important;
+}
+
+/* Conteúdo interno do modal ocupa TODA a largura útil do popup */
+#capture-modal .modal-content,
+#windows-container .capture-modal .modal-content,
+.capture-modal .modal-content {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
 }
 
 /* Garante que apenas um modal seja exibido por vez */
@@ -422,19 +471,24 @@ button.capture-btn.completed::after {
     padding: 35px !important;
     background: white !important;
     border-radius: 0 0 20px 20px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 30px !important;
 }
 
 #windows-container .capture-actions,
 .capture-actions {
     display: flex !important;
-    gap: 25px !important;
-    margin-bottom: 35px !important;
+    gap: 30px !important;
+    margin-bottom: 10px !important;
+    width: 100% !important;
+    justify-content: space-between !important;
 }
 
 #windows-container .action-btn,
 .action-btn {
-    flex: 1 !important;
-    height: 100px !important;
+    flex: 1 1 0 !important;
+    height: 130px !important;
     border: none !important;
     border-radius: 16px !important;
     cursor: pointer !important;
@@ -447,7 +501,7 @@ button.capture-btn.completed::after {
     font-weight: 700 !important;
     box-shadow: 0 6px 15px rgba(0,0,0,0.2) !important;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-    font-size: 14px !important;
+    font-size: 18px !important;
 }
 
 #windows-container .action-btn:hover,
@@ -481,12 +535,12 @@ button.capture-btn.completed::after {
 
 #windows-container .action-icon,
 .action-icon {
-    font-size: 36px !important;
+    font-size: 56px !important;
 }
 
 #windows-container .action-label,
 .action-label {
-    font-size: 14px !important;
+    font-size: 18px !important;
     text-align: center !important;
     font-weight: 600 !important;
 }
@@ -498,7 +552,7 @@ button.capture-btn.completed::after {
 
 #windows-container .offset-label,
 .offset-label {
-    font-size: 16px !important;
+    font-size: 18px !important;
     color: #6c757d !important;
     margin-bottom: 20px !important;
     font-weight: 600 !important;
@@ -570,17 +624,23 @@ button.capture-btn.completed::after {
     #windows-container .capture-grid,
     .capture-grid {
         grid-template-columns: repeat(6, 1fr) !important;
-        gap: 15px !important;
+        gap: 20px !important;
     }
     
     #windows-container .capture-btn,
     .capture-btn {
-        width: 100px !important;
-        height: 100px !important;
-        min-width: 100px !important;
-        min-height: 100px !important;
-        max-width: 100px !important;
-        max-height: 100px !important;
+        width: 130px !important;
+        height: 130px !important;
+        min-width: 130px !important;
+        min-height: 130px !important;
+        max-width: 130px !important;
+        max-height: 130px !important;
+        font-size: 14px !important;
+    }
+    
+    #windows-container .capture-icon,
+    .capture-icon {
+        font-size: 65px !important;
     }
 }
 
@@ -594,17 +654,23 @@ button.capture-btn.completed::after {
     #windows-container .capture-grid,
     .capture-grid {
         grid-template-columns: repeat(4, 1fr) !important;
-        gap: 12px !important;
+        gap: 18px !important;
     }
     
     #windows-container .capture-btn,
     .capture-btn {
-        width: 85px !important;
-        height: 85px !important;
-        min-width: 85px !important;
-        min-height: 85px !important;
-        max-width: 85px !important;
-        max-height: 85px !important;
+        width: 110px !important;
+        height: 110px !important;
+        min-width: 110px !important;
+        min-height: 110px !important;
+        max-width: 110px !important;
+        max-height: 110px !important;
+        font-size: 13px !important;
+    }
+    
+    #windows-container .capture-icon,
+    .capture-icon {
+        font-size: 55px !important;
     }
 }
 

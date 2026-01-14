@@ -72,11 +72,15 @@ function hideAllContainers() {
         'diagram-container',
         'graphics-container', // Adicionar graphics-container
         'viewer3d-container', // Adicionar viewer3d-container
-        'samples-container' // Adicionar samples-container
+        'samples-container', // Adicionar samples-container
+        'panels-container' // Adicionar panels-container
     ];
     containers.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
+        if (el) {
+            el.style.display = 'none';
+            el.style.visibility = 'hidden';
+        }
     });
     
     // ✅ CRÍTICO: Cleanup de TODAS as telas quando sair (evita vazamento de memória)
@@ -531,7 +535,8 @@ function showWindows(event) {
     hideAllContainers();
     const windowsContainer = document.getElementById('windows-container');
     if (windowsContainer) {
-        windowsContainer.style.display = 'block';
+        windowsContainer.style.display = 'flex';
+        windowsContainer.style.visibility = 'visible';
     }
 
     if (window.stopAlarmAutoRefresh) {
@@ -543,11 +548,38 @@ function showWindows(event) {
         event.currentTarget.classList.add('active');
     }
     
-    // Inicializa o sistema Windows se ainda não foi inicializado
-    if (typeof window.inicializarWindows === 'function' && !window.windowsInitialized) {
-        console.log('🎯 Inicializando sistema Windows...');
+    // Inicializa / reconfigura sempre o sistema Windows ao entrar na tela
+    if (typeof window.inicializarWindows === 'function') {
+        console.log('🎯 (Re)inicializando sistema Windows...');
         window.inicializarWindows();
-        window.windowsInitialized = true; // Evita reinicializar
+        window.windowsInitialized = true;
+    }
+}
+
+// ✅ Exibe a tela de painéis de conexão
+function showPanels(event) {
+    setLastScreen('panels');
+    hideAllContainers();
+    const panelsContainer = document.getElementById('panels-container');
+    if (panelsContainer) {
+        panelsContainer.style.display = 'flex';
+        panelsContainer.style.visibility = 'visible';
+    }
+
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
+
+    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+    if (event?.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+    
+    // Inicializa os painéis se ainda não foi inicializado
+    if (typeof window.inicializarPanels === 'function' && !window.panelsInitialized) {
+        console.log('🔌 Inicializando sistema de Painéis...');
+        window.inicializarPanels();
+        window.panelsInitialized = true; // Evita reinicializar
     }
 }
 
@@ -721,7 +753,8 @@ document.addEventListener('DOMContentLoaded', function() {
         diagram: showDiagram,
         windows: showWindows,
         viewer3d: showViewer3D,
-        samples: showSamples
+        samples: showSamples,
+        panels: showPanels
     };
 
     // Regra:
@@ -754,5 +787,6 @@ window.showDiagram = showDiagram;
 window.showWindows = showWindows;
 window.showViewer3D = showViewer3D; // ✅ Exportação global da função do visualizador 3D
 window.showSamples = showSamples; // ✅ Exportação global da função de amostras
+window.showPanels = showPanels; // ✅ Exportação global da função de painéis
 
 
