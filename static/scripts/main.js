@@ -85,6 +85,15 @@ function hideAllContainers() {
     });
     
     // ✅ CRÍTICO: Cleanup de TODAS as telas quando sair (evita vazamento de memória)
+    // Cleanup do grid (sempre ativo, mas limpa quando outras telas são abertas)
+    if (typeof window.cleanupGrid === 'function') {
+        try {
+            window.cleanupGrid();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup do grid:', e);
+        }
+    }
+    
     // Cleanup da tela de balança
     if (typeof window.cleanupBalance === 'function') {
         try {
@@ -448,17 +457,20 @@ function showClassification(event) {
         event.currentTarget.classList.add('active');
     }
 
-    // ✅ CRÍTICO: Evita múltiplas inicializações (causa vazamento de memória)
-    // Só inicializa se ainda não foi inicializada ou se foi limpa
-    if (typeof inicializarClassification === 'function') {
-        // Verifica se já foi inicializada (flag global)
-        if (!window._classificationInitialized) {
-            inicializarClassification();
-            window._classificationInitialized = true;
-        } else {
-            // Se já foi inicializada, apenas reativa (sem criar novos timers/listeners)
-            console.log('[MAIN] Tela de classificação já inicializada, pulando re-inicialização');
+    // ✅ CRÍTICO: Sempre limpa antes de reabrir para evitar vazamento de memória
+    // O cleanupClassification já limpa todos os timers, então podemos sempre reinicializar
+    if (typeof window.cleanupClassification === 'function') {
+        try {
+            window.cleanupClassification();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de classificação:', e);
         }
+    }
+    
+    // ✅ CRÍTICO: Sempre reinicializa após limpar (evita timers duplicados)
+    if (typeof inicializarClassification === 'function') {
+        inicializarClassification();
+        window._classificationInitialized = true;
     }
 }
 

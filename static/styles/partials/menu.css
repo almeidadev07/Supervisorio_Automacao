@@ -145,6 +145,17 @@
     padding: 0;
     margin: 0;
     box-shadow: none;
+    outline: none;
+}
+
+/* Garantir que botões técnicos não tenham nenhum elemento vermelho */
+.menu-btn-tecnico::after {
+    display: none !important;
+    content: none !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
 }
 
 /* Animação de entrada - esquerda */
@@ -181,6 +192,9 @@
     border-radius: clamp(8px, 1vw, 12px);
     z-index: 1;
     transition: all 0.3s ease;
+    border: none;
+    outline: none;
+    box-shadow: none;
 }
 
 .menu-btn:hover::before {
@@ -197,19 +211,56 @@
 
 /* Estilos para botões do menu técnico */
 .menu-btn-tecnico::before {
-    background: #374151;
+    background: #374151 !important;
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
 }
 
 .menu-btn-tecnico:hover::before {
-    background: #1f2937;
+    background: #1f2937 !important;
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
 }
 
 .menu-btn-tecnico:active::before {
-    background: #111827;
+    background: #111827 !important;
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
 }
 
 .menu-btn-tecnico.selected::before {
-    background: #1f2937;
+    background: #1f2937 !important;
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
+}
+
+/* Garantir que botões técnicos não tenham box-shadow ou borda vermelha */
+.menu-btn-tecnico {
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
+}
+
+.menu-btn-tecnico:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+    border: none !important;
+    outline: none !important;
+}
+
+.menu-btn-tecnico:active {
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
+}
+
+.menu-btn-tecnico.selected {
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
 }
 
 .menu-btn.zoomed {

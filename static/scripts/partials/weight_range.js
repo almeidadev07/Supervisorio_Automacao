@@ -133,6 +133,7 @@ function inicializarWeightRange() {
     // Subscrição por tela (ativa drivers só quando a tela está aberta)
     const clientId = `weight-range-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
     let heartbeatTimer = null;
+    let refreshLabelsInterval = null;
 
     function buildSubscribedTags(presetIdx) {
         const tags = [];
@@ -655,7 +656,11 @@ function inicializarWeightRange() {
         });
     }
 
-    setInterval(refreshLabelsFromPLC, 2000);
+    // ✅ CORRIGIDO: Armazena ID do intervalo para poder limpar depois
+    if (refreshLabelsInterval) {
+        clearInterval(refreshLabelsInterval);
+    }
+    refreshLabelsInterval = setInterval(refreshLabelsFromPLC, 2000);
 
     // Bind teclas do teclado virtual de texto
     if (tecladoTexto && ENABLE_LABEL_EDIT) {
@@ -728,6 +733,33 @@ function inicializarWeightRange() {
         stopHeartbeat();
         unsubscribeScreen();
     });
+    
+    // ✅ CRÍTICO: Função de cleanup para evitar vazamento de memória
+    window.cleanupWeightRange = function() {
+        console.log('[WEIGHT_RANGE] 🧹 Limpando recursos...');
+        
+        // Limpa heartbeat
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
+        
+        // Limpa intervalo de refresh de labels
+        if (refreshLabelsInterval) {
+            clearInterval(refreshLabelsInterval);
+            refreshLabelsInterval = null;
+        }
+        
+        // Desinscreve da tela
+        unsubscribeScreen();
+        
+        // Remove listener de visibilitychange
+        if (handleVisibility) {
+            document.removeEventListener('visibilitychange', handleVisibility);
+        }
+        
+        console.log('[WEIGHT_RANGE] ✅ Cleanup concluído');
+    };
 }
 
 // Exporta função para escopo global

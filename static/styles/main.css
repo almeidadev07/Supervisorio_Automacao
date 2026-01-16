@@ -134,9 +134,24 @@ body {
 #diagram-container {
     position: relative;
     width: 100%;
-    height: calc(100vh - 60px);
+    height: calc(100vh - var(--menu-height, 100px));
     background: #fff;
     overflow: hidden;
+}
+
+/* ✅ Padronização: Containers intermediários com mesma altura */
+#weight-range-container,
+#balance-container,
+#classification-container,
+#graphics-container,
+#washer-container,
+#dryer-container,
+#samples-container,
+#alarm-container {
+    width: 100%;
+    height: calc(100vh - var(--menu-height, 100px));
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 /* Ícone para o botão de diagrama */

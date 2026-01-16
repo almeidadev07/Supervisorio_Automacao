@@ -9,7 +9,7 @@ html, body {
 /* O alarmScreen ocupa toda a tela disponível abaixo do menu */
 #alarmScreen {
     display: flex;
-    height: calc(100vh - var(--menu-height, 100px) - 20px);
+    height: 100%;
     padding: 20px;
     margin: 0;
     background: #f8f9fa;

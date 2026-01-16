@@ -1,7 +1,7 @@
 .classification-wrapper {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - var(--menu-height, 100px) - 20px);
+    height: 100%;
     overflow: visible;
     position: relative;
     box-sizing: border-box;
@@ -58,7 +58,7 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
     overflow: hidden;
     box-sizing: border-box;
-    padding: clamp(8px, 1.2vw, 15px);
+    padding: 20px;
     position: relative;
 }
 .classification-alert {
@@ -747,7 +747,7 @@
 @media screen and (min-width: 1920px) {
     .classification-wrapper {
         padding: 10px;
-        height: calc(100vh - var(--menu-height, 100px) - 20px);
+        height: 100%;
     }
     
     .embaladora-grid {
@@ -787,7 +787,7 @@
 @media screen and (min-width: 2560px) {
     .classification-wrapper {
         padding: 12px;
-        height: calc(100vh - var(--menu-height, 110px) - 18px);
+        height: 100%;
     }
     
     .embaladora-grid {
@@ -823,7 +823,7 @@
 @media screen and (min-width: 3840px) {
     .classification-wrapper {
         padding: 15px;
-        height: calc(100vh - var(--menu-height, 120px) - 15px);
+        height: 100%;
     }
     
     .embaladora-grid {

@@ -2075,6 +2075,8 @@ function setAlarmCountsOffline(){
 // Flag global para evitar múltiplas inicializações
 let __velocimetroInicializado = false;
 let __pollSpeedLoopAtivo = false;
+let __pollSpeedLoopStopped = false; // flag para parar o loop recursivo
+let __pollSpeedLoopTimeoutId = null; // armazena o último timeout para poder limpar
 let __alarmWatchdogInterval = null;
 
 // Modificar a função inicializarVelocimetro para incluir a atualização dos contadores
@@ -2160,6 +2162,12 @@ function inicializarVelocimetro() {
     }
     
     async function pollSpeedLoop(){
+        // ✅ PROTEÇÃO: Para o loop se foi solicitado parada
+        if (__pollSpeedLoopStopped) {
+            console.log('[GRID] ⚠️ pollSpeedLoop parado por cleanup');
+            return;
+        }
+        
         // ✅ PROTEÇÃO: Evita múltiplos loops concorrentes
         if (__pollSpeedLoopAtivo) {
             // Silencia avisos repetidos; apenas retorna
@@ -2170,7 +2178,9 @@ function inicializarVelocimetro() {
         if (PLC_OFFLINE_CONFIRMED) {
             console.log('[GRID] ⚠️ PLC offline confirmado - bloqueando polling HTTP');
             __pollSpeedLoopAtivo = false;
-            setTimeout(pollSpeedLoop, 5000); // Tenta novamente em 5s
+            if (!__pollSpeedLoopStopped) {
+                __pollSpeedLoopTimeoutId = setTimeout(pollSpeedLoop, 5000); // Tenta novamente em 5s
+            }
             return;
         }
         
@@ -2192,14 +2202,18 @@ function inicializarVelocimetro() {
         try {
             if (!isGridVisible()) {
                 __pollSpeedLoopAtivo = false;
-                setTimeout(pollSpeedLoop, Math.max(2000, nextDelay));
+                if (!__pollSpeedLoopStopped) {
+                    __pollSpeedLoopTimeoutId = setTimeout(pollSpeedLoop, Math.max(2000, nextDelay));
+                }
                 return;
             }
             
             // Se recebeu dados recentes via socket, pula esta rodada
             if (now - SPEED_LAST_OK_TS <= 3000) {
                 __pollSpeedLoopAtivo = false;
-                setTimeout(pollSpeedLoop, nextDelay);
+                if (!__pollSpeedLoopStopped) {
+                    __pollSpeedLoopTimeoutId = setTimeout(pollSpeedLoop, nextDelay);
+                }
                 return;
             }
             
@@ -2207,7 +2221,9 @@ function inicializarVelocimetro() {
             if (PLC_OFFLINE_CONFIRMED) {
                 console.log('[GRID] ⚠️ PLC ficou offline durante fetch - cancelando atualização');
                 __pollSpeedLoopAtivo = false;
-                setTimeout(pollSpeedLoop, 5000);
+                if (!__pollSpeedLoopStopped) {
+                    __pollSpeedLoopTimeoutId = setTimeout(pollSpeedLoop, 5000);
+                }
                 return;
             }
             
@@ -2218,7 +2234,9 @@ function inicializarVelocimetro() {
             if (PLC_OFFLINE_CONFIRMED) {
                 console.log('[GRID] ⚠️ PLC ficou offline após fetch - cancelando atualização');
                 __pollSpeedLoopAtivo = false;
-                setTimeout(pollSpeedLoop, 5000);
+                if (!__pollSpeedLoopStopped) {
+                    __pollSpeedLoopTimeoutId = setTimeout(pollSpeedLoop, 5000);
+                }
                 return;
             }
             
@@ -2243,7 +2261,9 @@ function inicializarVelocimetro() {
                     // Se está offline confirmado, não atualiza valores mesmo que receba dados
                     console.log('[GRID] ⚠️ Dados recebidos via HTTP mas PLC está offline confirmado - ignorando');
                     __pollSpeedLoopAtivo = false;
-                    setTimeout(pollSpeedLoop, 5000);
+                    if (!__pollSpeedLoopStopped) {
+                        __pollSpeedLoopTimeoutId = setTimeout(pollSpeedLoop, 5000);
+                    }
                     return;
                 }
                 
@@ -2255,7 +2275,9 @@ function inicializarVelocimetro() {
                     if (PLC_OFFLINE_CONFIRMED) {
                         console.log('[GRID] ⚠️ Tentativa de atualizar velocidade mas PLC está offline confirmado - bloqueando');
                         __pollSpeedLoopAtivo = false;
-                        setTimeout(pollSpeedLoop, 5000);
+                        if (!__pollSpeedLoopStopped) {
+                            __pollSpeedLoopTimeoutId = setTimeout(pollSpeedLoop, 5000);
+                        }
                         return;
                     }
                     
@@ -2341,12 +2363,15 @@ function inicializarVelocimetro() {
             }
         } finally {
             __pollSpeedLoopAtivo = false;
-            setTimeout(pollSpeedLoop, nextDelay);
+            if (!__pollSpeedLoopStopped) {
+                __pollSpeedLoopTimeoutId = setTimeout(pollSpeedLoop, nextDelay);
+            }
         }
     }
     
     // Inicia polling após 1 segundo
-    setTimeout(pollSpeedLoop, 1000);
+    __pollSpeedLoopStopped = false; // Garante que o loop está ativo
+    __pollSpeedLoopTimeoutId = setTimeout(pollSpeedLoop, 1000);
     // Sincroniza SPEED_MAX e dispara uma leitura imediata para preencher a UI rapidamente
     syncSpeedMaxFromServer().catch(()=>{});
     fetchTagsWithFallback(SPEED_TAGS)
@@ -5879,3 +5904,55 @@ window.setupJogAcumuladora = setupJogAcumuladora;
         setTimeout(initOnce, 0);
     }
 })();
+
+// ✅ CRÍTICO: Função de cleanup para evitar vazamento de memória
+// Limpa todos os intervalos e timeouts do grid quando a tela é fechada
+window.cleanupGrid = function() {
+    console.log('[GRID] 🧹 Limpando recursos do grid...');
+    
+    // Limpa intervalos de jog
+    if (jogAcPollInterval) {
+        clearInterval(jogAcPollInterval);
+        jogAcPollInterval = null;
+    }
+    if (jogDosPollInterval) {
+        clearInterval(jogDosPollInterval);
+        jogDosPollInterval = null;
+    }
+    if (jogEscovaPollInterval) {
+        clearInterval(jogEscovaPollInterval);
+        jogEscovaPollInterval = null;
+    }
+    
+    // Limpa intervalos de sincronização de botão de power
+    if (window.__powerSwitchSyncInterval) {
+        clearInterval(window.__powerSwitchSyncInterval);
+        window.__powerSwitchSyncInterval = null;
+    }
+    if (window.__ensurePowerBtnInterval) {
+        clearInterval(window.__ensurePowerBtnInterval);
+        window.__ensurePowerBtnInterval = null;
+    }
+    
+    // Para o loop de polling de velocidade
+    __pollSpeedLoopStopped = true; // Marca como parado para não criar novos timeouts
+    __pollSpeedLoopAtivo = false; // Libera flag de execução
+    
+    // Limpa o último timeout agendado
+    if (__pollSpeedLoopTimeoutId) {
+        clearTimeout(__pollSpeedLoopTimeoutId);
+        __pollSpeedLoopTimeoutId = null;
+    }
+    
+    // Limpa intervalos de data/hora
+    if (dateTimeInterval) {
+        clearInterval(dateTimeInterval);
+        dateTimeInterval = null;
+    }
+    if (serverTimeSyncInterval) {
+        clearInterval(serverTimeSyncInterval);
+        serverTimeSyncInterval = null;
+    }
+    
+    console.log('[GRID] ✅ Cleanup do grid concluído');
+};
