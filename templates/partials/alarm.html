@@ -1,129 +1,139 @@
 <div id="alarmScreen">
-    <div class="alarm-container">
-        <!-- Container principal da lista (80%) -->
-        <div class="alarm-list-container">
-            <!-- Abas de filtro -->
-            <div class="filter-tabs">
-                <button class="filtro-btn active" data-prioridade="todas">
-                    <span class="btn-text">Todos</span>
-                </button>
-                <button class="filtro-btn" data-prioridade="emergency">
-                    <span class="color-indicator emergency"></span>
-                    <span class="btn-text">Emergência</span>
-                </button>
-                <button class="filtro-btn" data-prioridade="nr12">
-                    <span class="color-indicator nr12"></span>
-                    <span class="btn-text">NR12</span>
-                </button>
-                <button class="filtro-btn" data-prioridade="drives">
-                    <span class="color-indicator drives"></span>
-                    <span class="btn-text">Drives</span>
-                </button>
-                <button class="filtro-btn" data-prioridade="thermal">
-                    <span class="color-indicator thermal"></span>
-                    <span class="btn-text">Térmicos</span>
-                </button>
-                <button class="filtro-btn" data-prioridade="hardware">
-                    <span class="color-indicator hardware"></span>
-                    <span class="btn-text">Hardware</span>
-                </button>
-                <button class="filtro-btn" data-prioridade="process">
-                    <span class="color-indicator process"></span>
-                    <span class="btn-text">Processo</span>
-                </button>
-            </div>
-            <!-- Lista de alarmes -->
-            <div id="alarmList" class="alarm-list">
-                <!-- Cabeçalho da tabela -->
-                <div class="alarm-header">
-                    <span></span>
-                    <span>Data</span>
-                    <span>Hora</span>
-                    <span>Descrição do Alarme</span>
-                </div>
-                
-                <!-- Alarmes simulados -->
-                <div class="alarme-item emergency">
-                    <div class="alarm-type-dot emergency"></div>
-                    <span class="alarm-date">01/01/2025</span>
-                    <span class="alarm-time">14:32</span>
-                    <span class="alarm-description">Falha no Motor Principal</span>
-                </div>
-                
-                <div class="alarme-item drives">
-                    <div class="alarm-type-dot drives"></div>
-                    <span class="alarm-date">01/01/2025</span>
-                    <span class="alarm-time">14:35</span>
-                    <span class="alarm-description">Temperatura Alta no Inversor</span>
-                </div>
-                
-                <div class="alarme-item thermal">
-                    <div class="alarm-type-dot thermal"></div>
-                    <span class="alarm-date">01/01/2025</span>
-                    <span class="alarm-time">14:38</span>
-                    <span class="alarm-description">Pressão Baixa no Sistema Hidráulico</span>
-                </div>
-                
-                <div class="alarme-item hardware">
-                    <div class="alarm-type-dot hardware"></div>
-                    <span class="alarm-date">01/01/2025</span>
-                    <span class="alarm-time">14:40</span>
-                    <span class="alarm-description">Erro de Comunicação com PLC</span>
-                </div>
-            </div>
+    <div class="alarm-layout">
+        <!-- Header com título -->
+        <div class="alarm-header-box">
+            <h2 class="alarm-title">Alarmes</h2>
         </div>
         
-        <!-- Container de controles (20%) -->
-        <div class="alarm-controls">
-            <!-- Botões de alternância -->
-            <div class="view-buttons">
-                <button class="toggle-view-btn" data-state="instantaneos" onclick="toggleAlarmView(this)">
-                    <span class="toggle-text">Instantâneo</span>
-                    <div class="toggle-slider"></div>
-                </button>
-            </div>
-            
-            <!-- Legenda de prioridades -->
-            <div class="priority-legend">
-                <h3>Legenda Prioridades</h3>
-                <div class="legend-item" data-prioridade="emergency">
-                    <span class="color-box emergency"></span>
-                    <span class="legend-text">Emergência</span>
+        <!-- Content box -->
+        <div class="alarm-content-box">
+            <div class="alarm-container">
+                <!-- Container principal da lista (80%) -->
+                <div class="alarm-list-container">
+                    <!-- Abas de filtro -->
+                    <div class="filter-tabs">
+                        <button class="filtro-btn active" data-prioridade="todas">
+                            <span class="btn-text">Todos</span>
+                        </button>
+                        <button class="filtro-btn" data-prioridade="emergency">
+                            <span class="color-indicator emergency"></span>
+                            <span class="btn-text">Emergência</span>
+                        </button>
+                        <button class="filtro-btn" data-prioridade="nr12">
+                            <span class="color-indicator nr12"></span>
+                            <span class="btn-text">NR12</span>
+                        </button>
+                        <button class="filtro-btn" data-prioridade="drives">
+                            <span class="color-indicator drives"></span>
+                            <span class="btn-text">Drives</span>
+                        </button>
+                        <button class="filtro-btn" data-prioridade="thermal">
+                            <span class="color-indicator thermal"></span>
+                            <span class="btn-text">Térmicos</span>
+                        </button>
+                        <button class="filtro-btn" data-prioridade="hardware">
+                            <span class="color-indicator hardware"></span>
+                            <span class="btn-text">Hardware</span>
+                        </button>
+                        <button class="filtro-btn" data-prioridade="process">
+                            <span class="color-indicator process"></span>
+                            <span class="btn-text">Processo</span>
+                        </button>
+                    </div>
+                    <!-- Lista de alarmes -->
+                    <div id="alarmList" class="alarm-list">
+                        <!-- Cabeçalho da tabela -->
+                        <div class="alarm-table-header">
+                            <span></span>
+                            <span>Data</span>
+                            <span>Hora</span>
+                            <span>Descrição do Alarme</span>
+                        </div>
+                        
+                        <!-- Alarmes simulados -->
+                        <div class="alarme-item emergency">
+                            <div class="alarm-type-dot emergency"></div>
+                            <span class="alarm-date">01/01/2025</span>
+                            <span class="alarm-time">14:32</span>
+                            <span class="alarm-description">Falha no Motor Principal</span>
+                        </div>
+                        
+                        <div class="alarme-item drives">
+                            <div class="alarm-type-dot drives"></div>
+                            <span class="alarm-date">01/01/2025</span>
+                            <span class="alarm-time">14:35</span>
+                            <span class="alarm-description">Temperatura Alta no Inversor</span>
+                        </div>
+                        
+                        <div class="alarme-item thermal">
+                            <div class="alarm-type-dot thermal"></div>
+                            <span class="alarm-date">01/01/2025</span>
+                            <span class="alarm-time">14:38</span>
+                            <span class="alarm-description">Pressão Baixa no Sistema Hidráulico</span>
+                        </div>
+                        
+                        <div class="alarme-item hardware">
+                            <div class="alarm-type-dot hardware"></div>
+                            <span class="alarm-date">01/01/2025</span>
+                            <span class="alarm-time">14:40</span>
+                            <span class="alarm-description">Erro de Comunicação com PLC</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="legend-item" data-prioridade="nr12">
-                    <span class="color-box nr12"></span>
-                    <span class="legend-text">NR12</span>
-                </div>
-                <div class="legend-item" data-prioridade="drives">
-                    <span class="color-box drives"></span>
-                    <span class="legend-text">Drives</span>
-                </div>
-                <div class="legend-item" data-prioridade="thermal">
-                    <span class="color-box thermal"></span>
-                    <span class="legend-text">Térmicos</span>
-                </div>
-                <div class="legend-item" data-prioridade="hardware">
-                    <span class="color-box hardware"></span>
-                    <span class="legend-text">Hardware</span>
-                </div>
-                <div class="legend-item" data-prioridade="process">
-                    <span class="color-box process"></span>
-                    <span class="legend-text">Processo</span>
-                </div>
+                
+                <!-- Container de controles (20%) -->
+                <div class="alarm-controls">
+                    <!-- Botões de alternância -->
+                    <div class="view-buttons">
+                        <button class="toggle-view-btn" data-state="instantaneos" onclick="toggleAlarmView(this)">
+                            <span class="toggle-text">Instantâneo</span>
+                            <div class="toggle-slider"></div>
+                        </button>
+                    </div>
+                    
+                    <!-- Legenda de prioridades -->
+                    <div class="priority-legend">
+                        <h3>Legenda Prioridades</h3>
+                        <div class="legend-item" data-prioridade="emergency">
+                            <span class="color-box emergency"></span>
+                            <span class="legend-text">Emergência</span>
+                        </div>
+                        <div class="legend-item" data-prioridade="nr12">
+                            <span class="color-box nr12"></span>
+                            <span class="legend-text">NR12</span>
+                        </div>
+                        <div class="legend-item" data-prioridade="drives">
+                            <span class="color-box drives"></span>
+                            <span class="legend-text">Drives</span>
+                        </div>
+                        <div class="legend-item" data-prioridade="thermal">
+                            <span class="color-box thermal"></span>
+                            <span class="legend-text">Térmicos</span>
+                        </div>
+                        <div class="legend-item" data-prioridade="hardware">
+                            <span class="color-box hardware"></span>
+                            <span class="legend-text">Hardware</span>
+                        </div>
+                        <div class="legend-item" data-prioridade="process">
+                            <span class="color-box process"></span>
+                            <span class="legend-text">Processo</span>
+                        </div>
 
-                <!-- Ações rápidas: botões abaixo da legenda de prioridade -->
-                <div class="quick-actions" aria-label="Ações rápidas">
-                    <h3>Desativa Alarmes</h3>
-                    <button class="qa-button" id="btn-acionamento" type="button">
-                        <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Acionamento.png') }}" alt="Acionamento" class="qa-icon"/>
-                        <span class="qa-label">Solenóides</span>
-                        <span class="status-badge" aria-hidden="true">✕</span>
-                    </button>
-                    <button class="qa-button" id="btn-balanca" type="button">
-                        <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Balanca.png') }}" alt="Balança" class="qa-icon"/>
-                        <span class="qa-label">Balanças</span>
-                        <span class="status-badge" aria-hidden="true">✕</span>
-                    </button>
+                        <!-- Ações rápidas: botões abaixo da legenda de prioridade -->
+                        <div class="quick-actions" aria-label="Ações rápidas">
+                            <h3>Desativa Alarmes</h3>
+                            <button class="qa-button" id="btn-acionamento" type="button">
+                                <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Acionamento.png') }}" alt="Acionamento" class="qa-icon"/>
+                                <span class="qa-label">Solenóides</span>
+                                <span class="status-badge" aria-hidden="true">✕</span>
+                            </button>
+                            <button class="qa-button" id="btn-balanca" type="button">
+                                <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Balanca.png') }}" alt="Balança" class="qa-icon"/>
+                                <span class="qa-label">Balanças</span>
+                                <span class="status-badge" aria-hidden="true">✕</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

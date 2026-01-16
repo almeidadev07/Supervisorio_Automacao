@@ -1,53 +1,60 @@
 <!-- Tela de Gráficos -->
-<div class="graphics-container">
-    <div class="graphics-header">
-        <div style="display:flex; align-items:center; gap:16px;">
-            <h1>Gráficos de Produção</h1>
-            <div class="graphics-tabs">
-                <button id="tab-flow" class="tab-btn active" title="Gráfico de fluxo">Fluxo</button>
-                <button id="tab-weight" class="tab-btn" title="Gráfico de peso">Peso</button>
-                <button id="tab-speed" class="tab-btn" title="Gráfico de velocidade">Velocidade</button>
-            </div>
-        </div>
-        <div class="graphics-controls">
-            <button id="btn-refresh-graphics" class="control-btn">
-                <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Relatorio.png') }}" alt="Atualizar">
-                Atualizar
-            </button>
-            <button id="btn-export-graphics" class="control-btn">
-                <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Relatorio.png') }}" alt="Exportar">
-                Exportar
-            </button>
-        </div>
+<div class="graphics-layout">
+    <!-- Header com título -->
+    <div class="graphics-header-box">
+        <h2 class="graphics-title">Gráficos de Produção</h2>
     </div>
     
-    <div class="graphics-content">
-        <div class="chart-container">
-            <canvas id="classesChart" width="800" height="400"></canvas>
-        </div>
-        
-        <div class="chart-legend">
-            <div class="legend-item">
-                <div class="legend-color real-flow"></div>
-                <span>Fluxo Real</span>
+    <!-- Content box -->
+    <div class="graphics-content-box">
+        <div class="graphics-container">
+            <div class="graphics-toolbar">
+                <div class="graphics-tabs">
+                    <button id="tab-flow" class="tab-btn active" title="Gráfico de fluxo">Fluxo</button>
+                    <button id="tab-weight" class="tab-btn" title="Gráfico de peso">Peso</button>
+                    <button id="tab-speed" class="tab-btn" title="Gráfico de velocidade">Velocidade</button>
+                </div>
+                <div class="graphics-controls">
+                    <button id="btn-refresh-graphics" class="control-btn">
+                        <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Relatorio.png') }}" alt="Atualizar">
+                        Atualizar
+                    </button>
+                    <button id="btn-export-graphics" class="control-btn">
+                        <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Relatorio.png') }}" alt="Exportar">
+                        Exportar
+                    </button>
+                </div>
             </div>
-            <div class="legend-item">
-                <div class="legend-color programmed-flow"></div>
-                <span>Fluxo Máximo Permitido</span>
+            
+            <div class="graphics-content">
+                <div class="chart-container">
+                    <canvas id="classesChart" width="800" height="400"></canvas>
+                </div>
+                
+                <div class="chart-legend">
+                    <div class="legend-item">
+                        <div class="legend-color real-flow"></div>
+                        <span>Fluxo Real</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color programmed-flow"></div>
+                        <span>Fluxo Máximo Permitido</span>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-    
-    <div class="graphics-info">
-        <div class="info-item">
-            <span class="info-label">Última atualização:</span>
-            <span class="info-value" id="last-update">--:--:--</span>
-        </div>
-        <div class="info-item classes-legend-container">
-            <div class="classes-legend" id="classes-legend"></div>
-        </div>
-        <div class="info-item symbols-legend-container">
-            <div class="symbols-legend" id="symbols-legend"></div>
+            
+            <div class="graphics-info">
+                <div class="info-item">
+                    <span class="info-label">Última atualização:</span>
+                    <span class="info-value" id="last-update">--:--:--</span>
+                </div>
+                <div class="info-item classes-legend-container">
+                    <div class="classes-legend" id="classes-legend"></div>
+                </div>
+                <div class="info-item symbols-legend-container">
+                    <div class="symbols-legend" id="symbols-legend"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

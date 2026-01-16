@@ -3776,8 +3776,9 @@ function setupJogAcumuladora() {
 
     // Sincroniza estado inicial e inicia polling leve
     syncJogFromPLC();
+    // ✅ CORRIGIDO: Aumentado para 1000ms (era 400ms) - reduz uso de CPU/memória
     if (jogAcPollInterval) clearInterval(jogAcPollInterval);
-    jogAcPollInterval = setInterval(syncJogFromPLC, 400);
+    jogAcPollInterval = setInterval(syncJogFromPLC, 1000);
 }
 
 if (document.readyState === 'loading') {
@@ -4023,8 +4024,9 @@ function setupJogDosificadora() {
     }
     // Sincroniza estado inicial e inicia polling
     syncJogDosFromPLC();
+    // ✅ CORRIGIDO: Aumentado para 1000ms (era 400ms) - reduz uso de CPU/memória
     if (jogDosPollInterval) clearInterval(jogDosPollInterval);
-    jogDosPollInterval = setInterval(syncJogDosFromPLC, 400);
+    jogDosPollInterval = setInterval(syncJogDosFromPLC, 1000);
 }
 
 if (document.readyState === 'loading') {
@@ -4259,8 +4261,9 @@ function setupJogEscova() {
     }
     // Sincroniza estado inicial e inicia polling
     syncJogEscovaFromPLC();
+    // ✅ CORRIGIDO: Aumentado para 1000ms (era 400ms) - reduz uso de CPU/memória
     if (jogEscovaPollInterval) clearInterval(jogEscovaPollInterval);
-    jogEscovaPollInterval = setInterval(syncJogEscovaFromPLC, 400);
+    jogEscovaPollInterval = setInterval(syncJogEscovaFromPLC, 1000);
 }
 
 if (document.readyState === 'loading') {
@@ -5565,8 +5568,12 @@ function initPowerSwitchGrid() {
         // Sincroniza estado inicial do PLC
         syncPowerSwitchFromPLC();
         
-        // Polling para manter sincronizado (a cada 1 segundo)
-        setInterval(syncPowerSwitchFromPLC, 1000);
+        // ✅ CORRIGIDO: Armazena ID do intervalo para poder limpar depois
+        // Polling para manter sincronizado (a cada 3 segundos - era 1 segundo)
+        if (window.__powerSwitchSyncInterval) {
+            clearInterval(window.__powerSwitchSyncInterval);
+        }
+        window.__powerSwitchSyncInterval = setInterval(syncPowerSwitchFromPLC, 3000);
     } catch (e) {
         console.error('[POWER-GRID] Erro ao inicializar botão:', e);
     }
@@ -5617,8 +5624,12 @@ if (document.readyState === 'loading') {
     }, 500);
 }
 
-// Verifica periodicamente se o botão está no lugar correto
-setInterval(ensurePowerButtonInCorrectPlace, 2000);
+// ✅ CORRIGIDO: Armazena ID do intervalo para poder limpar depois
+// Verifica periodicamente se o botão está no lugar correto (a cada 10 segundos - era 2 segundos)
+if (window.__ensurePowerBtnInterval) {
+    clearInterval(window.__ensurePowerBtnInterval);
+}
+window.__ensurePowerBtnInterval = setInterval(ensurePowerButtonInCorrectPlace, 10000);
 
 // ========== Delegation de segurança para Jog Acumuladora (garante captura mesmo se bindings falharem) ==========
 document.addEventListener('click', async function(e){

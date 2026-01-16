@@ -82,7 +82,7 @@
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Janela.png') }}" alt="Ícone Janela" class="menu-icon">
             <span class="menu-text">Janelas</span>
         </button>
-        <button class="menu-btn menu-btn-tecnico" onclick="zoomButton(this)">
+        <button class="menu-btn menu-btn-tecnico" onclick="showSolenoids(event);zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Acionamento.png') }}" alt="Ícone Acionamento" class="menu-icon">
             <span class="menu-text">Solenoides</span>
         </button>

@@ -73,7 +73,8 @@ function hideAllContainers() {
         'graphics-container', // Adicionar graphics-container
         'viewer3d-container', // Adicionar viewer3d-container
         'samples-container', // Adicionar samples-container
-        'panels-container' // Adicionar panels-container
+        'panels-container', // Adicionar panels-container
+        'solenoids-container' // Adicionar solenoids-container
     ];
     containers.forEach(id => {
         const el = document.getElementById(id);
@@ -191,6 +192,19 @@ function hideAllContainers() {
             console.warn('Erro ao fazer cleanup da tela de amostras:', e);
         }
     }
+    
+    // Cleanup da tela de solenoides
+    if (typeof window.cleanupSolenoids === 'function') {
+        try {
+            window.cleanupSolenoids();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de solenoides:', e);
+        }
+    }
+    
+    // ✅ NOTA: NÃO resetamos as flags de inicialização aqui
+    // As telas técnicas (washer, dryer, etc) verificam suas flags para evitar re-inicialização
+    // Os intervalos são limpos pelo cleanup, mas os event listeners permanecem ativos
 }
 
 // Função para exibir o grid
@@ -198,7 +212,10 @@ function showGrid(event) {
     setLastScreen('grid');
     hideAllContainers();
     const grid = document.getElementById('grid-container');
-    if (grid) grid.style.display = 'block';
+    if (grid) {
+        grid.style.display = 'block';
+        grid.style.visibility = 'visible';
+    }
 
     // Parar atualização de alarmes ao sair da tela de alarmes
     if (window.stopAlarmAutoRefresh) {
@@ -228,7 +245,10 @@ function showGraphics(event) {
     setLastScreen('graphics');
     hideAllContainers();
     const graphics = document.getElementById('graphics-container');
-    if (graphics) graphics.style.display = 'block';
+    if (graphics) {
+        graphics.style.display = 'block';
+        graphics.style.visibility = 'visible';
+    }
 
     document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
     // Marca ativo somente quando for clique em botão do menu
@@ -271,7 +291,10 @@ function showAlarm(event) {
     setLastScreen('alarm');
     hideAllContainers();
     const alarm = document.getElementById('alarm-container');
-    if (alarm) alarm.style.display = 'block';
+    if (alarm) {
+        alarm.style.display = 'block';
+        alarm.style.visibility = 'visible';
+    }
 
     // Remove active de todos os botões do menu
     document.querySelectorAll('.menu-btn').forEach(btn => {
@@ -363,7 +386,10 @@ function showWeightRange(event) {
     setLastScreen('weight');
     hideAllContainers();
     const weightContainer = document.getElementById('weight-range-container');
-    if (weightContainer) weightContainer.style.display = 'block';
+    if (weightContainer) {
+        weightContainer.style.display = 'block';
+        weightContainer.style.visibility = 'visible';
+    }
 
     // Parar atualização de alarmes ao sair da tela de alarmes
     if (window.stopAlarmAutoRefresh) {
@@ -384,7 +410,10 @@ function showBalance(event) {
     setLastScreen('balance');
     hideAllContainers();
     const balanceContainer = document.getElementById('balance-container');
-    if (balanceContainer) balanceContainer.style.display = 'block';
+    if (balanceContainer) {
+        balanceContainer.style.display = 'block';
+        balanceContainer.style.visibility = 'visible';
+    }
 
     if (window.stopAlarmAutoRefresh) {
         window.stopAlarmAutoRefresh();
@@ -406,6 +435,7 @@ function showClassification(event) {
     const classificationContainer = document.getElementById('classification-container');
     if (classificationContainer) {
         classificationContainer.style.display = 'block';
+        classificationContainer.style.visibility = 'visible';
         classificationContainer.style.zIndex = '1';
     }
 
@@ -436,7 +466,10 @@ function showInput(event) {
     setLastScreen('input');
     hideAllContainers();
     const inputContainer = document.getElementById('input-container');
-    if (inputContainer) inputContainer.style.display = 'block';
+    if (inputContainer) {
+        inputContainer.style.display = 'block';
+        inputContainer.style.visibility = 'visible';
+    }
 
     if (window.stopAlarmAutoRefresh) {
         window.stopAlarmAutoRefresh();
@@ -459,6 +492,7 @@ function showWasher(event) {
     const washerContainer = document.getElementById('washer-container');
     if (washerContainer) {
         washerContainer.style.display = 'block';
+        washerContainer.style.visibility = 'visible';
     }
 
     if (window.stopAlarmAutoRefresh) {
@@ -485,6 +519,7 @@ function showDryer(event) {
     const dryerContainer = document.getElementById('dryer-container');
     if (dryerContainer) {
         dryerContainer.style.display = 'block';
+        dryerContainer.style.visibility = 'visible';
     }
 
     if (window.stopAlarmAutoRefresh) {
@@ -510,6 +545,7 @@ function showDiagram(event) {
     const diagramContainer = document.getElementById('diagram-container');
     if (diagramContainer) {
         diagramContainer.style.display = 'block';
+        diagramContainer.style.visibility = 'visible';
     }
 
     if (window.stopAlarmAutoRefresh) {
@@ -583,6 +619,33 @@ function showPanels(event) {
     }
 }
 
+// ✅ Exibe a tela de solenoides
+function showSolenoids(event) {
+    setLastScreen('solenoids');
+    hideAllContainers();
+    const solenoidsContainer = document.getElementById('solenoids-container');
+    if (solenoidsContainer) {
+        solenoidsContainer.style.display = 'flex';
+        solenoidsContainer.style.visibility = 'visible';
+    }
+
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
+
+    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+    if (event?.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+    
+    // Inicializa os solenoides se ainda não foi inicializado
+    if (typeof window.inicializarSolenoids === 'function' && !window.solenoidsInitialized) {
+        console.log('🔧 Inicializando sistema de Solenoides...');
+        window.inicializarSolenoids();
+        window.solenoidsInitialized = true; // Evita reinicializar
+    }
+}
+
 // Função para exibir a tela do visualizador 3D
 function showViewer3D(event) {
     setLastScreen('viewer3d');
@@ -590,6 +653,7 @@ function showViewer3D(event) {
     const viewer3dContainer = document.getElementById('viewer3d-container');
     if (viewer3dContainer) {
         viewer3dContainer.style.display = 'block';
+        viewer3dContainer.style.visibility = 'visible';
     }
 
     if (window.stopAlarmAutoRefresh) {
@@ -619,6 +683,7 @@ function showSamples(event) {
     const samplesContainer = document.getElementById('samples-container');
     if (samplesContainer) {
         samplesContainer.style.display = 'block';
+        samplesContainer.style.visibility = 'visible';
     }
 
     if (window.stopAlarmAutoRefresh) {
@@ -687,36 +752,18 @@ Promise.all([
         console.warn('Função inicializarVelocimetro não encontrada!');
     }
     
-    // Inicializar alarmes se a função existir
-    if (typeof window.inicializarAlarmes === 'function') {
-        console.log('Inicializando alarmes após carregamento de scripts');
-        window.inicializarAlarmes();
-    } else {
-        console.error('Função inicializarAlarmes não disponível após carregamento!');
-    }
-
-    // Inicializa telas principais, se os scripts já tiverem carregado
-    if (typeof inicializarWeightRange === 'function') {
-        inicializarWeightRange();
-    }
-
-    if (typeof inicializarBalance === 'function') {
-        inicializarBalance();
-    }
-
-    // Inicializa classificação apenas se a função existir
-    if (typeof inicializarClassification === 'function') {
-        inicializarClassification();
-    }
-
-    if (typeof inicializarInput === 'function') {
-        inicializarInput();
-    }
-
-    // Remova ou comente esta linha:
-    // if (typeof inicializarWasher === 'function') {
-    //     inicializarWasher();
-    // }
+    // ✅ CRÍTICO - CORREÇÃO DE VAZAMENTO DE MEMÓRIA:
+    // NÃO inicializa telas automaticamente ao carregar a página!
+    // Cada tela será inicializada apenas quando o usuário abri-la.
+    // Isso evita que múltiplos intervalos sejam criados desnecessariamente.
+    
+    // REMOVIDO: inicializarAlarmes() - será chamado apenas quando showAlarm() for executado
+    // REMOVIDO: inicializarWeightRange() - será chamado apenas quando showWeightRange() for executado
+    // REMOVIDO: inicializarBalance() - será chamado apenas quando showBalance() for executado
+    // REMOVIDO: inicializarClassification() - será chamado apenas quando showClassification() for executado
+    // REMOVIDO: inicializarInput() - será chamado apenas quando showInput() for executado
+    
+    console.log('[MAIN] ✅ Scripts carregados - telas serão inicializadas sob demanda');
 
 })
 .catch(error => console.error('Erro ao carregar scripts:', error));
@@ -754,7 +801,8 @@ document.addEventListener('DOMContentLoaded', function() {
         windows: showWindows,
         viewer3d: showViewer3D,
         samples: showSamples,
-        panels: showPanels
+        panels: showPanels,
+        solenoids: showSolenoids
     };
 
     // Regra:
@@ -788,5 +836,6 @@ window.showWindows = showWindows;
 window.showViewer3D = showViewer3D; // ✅ Exportação global da função do visualizador 3D
 window.showSamples = showSamples; // ✅ Exportação global da função de amostras
 window.showPanels = showPanels; // ✅ Exportação global da função de painéis
+window.showSolenoids = showSolenoids; // ✅ Exportação global da função de solenoides
 
 

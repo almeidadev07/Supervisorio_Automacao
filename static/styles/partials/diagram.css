@@ -1,11 +1,59 @@
 /* static/styles/partials/diagram.css */
 
+/* Layout principal com título e conteúdo */
+.diagram-screen-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    max-width: 100%;
+    height: calc(100vh - var(--menu-height, 100px) - 20px);
+    margin: 0 auto;
+    padding: 20px;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f8f9fa;
+}
+
+/* Header box branco com título */
+.diagram-header-box {
+    text-align: center;
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 25px;
+    box-sizing: border-box;
+}
+
+/* Título da tela */
+.diagram-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #4a5568;
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Content box branco */
+.diagram-content-box {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 20px;
+}
+
 .diagram-wrapper {
     display: flex;
-    height: calc(100vh - var(--menu-height, 100px) - 20px);
-    padding: 20px;
+    height: 100%;
     margin: 0;
-    background: #f8f9fa;
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
@@ -28,11 +76,9 @@
 
 .diagram-sidebar {
     width: 300px;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(245, 247, 250, 0.8);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
     overflow: hidden;
     box-sizing: border-box;
     padding: 20px;

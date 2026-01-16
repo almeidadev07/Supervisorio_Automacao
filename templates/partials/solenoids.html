@@ -1,0 +1,316 @@
+<!-- partials/solenoids.html - Tela de Controle de Solenoides -->
+<div class="solenoids-layout">
+    <!-- Box do Título -->
+    <div class="solenoids-header">
+        <h2 class="solenoids-title">Controle de Solenoides</h2>
+    </div>
+    
+    <!-- Box do Conteúdo -->
+    <div class="solenoids-content-box">
+        <div class="solenoids-content">
+            <!-- Painel Esquerdo - Controles -->
+            <div class="solenoids-left-panel">
+                <div class="control-button" id="btn-teste-solenoide" data-action="teste">
+                    <span class="control-label">Teste Solenoide</span>
+                    <button class="control-btn-img" data-state="off">
+                        <img class="btn-default" src="{{ url_for('static', filename='images/pages/icons/comandos/01 - Botão_Acionar_Branco.png') }}" alt="Inativo">
+                        <img class="btn-active" src="{{ url_for('static', filename='images/pages/icons/comandos/01 - Botão_Acionar_Azul.png') }}" alt="Ativo">
+                    </button>
+                </div>
+                
+                <div class="control-button" id="btn-amaciar" data-action="amaciar">
+                    <span class="control-label">Amaciar</span>
+                    <button class="control-btn-img" data-state="off">
+                        <img class="btn-default" src="{{ url_for('static', filename='images/pages/icons/comandos/01 - Botão_Acionar_Branco.png') }}" alt="Inativo">
+                        <img class="btn-active" src="{{ url_for('static', filename='images/pages/icons/comandos/01 - Botão_Acionar_Azul.png') }}" alt="Ativo">
+                    </button>
+                </div>
+                
+                <div class="control-button" id="btn-pos-solenoide" data-action="posicao">
+                    <span class="control-label">Pos. Solenoide</span>
+                    <button class="control-btn-img" data-state="off">
+                        <img class="btn-default" src="{{ url_for('static', filename='images/pages/icons/comandos/01 - Botão_Acionar_Branco.png') }}" alt="Inativo">
+                        <img class="btn-active" src="{{ url_for('static', filename='images/pages/icons/comandos/01 - Botão_Acionar_Azul.png') }}" alt="Ativo">
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Painel Central - Grid de Solenoides -->
+            <div class="solenoids-center-panel">
+                <div class="solenoids-grid">
+                    <!-- Linha 1: SL01 - SL06 -->
+                    <div class="solenoid-row">
+                        <div class="solenoid-item" data-solenoid="01">
+                            <span class="solenoid-label">SL01</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="02">
+                            <span class="solenoid-label">SL02</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="03">
+                            <span class="solenoid-label">SL03</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="04">
+                            <span class="solenoid-label">SL04</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="05">
+                            <span class="solenoid-label">SL05</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="06">
+                            <span class="solenoid-label">SL06</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Linha 2: SL07 - SL12 -->
+                    <div class="solenoid-row">
+                        <div class="solenoid-item" data-solenoid="07">
+                            <span class="solenoid-label">SL07</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="08">
+                            <span class="solenoid-label">SL08</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="09">
+                            <span class="solenoid-label">SL09</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="10">
+                            <span class="solenoid-label">SL10</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="11">
+                            <span class="solenoid-label">SL11</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="12">
+                            <span class="solenoid-label">SL12</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Linha 3: SL13 - SL18 -->
+                    <div class="solenoid-row">
+                        <div class="solenoid-item" data-solenoid="13">
+                            <span class="solenoid-label">SL13</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="14">
+                            <span class="solenoid-label">SL14</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="15">
+                            <span class="solenoid-label">SL15</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="16">
+                            <span class="solenoid-label">SL16</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="17">
+                            <span class="solenoid-label">SL17</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                        <div class="solenoid-item" data-solenoid="18">
+                            <span class="solenoid-label">SL18</span>
+                            <button class="solenoid-button" data-state="off">
+                                <img class="btn-off" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado">
+                                <img class="btn-on" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado">
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Painel Direito - Seleção de Posição -->
+            <div class="solenoids-right-panel">
+                <div class="position-panel">
+                    <h3 class="position-title">Posição</h3>
+                    <div class="position-list">
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-esteira-industrial" checked>
+                            <span class="checkmark"></span>
+                            <span class="position-label">Esteira Industrial</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-01">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 01</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-02">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 02</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-03">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 03</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-04">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 04</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-05">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 05</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-06">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 06</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-07">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 07</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-08">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 08</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-09">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 09</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-10">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 10</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-11">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 11</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-12">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 12</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-13">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 13</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-14">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 14</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-15">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 15</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-16">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 16</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-17">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 17</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-18">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 18</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-19">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 19</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-20">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 20</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-21">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 21</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-22">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 22</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-23">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 23</span>
+                        </label>
+                        <label class="position-item">
+                            <input type="checkbox" id="pos-emb-24">
+                            <span class="checkmark"></span>
+                            <span class="position-label">Embaladora 24</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

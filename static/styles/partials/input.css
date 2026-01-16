@@ -1,100 +1,223 @@
-#input-container .container {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-  max-width: 600px;
-  margin: auto;
+/* Input Screen - Seguindo padrão das outras telas */
+
+#input-container {
+    display: none;
+    height: calc(100vh - var(--menu-height, 100px) - 20px);
+    padding: 20px;
+    margin: 0;
+    background: #f8f9fa;
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
-#input-container .unit {
-  background: #fff;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+#input-container[style*="display: block"],
+#input-container[style*="display:flex"] {
+    display: flex !important;
 }
 
-#input-container .unit h2 {
-  margin-bottom: 10px;
-  font-size: 1.4rem;
+#inputScreen {
+    width: 100%;
+    height: 100%;
 }
 
-#input-container .jog-switch {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
+/* Layout principal com título e conteúdo */
+.input-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    margin: 0 auto;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-#input-container .toggle {
-  appearance: none;
-  width: 50px;
-  height: 26px;
-  background: #ccc;
-  border-radius: 20px;
-  position: relative;
-  cursor: pointer;
-  transition: background 0.3s ease;
+/* Header box branco com título */
+.input-header-box {
+    text-align: center;
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 25px;
+    box-sizing: border-box;
 }
 
-#input-container .toggle::before {
-  content: '';
-  position: absolute;
-  width: 22px;
-  height: 22px;
-  background: white;
-  border-radius: 50%;
-  top: 2px;
-  left: 2px;
-  transition: left 0.3s ease;
+/* Título da tela */
+.input-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #4a5568;
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-#input-container .toggle:checked {
-  background: #2196F3;
+/* Content box branco */
+.input-content-box {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-#input-container .toggle:checked::before {
-  left: 26px;
+.input-container {
+    display: flex;
+    flex-direction: row;
+    gap: 40px;
+    max-width: 100%;
+    justify-content: center;
+    align-items: stretch;
 }
 
-#input-container .gauge-container {
-  display: flex;
-  align-items: center;
-  gap: 20px;
+.input-container .unit {
+    background: rgba(245, 247, 250, 0.8);
+    border-radius: 16px;
+    padding: 30px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    min-width: 300px;
+    flex: 1;
+    max-width: 400px;
 }
 
-#input-container .gauge {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: conic-gradient(
-    #00cc66 0%,
-    #f1c40f 50%,
-    #e74c3c 100%
-  );
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.input-container .unit h2 {
+    margin-bottom: 20px;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #4a5568;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-#input-container .gauge span {
-  position: absolute;
-  font-weight: bold;
-  color: #000;
-  font-size: 1.1rem;
+.input-container .jog-switch {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #4a5568;
 }
 
-#input-container .slider-wrapper {
-  flex-grow: 1;
+.input-container .toggle {
+    appearance: none;
+    width: 56px;
+    height: 30px;
+    background: #ccc;
+    border-radius: 20px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.3s ease;
 }
 
-#input-container .slider {
-  width: 100%;
+.input-container .toggle::before {
+    content: '';
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background: white;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: left 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-#input-container .limite {
-  text-align: right;
-  font-size: 0.9rem;
-  color: #444;
-  margin-top: 4px;
+.input-container .toggle:checked {
+    background: #667eea;
+}
+
+.input-container .toggle:checked::before {
+    left: 29px;
+}
+
+.input-container .gauge-container {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.input-container .gauge {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: conic-gradient(
+        #00cc66 0%,
+        #f1c40f 50%,
+        #e74c3c 100%
+    );
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.input-container .gauge span {
+    position: absolute;
+    font-weight: bold;
+    color: #000;
+    font-size: 1.3rem;
+    background: white;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.input-container .slider-wrapper {
+    flex-grow: 1;
+}
+
+.input-container .slider {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: #ddd;
+    outline: none;
+    cursor: pointer;
+}
+
+.input-container .slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #667eea;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.input-container .limite {
+    text-align: right;
+    font-size: 1rem;
+    color: #4a5568;
+    margin-top: 8px;
+    font-weight: 600;
+}
+
+/* Responsividade */
+@media screen and (max-width: 768px) {
+    .input-container {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .input-container .unit {
+        max-width: 100%;
+        min-width: auto;
+    }
 }

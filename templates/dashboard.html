@@ -83,6 +83,11 @@
                     {% include 'partials/panels.html' %}
                 </div>
                 
+                <!-- Solenoids container -->
+                <div id="solenoids-container" class="container" style="display: none;">
+                    {% include 'partials/solenoids.html' %}
+                </div>
+                
                 <!-- Componentes de interface -->
                 {% include 'partials/virtual_keyboard.html' %}
             </div>
@@ -155,5 +160,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/viewer3d.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/panels.css') }}">
     <script src="{{ url_for('static', filename='scripts/partials/panels.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/solenoids.css') }}">
+    <script src="{{ url_for('static', filename='scripts/partials/solenoids.js') }}" defer></script>
 </body>
 </html>

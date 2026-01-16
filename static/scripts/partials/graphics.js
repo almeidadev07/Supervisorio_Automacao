@@ -51,6 +51,11 @@ let graphicsSocket = null;
 let isGraphicsScreenVisible = false;
 let isGridScreenVisible = false;
 
+// ✅ IDs dos intervalos para poder limpar depois (CRÍTICO para evitar vazamento de memória)
+let graphicsSubscriptionCheckInterval = null;
+let graphicsNameUpdateInterval = null;
+let graphicsBackgroundStarted = false;
+
 // Cores das classes (conforme definido na tela de classificação)
 const CLASS_COLORS = {
     'C1': '#FF3399',
@@ -963,10 +968,54 @@ function checkGraphicsSubscription() {
 
 // Não inicializa automaticamente; a inicialização ocorre ao abrir a tela (showGraphics)
 
+/**
+ * ✅ CRÍTICO: Função de cleanup para evitar vazamento de memória
+ * Limpa todos os intervalos, timers e subscriptions
+ */
+function cleanupGraphics() {
+    console.log('[GRAPHICS] 🧹 Executando cleanup de gráficos...');
+    
+    // Para o heartbeat
+    stopGraphicsHeartbeat();
+    
+    // Limpa intervalo de atualização de dados
+    if (dataUpdateIntervalId) {
+        clearInterval(dataUpdateIntervalId);
+        dataUpdateIntervalId = null;
+    }
+    
+    // Limpa intervalo de verificação de subscription
+    if (graphicsSubscriptionCheckInterval) {
+        clearInterval(graphicsSubscriptionCheckInterval);
+        graphicsSubscriptionCheckInterval = null;
+    }
+    
+    // Limpa intervalo de atualização de nomes
+    if (graphicsNameUpdateInterval) {
+        clearInterval(graphicsNameUpdateInterval);
+        graphicsNameUpdateInterval = null;
+    }
+    
+    // Remove listeners do Socket.IO
+    if (graphicsSocket) {
+        try {
+            graphicsSocket.off('telemetry');
+        } catch (_) {}
+    }
+    
+    // Faz unsubscribe das tags
+    try {
+        unsubscribeGraphicsScreen();
+    } catch (_) {}
+    
+    console.log('[GRAPHICS] ✅ Cleanup concluído');
+}
+
 // Exporta funções para uso global
 window.initGraphics = initGraphics;
 window.updateChartData = updateChartData;
 window.checkGraphicsSubscription = checkGraphicsSubscription;
+window.cleanupGraphics = cleanupGraphics; // ✅ CRÍTICO: Exporta cleanup
 window.getGraphicsSummary = function getGraphicsSummary() {
     return CLASS_NAMES.map((name, idx) => {
         const key = 'C' + (idx + 1);
@@ -981,11 +1030,12 @@ window.getGraphicsSummary = function getGraphicsSummary() {
 
 // Inicia um feed de dados em background para alimentar o mini-gráfico do grid
 // mesmo que a tela de gráficos não tenha sido aberta ainda.
+// ✅ CORRIGIDO: Agora armazena IDs dos intervalos para poder limpar depois
 (function startGraphicsBackgroundFeed() {
-    let started = false;
     async function start() {
-        if (started) return;
-        started = true;
+        // ✅ CRÍTICO: Evita iniciar múltiplas vezes
+        if (graphicsBackgroundStarted) return;
+        graphicsBackgroundStarted = true;
         
         // ✅ Busca os nomes das classes diretamente do PLC via DataHub
         try {
@@ -1007,16 +1057,24 @@ window.getGraphicsSummary = function getGraphicsSummary() {
         initGraphicsSubscription();
         initGraphicsSocketIO();
         
-        // ✅ Monitora mudanças de visibilidade das telas para gerenciar subscription
-        setInterval(() => {
+        // ✅ CORRIGIDO: Armazena ID do intervalo para poder limpar depois
+        // Monitora mudanças de visibilidade das telas para gerenciar subscription
+        if (graphicsSubscriptionCheckInterval) {
+            clearInterval(graphicsSubscriptionCheckInterval);
+        }
+        graphicsSubscriptionCheckInterval = setInterval(() => {
             checkGraphicsSubscription();
-        }, 2000); // Verifica a cada 2 segundos
+        }, 5000); // ✅ Aumentado para 5 segundos (era 2) - reduz uso de CPU
         
-        // ✅ Atualiza os nomes a cada 30s + monitora conexão PLC ↔ DataHub
+        // ✅ CORRIGIDO: Armazena ID do intervalo para poder limpar depois
+        // Atualiza os nomes a cada 60s (era 30s) + monitora conexão PLC ↔ DataHub
         let plcConnected = true;
         let consecutiveFailures = 0;
         
-        setInterval(async () => {
+        if (graphicsNameUpdateInterval) {
+            clearInterval(graphicsNameUpdateInterval);
+        }
+        graphicsNameUpdateInterval = setInterval(async () => {
             try {
                 // ✅ VERIFICA STATUS DA CONEXÃO PLC ↔ DataHub
                 const isConnected = await graphicsApi.checkPLCConnection();
@@ -1074,7 +1132,9 @@ window.getGraphicsSummary = function getGraphicsSummary() {
                     }
                 }
             }
-        }, 30000);
+        }, 60000); // ✅ Aumentado para 60 segundos (era 30) - reduz uso de CPU/memória
+        
+        console.log('[GRAPHICS] ✅ Background feed iniciado com intervalos controlados');
     }
 
     if (document.readyState === 'loading') {

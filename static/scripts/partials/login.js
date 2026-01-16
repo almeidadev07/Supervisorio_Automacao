@@ -150,6 +150,28 @@ function isAdmin() {
 }
 
 function showLoginModal() {
+    // Recolhe o menu se estiver aberto
+    if (typeof window.toggleMenu === 'function') {
+        // Verifica se o menu está aberto através do elemento DOM
+        const menu = document.getElementById('menu');
+        const carouselWrapper = document.getElementById('menu-carousel-wrapper');
+        const isMenuOpen = menu && (menu.classList.contains('open') || (carouselWrapper && carouselWrapper.classList.contains('active')));
+        
+        if (isMenuOpen) {
+            // Fecha o menu antes de abrir o modal
+            window.toggleMenu();
+            // Aguarda um pouco para a animação do menu fechar antes de abrir o modal
+            setTimeout(() => {
+                const loginModal = document.getElementById('login-modal');
+                if (loginModal) {
+                    loginModal.classList.add('show');
+                    updateUserDisplay();
+                }
+            }, 100);
+            return; // Retorna para não executar o código abaixo
+        }
+    }
+    
     document.getElementById('login-modal').classList.add('show');
     updateUserDisplay();
 }

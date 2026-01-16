@@ -1,103 +1,113 @@
 <div id="weightRangeScreen">
-    <div class="weight-container">
-        <div class="weight-panel">
-            <!-- Cabeçalho / seleção de preset -->
-            <div class="setup-selection">
-                <div class="setup-buttons">
-                    <label class="setup-label">
-                        <input type="radio" name="setup" value="0" checked>
-                        <span class="setup-circle">1</span>
-                    </label>
-                    <label class="setup-label">
-                        <input type="radio" name="setup" value="1">
-                        <span class="setup-circle">2</span>
-                    </label>
-                    <label class="setup-label">
-                        <input type="radio" name="setup" value="2">
-                        <span class="setup-circle">3</span>
-                    </label>
-                    <label class="setup-label">
-                        <input type="radio" name="setup" value="3">
-                        <span class="setup-circle">4</span>
-                    </label>
-                </div>
-            </div>
+    <div class="weight-layout">
+        <!-- Header com título -->
+        <div class="weight-header-box">
+            <h2 class="weight-title">Faixa de Peso</h2>
+        </div>
+        
+        <!-- Content box -->
+        <div class="weight-content-box">
+            <div class="weight-container">
+                <div class="weight-panel">
+                    <!-- Cabeçalho / seleção de preset -->
+                    <div class="setup-selection">
+                        <div class="setup-buttons">
+                            <label class="setup-label">
+                                <input type="radio" name="setup" value="0" checked>
+                                <span class="setup-circle">1</span>
+                            </label>
+                            <label class="setup-label">
+                                <input type="radio" name="setup" value="1">
+                                <span class="setup-circle">2</span>
+                            </label>
+                            <label class="setup-label">
+                                <input type="radio" name="setup" value="2">
+                                <span class="setup-circle">3</span>
+                            </label>
+                            <label class="setup-label">
+                                <input type="radio" name="setup" value="3">
+                                <span class="setup-circle">4</span>
+                            </label>
+                        </div>
+                    </div>
 
-            <div class="weight-range-content">
-                <!-- Escala de peso -->
-                <div class="weight-scale">
-                    <span>0g</span>
-                    <span>30g</span>
-                    <span>60g</span>
-                    <span>90g</span>
-                    <span>120g</span>
-                    <span>150g</span>
-                </div>
+                    <div class="weight-range-content">
+                        <!-- Escala de peso -->
+                        <div class="weight-scale">
+                            <span>0g</span>
+                            <span>30g</span>
+                            <span>60g</span>
+                            <span>90g</span>
+                            <span>120g</span>
+                            <span>150g</span>
+                        </div>
 
-                <!-- Barra principal -->
-                <div id="main-bar" class="weight-bar">
-                    <div class="segment faixa-1" style="width: 14.28%; background-color: #FF1493"></div>
-                    <div class="segment faixa-2" style="width: 14.28%; background-color: #FFFF00"></div>
-                    <div class="segment faixa-3" style="width: 14.28%; background-color: #0000FF"></div>
-                    <div class="segment faixa-4" style="width: 14.28%; background-color: #00FF00"></div>
-                    <div class="segment faixa-5" style="width: 14.28%; background-color: #FF4500"></div>
-                    <div class="segment faixa-6" style="width: 14.28%; background-color: #00BFFF"></div>
-                    <div class="segment faixa-7" style="width: 14.28%; background-color: #00FFBF"></div>
-                </div>
+                        <!-- Barra principal -->
+                        <div id="main-bar" class="weight-bar">
+                            <div class="segment faixa-1" style="width: 14.28%; background-color: #FF1493"></div>
+                            <div class="segment faixa-2" style="width: 14.28%; background-color: #FFFF00"></div>
+                            <div class="segment faixa-3" style="width: 14.28%; background-color: #0000FF"></div>
+                            <div class="segment faixa-4" style="width: 14.28%; background-color: #00FF00"></div>
+                            <div class="segment faixa-5" style="width: 14.28%; background-color: #FF4500"></div>
+                            <div class="segment faixa-6" style="width: 14.28%; background-color: #00BFFF"></div>
+                            <div class="segment faixa-7" style="width: 14.28%; background-color: #00FFBF"></div>
+                        </div>
 
-                <!-- Inputs de peso -->
-                <div class="weight-inputs">
-                    <div class="input-group">
-                        <label class="faixa-label faixa-1" aria-readonly="true">Faixa 1</label>
-                        <div class="input-wrapper">
-                            <input type="number" class="weight-input faixa-1" value="30" min="0" max="150">
-                            <span>g</span>
+                        <!-- Inputs de peso -->
+                        <div class="weight-inputs">
+                            <div class="input-group">
+                                <label class="faixa-label faixa-1" aria-readonly="true">Faixa 1</label>
+                                <div class="input-wrapper">
+                                    <input type="number" class="weight-input faixa-1" value="30" min="0" max="150">
+                                    <span>g</span>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label class="faixa-label faixa-2" aria-readonly="true">Faixa 2</label>
+                                <div class="input-wrapper">
+                                    <input type="number" class="weight-input faixa-2" value="30" min="0" max="150">
+                                    <span>g</span>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label class="faixa-label faixa-3" aria-readonly="true">Faixa 3</label>
+                                <div class="input-wrapper">
+                                    <input type="number" class="weight-input faixa-3" value="30" min="0" max="150">
+                                    <span>g</span>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label class="faixa-label faixa-4" aria-readonly="true">Faixa 4</label>
+                                <div class="input-wrapper">
+                                    <input type="number" class="weight-input faixa-4" value="30" min="0" max="150">
+                                    <span>g</span>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label class="faixa-label faixa-5" aria-readonly="true">Faixa 5</label>
+                                <div class="input-wrapper">
+                                    <input type="number" class="weight-input faixa-5" value="30" min="0" max="150">
+                                    <span>g</span>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label class="faixa-label faixa-6" aria-readonly="true">Faixa 6</label>
+                                <div class="input-wrapper">
+                                    <input type="number" class="weight-input faixa-6" value="30" min="0" max="150">
+                                    <span>g</span>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label class="faixa-label faixa-7" aria-readonly="true">Faixa 7</label>
+                                <div class="input-wrapper">
+                                    <input type="number" class="weight-input faixa-7" value="30" min="0" max="150">
+                                    <span>g</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="input-group">
-                        <label class="faixa-label faixa-2" aria-readonly="true">Faixa 2</label>
-                        <div class="input-wrapper">
-                            <input type="number" class="weight-input faixa-2" value="30" min="0" max="150">
-                            <span>g</span>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label class="faixa-label faixa-3" aria-readonly="true">Faixa 3</label>
-                        <div class="input-wrapper">
-                            <input type="number" class="weight-input faixa-3" value="30" min="0" max="150">
-                            <span>g</span>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label class="faixa-label faixa-4" aria-readonly="true">Faixa 4</label>
-                        <div class="input-wrapper">
-                            <input type="number" class="weight-input faixa-4" value="30" min="0" max="150">
-                            <span>g</span>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label class="faixa-label faixa-5" aria-readonly="true">Faixa 5</label>
-                        <div class="input-wrapper">
-                            <input type="number" class="weight-input faixa-5" value="30" min="0" max="150">
-                            <span>g</span>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label class="faixa-label faixa-6" aria-readonly="true">Faixa 6</label>
-                        <div class="input-wrapper">
-                            <input type="number" class="weight-input faixa-6" value="30" min="0" max="150">
-                            <span>g</span>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label class="faixa-label faixa-7" aria-readonly="true">Faixa 7</label>
-                        <div class="input-wrapper">
-                            <input type="number" class="weight-input faixa-7" value="30" min="0" max="150">
-                            <span>g</span>
-                        </div>
+
                     </div>
                 </div>
-
             </div>
         </div>
     </div>

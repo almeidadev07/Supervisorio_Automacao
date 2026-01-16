@@ -1,71 +1,80 @@
 <div id="balanceScreen">
-    <div class="balance-container">
-        <div class="balance-panel">
-    <div class="balance-header">
-        <button id="toggle-calibration" class="toggle-btn">
-            Habilitar Calibração
-        </button>
-    </div>
-
-    <div class="balance-grid">
-        <!-- As linhas serão inseridas dinamicamente via JavaScript -->
-    </div>
-
-    <!-- Modal de Seleção de Peso -->
-    <div id="weight-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <button type="button" class="modal-close" aria-label="Fechar">×</button>
-            <h2>Calibração de Balança</h2>
-            <p>Linha: <span id="modal-line-number"></span></p>
-            <p><span id="modal-current-value"></span><span id="unit">g</span></p>
-            
-            <div class="modal-buttons">
-                <button id="min-weight-btn" class="btn btn-icon" aria-label="Peso mínimo">
-                    <img src="{{ url_for('static', filename='images/pages/icons/comandos/icone_peso_minimo.png') }}" alt="Peso mínimo" />
-                </button>
-                <button id="max-weight-btn" class="btn btn-icon" aria-label="Peso máximo">
-                    <img src="{{ url_for('static', filename='images/pages/icons/comandos/icone_peso_maximo.png') }}" alt="Peso máximo" />
-                </button>
-            </div>
+    <div class="balance-layout">
+        <!-- Header com título -->
+        <div class="balance-header-box">
+            <h2 class="balance-title">Balança</h2>
         </div>
-    </div>
+        
+        <!-- Content box -->
+        <div class="balance-content-box">
+            <div class="balance-container">
+                <div class="balance-panel">
+                    <div class="balance-controls-header">
+                        <button id="toggle-calibration" class="toggle-btn">
+                            Habilitar Calibração
+                        </button>
+                    </div>
 
-    <!-- Modal de Confirmação -->
-    <div id="confirmation-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <button type="button" class="modal-close" aria-label="Fechar">×</button>
-            <h2>Confirmar Calibração</h2>
-            <p>Linha: <span id="confirm-line-number"></span></p>
-            <p>Deseja calibrar o peso <span id="weight-type"></span> da balança?</p>
-            
-            <div class="modal-buttons">
-                <button id="confirm-calibration" class="btn btn-icon" aria-label="Confirmar">
-                    <img src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão Selecionado_ligado.png') }}" alt="Confirmar" />
-                </button>
-                <button id="cancel-calibration" class="btn btn-icon" aria-label="Cancelar">
-                    <img src="{{ url_for('static', filename='images/pages/icons/comandos/Botão_fechar.png') }}" alt="Cancelar" />
-                </button>
-            </div>
-        </div>
-    </div>
+                    <div class="balance-grid">
+                        <!-- As linhas serão inseridas dinamicamente via JavaScript -->
+                    </div>
 
-    <!-- Modal de Carregamento -->
-    <div id="loading-modal" class="modal loading-overlay" style="display: none;">
-        <div class="loading-content">
+                    <!-- Modal de Seleção de Peso -->
+                    <div id="weight-modal" class="modal" style="display: none;">
+                        <div class="modal-content">
+                            <button type="button" class="modal-close" aria-label="Fechar">×</button>
+                            <h2>Calibração de Balança</h2>
+                            <p>Linha: <span id="modal-line-number"></span></p>
+                            <p><span id="modal-current-value"></span><span id="unit">g</span></p>
+                            
+                            <div class="modal-buttons">
+                                <button id="min-weight-btn" class="btn btn-icon" aria-label="Peso mínimo">
+                                    <img src="{{ url_for('static', filename='images/pages/icons/comandos/icone_peso_minimo.png') }}" alt="Peso mínimo" />
+                                </button>
+                                <button id="max-weight-btn" class="btn btn-icon" aria-label="Peso máximo">
+                                    <img src="{{ url_for('static', filename='images/pages/icons/comandos/icone_peso_maximo.png') }}" alt="Peso máximo" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-            <div class="loading-gear">
-                <img src="{{ url_for('static', filename='images/pages/icons/status/engrenagem_rodando_01.png') }}" alt="Engrenagem" class="gear gear-1" />
-            </div>
-            <div class="loading-text">Habilitando Calibração...</div>
-            <div class="loading-progress">
-                <div class="progress-bar">
-                    <div class="progress-half left" id="loading-progress-left"></div>
-                    <div class="progress-half right" id="loading-progress-right"></div>
+                    <!-- Modal de Confirmação -->
+                    <div id="confirmation-modal" class="modal" style="display: none;">
+                        <div class="modal-content">
+                            <button type="button" class="modal-close" aria-label="Fechar">×</button>
+                            <h2>Confirmar Calibração</h2>
+                            <p>Linha: <span id="confirm-line-number"></span></p>
+                            <p>Deseja calibrar o peso <span id="weight-type"></span> da balança?</p>
+                            
+                            <div class="modal-buttons">
+                                <button id="confirm-calibration" class="btn btn-icon" aria-label="Confirmar">
+                                    <img src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão Selecionado_ligado.png') }}" alt="Confirmar" />
+                                </button>
+                                <button id="cancel-calibration" class="btn btn-icon" aria-label="Cancelar">
+                                    <img src="{{ url_for('static', filename='images/pages/icons/comandos/Botão_fechar.png') }}" alt="Cancelar" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal de Carregamento -->
+                    <div id="loading-modal" class="modal loading-overlay" style="display: none;">
+                        <div class="loading-content">
+                            <div class="loading-gear">
+                                <img src="{{ url_for('static', filename='images/pages/icons/status/engrenagem_rodando_01.png') }}" alt="Engrenagem" class="gear gear-1" />
+                            </div>
+                            <div class="loading-text">Habilitando Calibração...</div>
+                            <div class="loading-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-half left" id="loading-progress-left"></div>
+                                    <div class="progress-half right" id="loading-progress-right"></div>
+                                </div>
+                                <div class="progress-text" id="loading-progress-text">0%</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="progress-text" id="loading-progress-text">0%</div>
             </div>
         </div>
     </div>
-        </div>
-    </div>
-    </div>
+</div>

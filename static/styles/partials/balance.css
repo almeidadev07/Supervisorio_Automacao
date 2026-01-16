@@ -1,12 +1,62 @@
 #balanceScreen {
     display: flex;
     height: calc(100vh - var(--menu-height, 100px) - 20px);
-    padding: clamp(10px, 1.5vw, 20px);
+    padding: 20px;
     margin: 0;
     background: #f8f9fa;
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
+}
+
+/* Layout principal com título e conteúdo */
+.balance-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px !important;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    margin: 0 auto;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Header box branco com título */
+.balance-header-box {
+    text-align: center;
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 25px !important;
+    box-sizing: border-box;
+}
+
+/* Título da tela */
+.balance-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #4a5568;
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Content box branco */
+.balance-content-box {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: clamp(15px, 1.5vw, 20px) !important;
+    min-height: 0;
 }
 
 .balance-container {
@@ -27,28 +77,24 @@
     flex-direction: column;
     height: 100%;
     min-width: 0;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
+    background: transparent;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-weight: 700;
     color: #4a5568;
-    border: 1px solid rgba(255, 255, 255, 0.2);
     overflow: hidden;
     box-sizing: border-box;
-    padding: clamp(12px, 1.5vw, 20px);
+    padding: 0;
 }
 
-.balance-header {
+.balance-controls-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 20px !important;
 }
 
 .toggle-btn {
-    padding: 10px 18px;
+    padding: 10px 18px !important;
     border-radius: 12px;
     font-weight: 800;
     cursor: pointer;
@@ -57,6 +103,7 @@
     background: linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%);
     color: #334155;
     box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    font-size: clamp(15px, 1.3vw, 17px) !important;
 }
 
 .toggle-btn.enabled {
@@ -74,7 +121,7 @@
     display: grid;
     /* Número de colunas é definido dinamicamente via JavaScript baseado na quantidade de linhas */
     grid-template-columns: repeat(var(--balance-cols, 6), 1fr);
-    gap: clamp(10px, 1.2vw, 20px);
+    gap: clamp(15px, 1.5vw, 20px) !important;
     justify-content: stretch;
     align-content: stretch;
     flex: 1;
@@ -84,14 +131,14 @@
 .balance-card {
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 16px;
-    padding: clamp(12px, 1.5vw, 20px);
+    padding: clamp(15px, 1.6vw, 20px) !important;
     text-align: center;
     background: rgba(255, 255, 255, 0.95);
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
-    min-height: clamp(200px, 30vh, 300px);
+    min-height: clamp(190px, 28vh, 280px) !important;
     height: auto;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
     flex: 1;
@@ -102,7 +149,7 @@
     display: flex; 
     align-items: center; 
     justify-content: center; 
-    height: 90px;
+    height: 85px !important;
     margin-top: auto;
     position: relative;
 }
@@ -117,25 +164,26 @@
 }
 
 .status-icons img {
-    width: 60px;
-    height: 60px;
+    width: 58px !important;
+    height: 58px !important;
     object-fit: contain;
     display: none;
 }
 
 .weight-value {
-    font-size: 37px;
+    font-size: clamp(34px, 3.2vw, 42px) !important;
     font-weight: bold;
     display: block;
-    margin-top: 46px;
-    margin-bottom: 8px;
+    margin-top: 40px !important;
+    margin-bottom: 10px !important;
     color: #00ff00; /* Verde neon */
     text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
 }
 
 .balance-card h3 {
     font-weight: bold;
-    margin-bottom: 16px;
+    margin-bottom: 15px !important;
+    font-size: clamp(17px, 1.5vw, 21px) !important;
 }
 
 
@@ -206,8 +254,8 @@
 
 /* Tamanho do botão Calibrar (imagem interna) */
 .calibrate-btn img {
-    width: 80px;
-    height: 70px;
+    width: 78px !important;
+    height: 68px !important;
     object-fit: contain;
     display: block;
 }
@@ -223,7 +271,7 @@
 }
 
 #unit{
-    font-size: 30px !important;
+    font-size: clamp(28px, 2.7vw, 34px) !important;
     font-weight: bold !important;
     color: #00ff00 !important; /* Verde neon */
     text-shadow: 0 0 10px rgba(0, 255, 0, 0.5) !important; /* Efeito neon */

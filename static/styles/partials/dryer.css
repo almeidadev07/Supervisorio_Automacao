@@ -1,12 +1,63 @@
+/* Layout principal com título e conteúdo */
+.dryer-screen-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    max-width: 100%;
+    height: calc(100vh - var(--menu-height, 100px) - 20px);
+    margin: 0 auto;
+    padding: 20px;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f8f9fa;
+}
+
+/* Header box branco com título */
+.dryer-header-box {
+    text-align: center;
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 25px;
+    box-sizing: border-box;
+}
+
+/* Título da tela */
+.dryer-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #4a5568;
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Content box branco */
+.dryer-content-box {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .dryer-layout {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: calc(100vh - 140px);
-  padding-top: 40px;
-  color: #fff;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* mesmo da tela de lavadora */
-  font-weight: 700;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    color: #4a5568;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 700;
 }
 
 .dryer-layout .units-grid {
@@ -71,9 +122,11 @@
 }
 
 .dryer-layout .motor-unit {
-  background: #6a6a6a;
+  background: rgba(255, 255, 255, 0.95) !important; /* box branco igual à tela de balança */
   padding: 14px 16px 10px 16px;
   border-radius: 16px; /* mesmo da tela de lavadora */
+  border: 1px solid rgba(255, 255, 255, 0.2) !important; /* mesmo border da balança */
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08) !important; /* mesmo shadow da balança */
   width: 170px;
   max-width: 350px;
   min-height: 280px;
@@ -89,7 +142,7 @@
   font-weight: 700;
   margin-bottom: 20px;
   text-align: center;
-  color: white;
+  color: #4a5568 !important; /* mesma cor do texto da tela de balança */
 }
 
 .dryer-layout .motor-visual {

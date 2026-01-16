@@ -1,86 +1,129 @@
 /* ========== Estilos para Tela de Gráficos ========== */
 
-.graphics-container {
+/* Layout principal com título e conteúdo */
+.graphics-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
     width: 100%;
-    height: calc(100vh - 140px); /* Subtrai altura do menu (reduzido mais um pouco) */
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    max-width: 100%;
+    height: calc(100vh - var(--menu-height, 100px) - 20px);
+    margin: 0 auto;
     padding: 20px;
     box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f8f9fa;
+}
+
+/* Header box branco com título */
+.graphics-header-box {
+    text-align: center;
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 25px;
+    box-sizing: border-box;
+}
+
+/* Título da tela */
+.graphics-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #4a5568;
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Content box branco */
+.graphics-content-box {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 15px !important;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.graphics-container {
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     overflow: hidden;
+    min-height: 0;
 }
 
-.graphics-header {
+.graphics-toolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
-    padding: 15px;
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 15px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
+    margin-bottom: 8px;
+    padding: 6px 10px !important;
+    background: rgba(245, 247, 250, 0.8);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
     flex-shrink: 0;
-    position: relative; /* permite centralizar o título no meio do header */
+    min-height: auto !important;
 }
 
 .graphics-tabs {
-	display: flex;
-	gap: 8px;
+    display: flex;
+    gap: 8px;
 }
 
 .graphics-tabs .tab-btn {
-	padding: 8px 12px;
-	border: none;
-	border-radius: 8px;
-	background: #eef2f7;
-	color: #2c3e50;
-	font-weight: 700;
-	cursor: pointer;
-	transition: all .2s ease;
+    padding: 6px 10px !important;
+    border: none;
+    border-radius: 8px;
+    background: #eef2f7;
+    color: #2c3e50;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .2s ease;
+    font-size: 0.85rem !important;
+    height: auto !important;
+    line-height: 1.2 !important;
 }
 .graphics-tabs .tab-btn:hover { filter: brightness(0.98); }
 .graphics-tabs .tab-btn.active { background: #667eea; color: #fff; }
 
-.graphics-header h1 {
-    color: #2c3e50;
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin: 0;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    position: absolute;     /* centraliza em relação ao header inteiro */
-    left: 50%;
-    transform: translateX(-50%);
-    text-align: center;
-}
-
 .graphics-controls {
     display: flex;
-    gap: 15px;
+    gap: 8px;
     align-items: center;
 }
 
 .graphics-controls .control-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
+    gap: 4px !important;
+    padding: 6px 10px !important;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
-    border-radius: 25px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 1rem;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    font-size: 0.85rem !important;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    height: auto !important;
+    line-height: 1.2 !important;
 }
 
 .graphics-controls .control-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
 }
 
 .graphics-controls .control-btn:active {
@@ -88,62 +131,70 @@
 }
 
 .graphics-controls .control-btn img {
-    width: 20px;
-    height: 20px;
+    width: 14px !important;
+    height: 14px !important;
     filter: brightness(0) invert(1);
+    flex-shrink: 0;
 }
 
 .graphics-content {
-    flex: 1;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     background: rgba(255, 255, 255, 0.95);
     border-radius: 20px;
-    padding: 15px;
+    padding: 8px !important;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     min-height: 0; /* Permite que o flex item encolha */
+    overflow: hidden;
+    max-height: calc(100% - 120px) !important;
 }
 
 .chart-container {
-    flex: 1;
+    flex: 1 1 auto;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 250px;
+    min-height: 150px !important;
+    max-height: calc(100% - 45px) !important; /* Reserva espaço para a legenda */
     background: rgba(248, 249, 250, 0.8);
     border-radius: 15px;
-    padding: 10px;
+    padding: 6px !important;
     position: relative;
     overflow: hidden;
+    height: auto !important;
 }
 
 #classesChart {
     width: 100% !important;
     height: 100% !important;
-    max-width: 100%;
-    max-height: 100%;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain;
 }
 
 .chart-legend {
     display: flex;
     justify-content: center;
     align-items: center; /* centraliza conteúdo no eixo vertical */
-    gap: 28px; /* gap um pouco menor para reduzir largura/altura visual */
-    margin-top: 6px;
-    margin-bottom: 0;
-    padding: 5px 10px; /* reduz altura do container cinza */
+    gap: 16px !important;
+    margin-top: 4px !important;
+    margin-bottom: 0 !important;
+    padding: 3px 6px !important;
     background: rgba(240, 242, 245, 0.8);
     border-radius: 10px;
     flex-shrink: 0;
+    height: auto !important;
+    min-height: auto !important;
 }
 
 .legend-item {
     display: flex;
     align-items: center; /* centraliza texto verticalmente ao lado do quadrado de cor */
-    gap: 8px;
-    font-size: 1rem;
+    gap: 6px;
+    font-size: 0.85rem;
     font-weight: 600;
     color: #2c3e50;
     line-height: 1; /* evita aumento de altura por linha */
@@ -169,14 +220,16 @@
 	flex-direction: row;           /* linha: esquerda (info), centro (classes), direita (+/-) */
 	justify-content: space-between;
 	align-items: center;
-	padding: 15px;
+	padding: 8px 10px !important;
 	background: rgba(255, 255, 255, 0.9);
 	border-radius: 15px;
 	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 	backdrop-filter: blur(10px);
 	flex-shrink: 0;
-	gap: 10px;
+	gap: 8px;
 	position: relative;            /* permite centralizar a legenda de classes no box */
+	min-height: auto !important;
+	height: auto !important;
 }
 
 .graphics-info .info-item + .info-item { margin-left: 16px; } /* espaço entre Última atualização e Total */
@@ -226,11 +279,11 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 6px;
-	font-size: 1.1rem;
+	gap: 4px;
+	font-size: 0.9rem;
 	font-weight: 600;
 	color: #2c3e50;
-	padding: 6px 10px; /* cria um \"box\" visual em volta do texto */
+	padding: 4px 8px; /* cria um \"box\" visual em volta do texto */
 	border-radius: 8px;
 	background: rgba(255, 255, 255, 0.8);
 }
@@ -238,7 +291,7 @@
 .symbol-legend-symbol {
 	font-weight: bold;
 	line-height: 1;
-	font-size: 2.6rem; /* aumenta o tamanho do símbolo + e - */
+	font-size: 2rem; /* reduz tamanho do símbolo + e - */
 }
 
 .symbol-legend-text {
@@ -250,14 +303,15 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center; /* centraliza o conteúdo dentro do chip */
-	gap: 6px;
-	padding: 4px 10px;
+	gap: 4px;
+	padding: 3px 8px;
 	background: #fff;
 	border-radius: 8px;
 	box-shadow: 0 1px 2px rgba(0,0,0,0.06);
 	white-space: nowrap;
 	text-align: center;
-	min-width: 80px; /* garante uma largura mínima para centralizar melhor o texto */
+	min-width: 70px; /* garante uma largura mínima para centralizar melhor o texto */
+	font-size: 0.85rem;
 }
 
 .classes-legend .legend-dot {
@@ -276,17 +330,17 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 3px;
 }
 
 .info-label {
-    font-size: 0.9rem;
+    font-size: 0.75rem;
     color: #6c757d;
     font-weight: 500;
 }
 
 .info-value {
-    font-size: 1.2rem;
+    font-size: 1rem;
     color: #2c3e50;
     font-weight: 700;
 }

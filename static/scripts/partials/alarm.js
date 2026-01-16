@@ -119,7 +119,7 @@ let currentAlarms = [];
 let alarmSocket = null;
 let alarmPollIntervalId = null;
 let currentViewMode = 'instantaneos'; // Controla se está em modo instantâneo ou histórico
-const ALARM_POLL_MS = 1000; // Intervalo ideal para atualização de alarmes
+const ALARM_POLL_MS = 3000; // ✅ CORRIGIDO: Aumentado para 3 segundos (era 1 segundo) - reduz uso de CPU/memória
 
 function carregarAlarmes(tipo) {
     console.log(`Carregando alarmes ${tipo}...`);
@@ -1036,10 +1036,14 @@ function inicializarBotoesRapidos() {
         syncInterval = null;
     }
     
-    // Sincroniza periodicamente o status dos botões (a cada 2 segundos)
+    // ✅ CORRIGIDO: Armazena ID do intervalo para poder limpar depois
+    // Sincroniza periodicamente o status dos botões (a cada 5 segundos - era 2 segundos)
+    if (syncInterval) {
+        clearInterval(syncInterval);
+    }
     syncInterval = setInterval(() => {
         syncButtonStatus();
-    }, 2000);
+    }, 5000);
     
     // Limpa o intervalo quando a página é fechada
     window.addEventListener('beforeunload', () => {
@@ -1053,6 +1057,31 @@ function inicializarBotoesRapidos() {
     console.log('[QUICK_BUTTONS] ✅ Botões rápidos inicializados com sucesso');
 }
 
+/**
+ * ✅ CRÍTICO: Função de cleanup para evitar vazamento de memória
+ * Limpa todos os intervalos e recursos da tela de alarmes
+ */
+function cleanupAlarm() {
+    console.log('[ALARM] 🧹 Executando cleanup de alarmes...');
+    
+    // Para o polling de alarmes
+    stopAlarmAutoRefresh();
+    
+    // Para o sync interval dos botões rápidos
+    if (syncInterval) {
+        clearInterval(syncInterval);
+        syncInterval = null;
+    }
+    
+    // ✅ NÃO reseta alarmesInicializados - os event listeners são adicionados apenas uma vez
+    // e não devem ser re-adicionados ao reabrir a tela
+    
+    // ✅ Reseta a flag de botões rápidos para permitir re-inicialização
+    quickButtonsInitialized = false;
+    
+    console.log('[ALARM] ✅ Cleanup concluído');
+}
+
 // Exporta as funções para o escopo global
 window.inicializarAlarmes = inicializarAlarmes;
 window.toggleAlarmView = toggleAlarmView;
@@ -1060,3 +1089,4 @@ window.carregarAlarmesDoCommMap = carregarAlarmesDoCommMap;
 window.startAlarmAutoRefresh = startAlarmAutoRefresh;
 window.stopAlarmAutoRefresh = stopAlarmAutoRefresh;
 window.inicializarBotoesRapidos = inicializarBotoesRapidos;
+window.cleanupAlarm = cleanupAlarm; // ✅ CRÍTICO: Exporta cleanup

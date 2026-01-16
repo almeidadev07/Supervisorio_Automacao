@@ -268,11 +268,11 @@ function inicializarSamples() {
         // Garante que o estado está ativo
         state.isActive = true;
         
-        // Polling rápido (200ms) para capturar mudanças rápidas quando Socket.IO não está disponível
+        // ✅ CORRIGIDO: Polling a cada 2 segundos (era 200ms) - reduz uso de CPU/memória
         state.pollingInterval = setInterval(() => {
             refreshFromPLC();
-        }, 200);
-        console.log('[SAMPLES] Polling HTTP iniciado (200ms)');
+        }, 2000);
+        console.log('[SAMPLES] Polling HTTP iniciado (2000ms)');
         
         // Primeira leitura imediata
         setTimeout(() => {
