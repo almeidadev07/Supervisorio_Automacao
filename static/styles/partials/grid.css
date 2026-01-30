@@ -817,11 +817,12 @@
     /* GAP ZERO para caber tudo */
     gap: 0 !important;
     width: 100%;
-    height: calc(100% - 18px);
-    padding: 2px 0;
+    height: 100%;
+    padding: 1px 0;
     box-sizing: border-box;
     margin-top: 0;
     overflow: hidden;
+    flex: 1 1 auto;
 }
 
 .peripheral-item { 
@@ -846,15 +847,15 @@
 /* Labels dos periféricos - permite quebra de linha */
 .peripheral-label { 
     font-weight: 700; 
-    font-size: clamp(0.45rem, 0.8vw, 0.7rem);
-    color: #222; 
+    font-size: clamp(0.55rem, 1vw, 0.85rem);
+    color: #fff; 
     text-align: center; 
     margin-bottom: 0;
     white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
-    line-height: 1.0;
+    line-height: 1.05;
     min-height: auto;
     word-wrap: break-word;
 }
@@ -878,8 +879,8 @@
 
 /* Ícones de periféricos - TODOS DO MESMO TAMANHO */
 .btn-icon {
-    width: clamp(50px, 8vw, 100px) !important;
-    height: clamp(32px, 5.5vh, 75px) !important;
+    width: clamp(58px, 9vw, 115px) !important;
+    height: clamp(38px, 6.2vh, 85px) !important;
     padding: 0 !important;
     border: none !important;
     background-color: transparent !important;
@@ -887,10 +888,10 @@
     background-size: contain !important;
     background-repeat: no-repeat !important;
     background-position: center !important;
-    min-width: clamp(50px, 8vw, 100px) !important;
-    min-height: clamp(32px, 5.5vh, 75px) !important;
-    max-width: clamp(50px, 8vw, 100px) !important;
-    max-height: clamp(32px, 5.5vh, 75px) !important;
+    min-width: clamp(58px, 9vw, 115px) !important;
+    min-height: clamp(38px, 6.2vh, 85px) !important;
+    max-width: clamp(58px, 9vw, 115px) !important;
+    max-height: clamp(38px, 6.2vh, 85px) !important;
     transition: transform 0.15s ease !important;
 }
 
@@ -968,12 +969,12 @@
 
 /* Botão Habilita - mesmo tamanho dos outros */
 .escova-power-container #btn-escova-manual-toggle {
-    width: clamp(50px, 8vw, 100px) !important;
-    height: clamp(32px, 5.5vh, 75px) !important;
-    min-width: clamp(50px, 8vw, 100px) !important;
-    min-height: clamp(32px, 5.5vh, 75px) !important;
-    max-width: clamp(50px, 8vw, 100px) !important;
-    max-height: clamp(32px, 5.5vh, 75px) !important;
+    width: clamp(58px, 9vw, 115px) !important;
+    height: clamp(38px, 6.2vh, 85px) !important;
+    min-width: clamp(58px, 9vw, 115px) !important;
+    min-height: clamp(38px, 6.2vh, 85px) !important;
+    max-width: clamp(58px, 9vw, 115px) !important;
+    max-height: clamp(38px, 6.2vh, 85px) !important;
     background-size: contain !important;
     background-repeat: no-repeat !important;
     background-position: center !important;
@@ -1053,34 +1054,34 @@
     
     /* Ícones de periféricos maiores */
     .btn-icon {
-        width: clamp(60px, 7vw, 110px) !important;
-        height: clamp(38px, 5vh, 80px) !important;
-        min-width: clamp(60px, 7vw, 110px) !important;
-        min-height: clamp(38px, 5vh, 80px) !important;
-        max-width: clamp(60px, 7vw, 110px) !important;
-        max-height: clamp(38px, 5vh, 80px) !important;
+        width: clamp(70px, 7.8vw, 125px) !important;
+        height: clamp(45px, 5.6vh, 92px) !important;
+        min-width: clamp(70px, 7.8vw, 125px) !important;
+        min-height: clamp(45px, 5.6vh, 92px) !important;
+        max-width: clamp(70px, 7.8vw, 125px) !important;
+        max-height: clamp(45px, 5.6vh, 92px) !important;
     }
     
     .escova-power-container #btn-escova-manual-toggle {
-        width: clamp(60px, 7vw, 110px) !important;
-        height: clamp(38px, 5vh, 80px) !important;
-        min-width: clamp(60px, 7vw, 110px) !important;
-        min-height: clamp(38px, 5vh, 80px) !important;
-        max-width: clamp(60px, 7vw, 110px) !important;
-        max-height: clamp(38px, 5vh, 80px) !important;
+        width: clamp(70px, 7.8vw, 125px) !important;
+        height: clamp(45px, 5.6vh, 92px) !important;
+        min-width: clamp(70px, 7.8vw, 125px) !important;
+        min-height: clamp(45px, 5.6vh, 92px) !important;
+        max-width: clamp(70px, 7.8vw, 125px) !important;
+        max-height: clamp(45px, 5.6vh, 92px) !important;
     }
     
     .escova-power-container #btn-power-toggle {
-        width: clamp(40px, 4.5vw, 72px) !important;
-        height: clamp(25px, 3.3vh, 52px) !important;
-        min-width: clamp(40px, 4.5vw, 72px) !important;
-        min-height: clamp(25px, 3.3vh, 52px) !important;
-        max-width: clamp(40px, 4.5vw, 72px) !important;
-        max-height: clamp(25px, 3.3vh, 52px) !important;
+        width: clamp(48px, 5.2vw, 85px) !important;
+        height: clamp(30px, 3.8vh, 60px) !important;
+        min-width: clamp(48px, 5.2vw, 85px) !important;
+        min-height: clamp(30px, 3.8vh, 60px) !important;
+        max-width: clamp(48px, 5.2vw, 85px) !important;
+        max-height: clamp(30px, 3.8vh, 60px) !important;
     }
     
     .peripheral-label {
-        font-size: clamp(0.5rem, 0.75vw, 0.8rem);
+        font-size: clamp(0.6rem, 0.95vw, 0.95rem);
     }
     
     /* Alarmes maiores */
@@ -1187,34 +1188,34 @@
     
     /* Ícones de periféricos gigantes */
     .btn-icon {
-        width: clamp(75px, 8vw, 135px) !important;
-        height: clamp(48px, 6vh, 100px) !important;
-        min-width: clamp(75px, 8vw, 135px) !important;
-        min-height: clamp(48px, 6vh, 100px) !important;
-        max-width: clamp(75px, 8vw, 135px) !important;
-        max-height: clamp(48px, 6vh, 100px) !important;
+        width: clamp(86px, 9vw, 155px) !important;
+        height: clamp(55px, 6.9vh, 115px) !important;
+        min-width: clamp(86px, 9vw, 155px) !important;
+        min-height: clamp(55px, 6.9vh, 115px) !important;
+        max-width: clamp(86px, 9vw, 155px) !important;
+        max-height: clamp(55px, 6.9vh, 115px) !important;
     }
     
     .escova-power-container #btn-escova-manual-toggle {
-        width: clamp(75px, 8vw, 135px) !important;
-        height: clamp(48px, 6vh, 100px) !important;
-        min-width: clamp(75px, 8vw, 135px) !important;
-        min-height: clamp(48px, 6vh, 100px) !important;
-        max-width: clamp(75px, 8vw, 135px) !important;
-        max-height: clamp(48px, 6vh, 100px) !important;
+        width: clamp(86px, 9vw, 155px) !important;
+        height: clamp(55px, 6.9vh, 115px) !important;
+        min-width: clamp(86px, 9vw, 155px) !important;
+        min-height: clamp(55px, 6.9vh, 115px) !important;
+        max-width: clamp(86px, 9vw, 155px) !important;
+        max-height: clamp(55px, 6.9vh, 115px) !important;
     }
     
     .escova-power-container #btn-power-toggle {
-        width: clamp(50px, 5.2vw, 90px) !important;
-        height: clamp(32px, 4vh, 65px) !important;
-        min-width: clamp(50px, 5.2vw, 90px) !important;
-        min-height: clamp(32px, 4vh, 65px) !important;
-        max-width: clamp(50px, 5.2vw, 90px) !important;
-        max-height: clamp(32px, 4vh, 65px) !important;
+        width: clamp(58px, 6vw, 105px) !important;
+        height: clamp(37px, 4.6vh, 75px) !important;
+        min-width: clamp(58px, 6vw, 105px) !important;
+        min-height: clamp(37px, 4.6vh, 75px) !important;
+        max-width: clamp(58px, 6vw, 105px) !important;
+        max-height: clamp(37px, 4.6vh, 75px) !important;
     }
     
     .peripheral-label {
-        font-size: clamp(0.55rem, 0.85vw, 0.95rem);
+        font-size: clamp(0.65rem, 1vw, 1.1rem);
     }
     
     /* Alarmes gigantes */
@@ -1321,30 +1322,30 @@
     
     /* Ícones de periféricos ultra */
     .btn-icon {
-        width: clamp(95px, 9vw, 170px) !important;
-        height: clamp(60px, 7vh, 125px) !important;
-        min-width: clamp(95px, 9vw, 170px) !important;
-        min-height: clamp(60px, 7vh, 125px) !important;
-        max-width: clamp(95px, 9vw, 170px) !important;
-        max-height: clamp(60px, 7vh, 125px) !important;
+        width: clamp(110px, 10vw, 195px) !important;
+        height: clamp(70px, 8vh, 145px) !important;
+        min-width: clamp(110px, 10vw, 195px) !important;
+        min-height: clamp(70px, 8vh, 145px) !important;
+        max-width: clamp(110px, 10vw, 195px) !important;
+        max-height: clamp(70px, 8vh, 145px) !important;
     }
     
     .escova-power-container #btn-escova-manual-toggle {
-        width: clamp(95px, 9vw, 170px) !important;
-        height: clamp(60px, 7vh, 125px) !important;
-        min-width: clamp(95px, 9vw, 170px) !important;
-        min-height: clamp(60px, 7vh, 125px) !important;
-        max-width: clamp(95px, 9vw, 170px) !important;
-        max-height: clamp(60px, 7vh, 125px) !important;
+        width: clamp(110px, 10vw, 195px) !important;
+        height: clamp(70px, 8vh, 145px) !important;
+        min-width: clamp(110px, 10vw, 195px) !important;
+        min-height: clamp(70px, 8vh, 145px) !important;
+        max-width: clamp(110px, 10vw, 195px) !important;
+        max-height: clamp(70px, 8vh, 145px) !important;
     }
     
     .escova-power-container #btn-power-toggle {
-        width: clamp(62px, 6vw, 110px) !important;
-        height: clamp(40px, 4.5vh, 82px) !important;
-        min-width: clamp(62px, 6vw, 110px) !important;
-        min-height: clamp(40px, 4.5vh, 82px) !important;
-        max-width: clamp(62px, 6vw, 110px) !important;
-        max-height: clamp(40px, 4.5vh, 82px) !important;
+        width: clamp(72px, 6.8vw, 126px) !important;
+        height: clamp(46px, 5.2vh, 95px) !important;
+        min-width: clamp(72px, 6.8vw, 126px) !important;
+        min-height: clamp(46px, 5.2vh, 95px) !important;
+        max-width: clamp(72px, 6.8vw, 126px) !important;
+        max-height: clamp(46px, 5.2vh, 95px) !important;
     }
     
     .escova-power-container #btn-escova-manual-toggle {
@@ -1356,7 +1357,7 @@
     }
     
     .peripheral-label {
-        font-size: clamp(0.65rem, 1vw, 1.1rem);
+        font-size: clamp(0.75rem, 1.15vw, 1.25rem);
     }
     
     /* Alarmes ultra */
@@ -1453,28 +1454,28 @@
     }
     
     .peripheral-label {
-        font-size: clamp(0.38rem, 1.1vw, 0.55rem);
+        font-size: clamp(0.45rem, 1.3vw, 0.65rem);
         min-height: auto;
     }
     
     .btn-icon,
     .escova-power-container #btn-escova-manual-toggle {
-        width: clamp(40px, 9vw, 75px) !important;
-        height: clamp(24px, 4.5vh, 52px) !important;
-        min-width: clamp(40px, 9vw, 75px) !important;
-        min-height: clamp(24px, 4.5vh, 52px) !important;
-        max-width: clamp(40px, 9vw, 75px) !important;
-        max-height: clamp(24px, 4.5vh, 52px) !important;
+        width: clamp(46px, 10vw, 85px) !important;
+        height: clamp(28px, 5.2vh, 60px) !important;
+        min-width: clamp(46px, 10vw, 85px) !important;
+        min-height: clamp(28px, 5.2vh, 60px) !important;
+        max-width: clamp(46px, 10vw, 85px) !important;
+        max-height: clamp(28px, 5.2vh, 60px) !important;
     }
     
     /* Botão Liga MENOR em tablets */
     .escova-power-container #btn-power-toggle {
-        width: clamp(26px, 5.5vw, 50px) !important;
-        height: clamp(16px, 2.8vh, 35px) !important;
-        min-width: clamp(26px, 5.5vw, 50px) !important;
-        min-height: clamp(16px, 2.8vh, 35px) !important;
-        max-width: clamp(26px, 5.5vw, 50px) !important;
-        max-height: clamp(16px, 2.8vh, 35px) !important;
+        width: clamp(30px, 6.3vw, 58px) !important;
+        height: clamp(19px, 3.2vh, 40px) !important;
+        min-width: clamp(30px, 6.3vw, 58px) !important;
+        min-height: clamp(19px, 3.2vh, 40px) !important;
+        max-width: clamp(30px, 6.3vw, 58px) !important;
+        max-height: clamp(19px, 3.2vh, 40px) !important;
     }
     
     /* Botões da escova colados em tablets */
@@ -1556,7 +1557,7 @@
     }
     
     .peripheral-label {
-        font-size: clamp(0.36rem, 2vw, 0.52rem);
+        font-size: clamp(0.42rem, 2.3vw, 0.6rem);
         margin-bottom: 0;
         min-height: auto;
     }
@@ -1578,22 +1579,22 @@
     /* Botões do mesmo tamanho em mobile */
     .btn-icon,
     .escova-power-container #btn-escova-manual-toggle {
-        width: clamp(36px, 16vw, 65px) !important;
-        height: clamp(22px, 5vh, 45px) !important;
-        min-width: clamp(36px, 16vw, 65px) !important;
-        min-height: clamp(22px, 5vh, 45px) !important;
-        max-width: clamp(36px, 16vw, 65px) !important;
-        max-height: clamp(22px, 5vh, 45px) !important;
+        width: clamp(42px, 18vw, 75px) !important;
+        height: clamp(26px, 5.8vh, 52px) !important;
+        min-width: clamp(42px, 18vw, 75px) !important;
+        min-height: clamp(26px, 5.8vh, 52px) !important;
+        max-width: clamp(42px, 18vw, 75px) !important;
+        max-height: clamp(26px, 5.8vh, 52px) !important;
     }
     
     /* Botão Liga MENOR em mobile */
     .escova-power-container #btn-power-toggle {
-        width: clamp(22px, 9vw, 40px) !important;
-        height: clamp(14px, 3vh, 28px) !important;
-        min-width: clamp(22px, 9vw, 40px) !important;
-        min-height: clamp(14px, 3vh, 28px) !important;
-        max-width: clamp(22px, 9vw, 40px) !important;
-        max-height: clamp(14px, 3vh, 28px) !important;
+        width: clamp(26px, 10vw, 46px) !important;
+        height: clamp(16px, 3.4vh, 32px) !important;
+        min-width: clamp(26px, 10vw, 46px) !important;
+        min-height: clamp(16px, 3.4vh, 32px) !important;
+        max-width: clamp(26px, 10vw, 46px) !important;
+        max-height: clamp(16px, 3.4vh, 32px) !important;
     }
     
     #teclado-virtual {

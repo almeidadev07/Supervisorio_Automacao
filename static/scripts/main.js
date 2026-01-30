@@ -1264,7 +1264,7 @@ Promise.all([
     loadScript('/static/scripts/partials/graphics.js'),
     loadScript('/static/scripts/partials/viewer3d.js'),
     loadScript('/static/scripts/partials/samples.js'), // ✅ Script de amostras
-    loadScript('/static/scripts/partials/synchronism.js'),
+    loadScript('/static/scripts/partials/synchronism.js?v=20260130_sync_js'),
     loadScript('/static/scripts/partials/information.js')
 
 ])

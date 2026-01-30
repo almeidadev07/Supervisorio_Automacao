@@ -205,7 +205,11 @@ function setupSyncToggle() {
     if (btnSync) {
         registerSyncEventListener(btnSync, 'click', () => {
             syncState.syncEnabled = !syncState.syncEnabled;
-            btnSync.classList.toggle('active', syncState.syncEnabled);
+            if (syncState.syncEnabled) {
+                btnSync.classList.add('active');
+            } else {
+                btnSync.classList.remove('active');
+            }
             console.log('[SYNC] Sincronismo:', syncState.syncEnabled ? 'ATIVADO' : 'DESATIVADO');
             
             // TODO: Enviar para o PLC
