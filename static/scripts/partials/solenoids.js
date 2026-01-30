@@ -10,15 +10,25 @@
     let solenoidStates = {};
     let controlStates = {
         'teste': false,
-        'amaciar': false,
-        'posicao': false
+        'amaciar': false
     };
+    let solenoidsEventListeners = [];
+
+    function registerSolenoidsEventListener(element, event, handler) {
+        if (element) {
+            element.addEventListener(event, handler);
+            solenoidsEventListeners.push({ element, event, handler });
+        }
+    }
 
     /**
      * Inicializa a tela de solenoides
      */
     function inicializarSolenoids() {
         console.log('🔧 Inicializando sistema de Solenoides...');
+        
+        // Evita duplicação de listeners
+        cleanupSolenoids();
 
         // Carrega estados salvos
         loadSolenoidStates();
@@ -136,10 +146,7 @@
         const buttons = document.querySelectorAll('.solenoid-button');
         
         buttons.forEach(btn => {
-            // Remove event listeners anteriores
-            btn.removeEventListener('click', handleSolenoidClick);
-            // Adiciona novo event listener
-            btn.addEventListener('click', handleSolenoidClick);
+            registerSolenoidsEventListener(btn, 'click', handleSolenoidClick);
         });
     }
 
@@ -203,11 +210,7 @@
         const controlButtons = document.querySelectorAll('.control-btn-img');
         
         controlButtons.forEach(btn => {
-            // Remove event listeners anteriores
-            const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
-            
-            newBtn.addEventListener('click', function(e) {
+            registerSolenoidsEventListener(btn, 'click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -248,10 +251,6 @@
                 console.log(`Modo Amaciar: ${isActive ? 'ATIVADO' : 'DESATIVADO'}`);
                 // Implementar lógica de amaciar
                 break;
-            case 'posicao':
-                console.log(`Modo Posição de Solenoide: ${isActive ? 'ATIVADO' : 'DESATIVADO'}`);
-                // Implementar lógica de posição
-                break;
         }
     }
 
@@ -262,7 +261,7 @@
         const checkboxes = document.querySelectorAll('.position-item input[type="checkbox"]');
         
         checkboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
+            registerSolenoidsEventListener(checkbox, 'change', function() {
                 const position = this.id.replace('pos-', '');
                 const isChecked = this.checked;
                 
@@ -349,7 +348,12 @@
      */
     function cleanupSolenoids() {
         console.log('🧹 Limpando sistema de Solenoides...');
-        // Remove event listeners se necessário
+        solenoidsEventListeners.forEach(({ element, event, handler }) => {
+            if (element) {
+                element.removeEventListener(event, handler);
+            }
+        });
+        solenoidsEventListeners = [];
     }
 
     // Exporta funções globais

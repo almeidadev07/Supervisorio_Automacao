@@ -1,15 +1,315 @@
-// Função para carregar scripts dinamicamente ///
+// ✅ CRÍTICO: Handlers globais para evitar acumulação de erros na memória
+// Quando PLC está desconectado, fetch requests falham e podem acumular erros
+window.addEventListener('unhandledrejection', function(event) {
+    // Log silencioso para não poluir console, mas evita acumulação de erros
+    console.debug('[MAIN] Promise rejeitada não tratada:', event.reason);
+    // Previne comportamento padrão que pode acumular erros
+    event.preventDefault();
+});
+
+// Handler para erros gerais (evita acumulação)
+window.addEventListener('error', function(event) {
+    // Log silencioso para erros de script
+    if (event.message && event.message.includes('Script')) {
+        console.debug('[MAIN] Erro de script:', event.message);
+        event.preventDefault();
+    }
+});
+
+// ✅ CRÍTICO: Wrapper global de fetch com timeout e monitor opcional
+// Isso impede acúmulo de requisições quando o PLC/DataHub está offline
+(function installFetchTimeout() {
+    if (window.__fetchTimeoutInstalled) return;
+    if (typeof window.fetch !== 'function') return;
+    const nativeFetch = window.fetch.bind(window);
+    const DEFAULT_TIMEOUT_MS = 8000;
+
+    function getUrlKey(input) {
+        try {
+            if (typeof input === 'string') return input;
+            if (input && typeof input.url === 'string') return input.url;
+        } catch (_) {}
+        return 'unknown';
+    }
+
+    window.fetch = function(input, init = {}) {
+        const timeoutMs = (typeof init.timeoutMs === 'number') ? init.timeoutMs : DEFAULT_TIMEOUT_MS;
+        const urlKey = getUrlKey(input);
+
+        // Monitor: registra início
+        if (window.__monitor && typeof window.__monitor.onFetchStart === 'function') {
+            window.__monitor.onFetchStart(urlKey);
+        }
+
+        // Se já existe signal ou timeout desativado, delega
+        if (init.signal || !timeoutMs || timeoutMs <= 0) {
+            return nativeFetch(input, init)
+                .finally(() => {
+                    if (window.__monitor && typeof window.__monitor.onFetchEnd === 'function') {
+                        window.__monitor.onFetchEnd(urlKey);
+                    }
+                });
+        }
+
+        const controller = new AbortController();
+        const timerId = setTimeout(() => {
+            try { controller.abort(); } catch(_) {}
+        }, timeoutMs);
+        const nextInit = Object.assign({}, init, { signal: controller.signal });
+
+        return nativeFetch(input, nextInit)
+            .finally(() => {
+                clearTimeout(timerId);
+                if (window.__monitor && typeof window.__monitor.onFetchEnd === 'function') {
+                    window.__monitor.onFetchEnd(urlKey);
+                }
+            });
+    };
+    window.__fetchTimeoutInstalled = true;
+})();
+
+// ✅ Monitor opcional de vazamento (fetch/intervals/timeouts/listeners/DOM)
+// Ative com ?monitor=1 na URL ou localStorage supervisor_monitor=1
+(function installLeakMonitor() {
+    function isEnabled() {
+        try {
+            const q = new URLSearchParams(window.location.search);
+            if (q.get('monitor') === '1') return true;
+        } catch (_) {}
+        try {
+            return localStorage.getItem('supervisor_monitor') === '1';
+        } catch (_) {}
+        return false;
+    }
+
+    if (!isEnabled()) return;
+    if (window.__monitorInstalled) return;
+
+    const monitor = {
+        fetchInFlight: 0,
+        fetchByUrl: new Map(),
+        intervals: new Map(),
+        timeouts: new Map(),
+        timeoutCreated: 0,
+        timeoutSources: new Map(),
+        _lastTimeoutTotals: new Map(),
+        listenersAdded: 0,
+        listenersRemoved: 0,
+        suppress: false,
+        onFetchStart(url) {
+            this.fetchInFlight++;
+            const key = String(url || 'unknown');
+            const entry = this.fetchByUrl.get(key) || { inFlight: 0, total: 0, lastAt: 0, lastStack: null };
+            entry.inFlight += 1;
+            entry.total += 1;
+            entry.lastAt = Date.now();
+            if (!entry.lastStack) {
+                try { entry.lastStack = (new Error().stack || '').split('\n').slice(2, 7).join('\n'); } catch (_) {}
+            }
+            this.fetchByUrl.set(key, entry);
+        },
+        onFetchEnd(url) {
+            this.fetchInFlight = Math.max(0, this.fetchInFlight - 1);
+            const key = String(url || 'unknown');
+            const entry = this.fetchByUrl.get(key);
+            if (entry) {
+                entry.inFlight = Math.max(0, entry.inFlight - 1);
+                this.fetchByUrl.set(key, entry);
+            }
+        },
+        withoutTracking(fn) {
+            this.suppress = true;
+            try { return fn(); } finally { this.suppress = false; }
+        }
+    };
+
+    window.__monitor = monitor;
+
+    // Wrap setInterval / clearInterval
+    const nativeSetInterval = window.setInterval.bind(window);
+    const nativeClearInterval = window.clearInterval.bind(window);
+    window.setInterval = function(fn, ms, ...args) {
+        if (monitor.suppress) return nativeSetInterval(fn, ms, ...args);
+        const id = nativeSetInterval(fn, ms, ...args);
+        try {
+            monitor.intervals.set(id, { ms: ms, at: Date.now(), stack: (new Error().stack || '').split('\n').slice(2, 7).join('\n') });
+        } catch (_) {}
+        return id;
+    };
+    window.clearInterval = function(id) {
+        monitor.intervals.delete(id);
+        return nativeClearInterval(id);
+    };
+
+    function getStackKey(skip) {
+        try {
+            const stack = (new Error().stack || '').split('\n');
+            const line = stack[skip || 3] || stack[2] || stack[1] || 'unknown';
+            return line.trim();
+        } catch (_) {
+            return 'unknown';
+        }
+    }
+
+    // Wrap setTimeout / clearTimeout
+    const nativeSetTimeout = window.setTimeout.bind(window);
+    const nativeClearTimeout = window.clearTimeout.bind(window);
+    window.setTimeout = function(fn, ms, ...args) {
+        if (monitor.suppress) return nativeSetTimeout(fn, ms, ...args);
+        const key = getStackKey(3);
+        monitor.timeoutCreated += 1;
+        const src = monitor.timeoutSources.get(key) || { total: 0, lastAt: 0 };
+        src.total += 1;
+        src.lastAt = Date.now();
+        monitor.timeoutSources.set(key, src);
+
+        const handler = (typeof fn === 'function') ? fn : function() {
+            try { Function(String(fn))(); } catch (_) {}
+        };
+
+        const id = nativeSetTimeout(function(...cbArgs) {
+            try {
+                return handler.apply(this, cbArgs);
+            } finally {
+                monitor.timeouts.delete(id);
+            }
+        }, ms, ...args);
+        monitor.timeouts.set(id, { ms: ms, at: Date.now(), key });
+        return id;
+    };
+    window.clearTimeout = function(id) {
+        monitor.timeouts.delete(id);
+        return nativeClearTimeout(id);
+    };
+
+    // Wrap addEventListener / removeEventListener (contagem simples)
+    const nativeAdd = EventTarget.prototype.addEventListener;
+    const nativeRemove = EventTarget.prototype.removeEventListener;
+    EventTarget.prototype.addEventListener = function(type, listener, options) {
+        if (!monitor.suppress) monitor.listenersAdded += 1;
+        return nativeAdd.call(this, type, listener, options);
+    };
+    EventTarget.prototype.removeEventListener = function(type, listener, options) {
+        if (!monitor.suppress) monitor.listenersRemoved += 1;
+        return nativeRemove.call(this, type, listener, options);
+    };
+
+    // Overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'monitor-overlay';
+    overlay.style.cssText = [
+        'position:fixed',
+        'bottom:12px',
+        'right:12px',
+        'z-index:99999',
+        'background:rgba(0,0,0,0.75)',
+        'color:#00ff9a',
+        'padding:10px 12px',
+        'font:12px/1.4 monospace',
+        'border-radius:8px',
+        'max-width:420px',
+        'box-shadow:0 4px 16px rgba(0,0,0,0.35)'
+    ].join(';');
+    overlay.textContent = 'monitor inicializando...';
+    document.body.appendChild(overlay);
+
+    function formatBytes(n) {
+        if (!n && n !== 0) return 'n/a';
+        const mb = n / (1024 * 1024);
+        return mb.toFixed(1) + ' MB';
+    }
+
+    function getTopFetch() {
+        const arr = [];
+        monitor.fetchByUrl.forEach((v, k) => {
+            if (v.inFlight > 0 || v.total > 0) arr.push({ url: k, inFlight: v.inFlight, total: v.total });
+        });
+        arr.sort((a, b) => (b.inFlight - a.inFlight) || (b.total - a.total));
+        return arr.slice(0, 5);
+    }
+
+    const render = () => {
+        const mem = (performance && performance.memory) ? performance.memory : null;
+        const nodes = document.getElementsByTagName('*').length;
+        const top = getTopFetch();
+        const topText = top.map(t => `${t.inFlight}/${t.total} ${t.url}`).join('\n');
+        const intervalCount = monitor.intervals.size;
+        const timeoutCount = monitor.timeouts.size;
+        const listenersDelta = monitor.listenersAdded - monitor.listenersRemoved;
+        overlay.textContent =
+            `MONITOR\n` +
+            `JS Heap: ${mem ? (formatBytes(mem.usedJSHeapSize) + ' / ' + formatBytes(mem.totalJSHeapSize)) : 'n/a'}\n` +
+            `DOM nodes: ${nodes}\n` +
+            `fetch in-flight: ${monitor.fetchInFlight}\n` +
+            `intervals: ${intervalCount}  timeouts: ${timeoutCount}\n` +
+            `listeners Δ: ${listenersDelta}\n` +
+            (topText ? `top fetch:\n${topText}` : '');
+    };
+
+    monitor.withoutTracking(() => {
+        nativeSetInterval(render, 2000);
+        nativeSetTimeout(render, 200);
+    });
+
+    window.__monitorDump = function() {
+        console.log('[MONITOR] fetchByUrl:', Array.from(monitor.fetchByUrl.entries()));
+        console.log('[MONITOR] intervals:', Array.from(monitor.intervals.values()));
+        console.log('[MONITOR] timeouts:', Array.from(monitor.timeouts.values()));
+        console.log('[MONITOR] listeners added/removed:', monitor.listenersAdded, monitor.listenersRemoved);
+    };
+
+    window.__monitorInstalled = true;
+})();
+
+// ✅ Função utilitária para aplicar traduções após mostrar uma tela
+function applyTranslationsIfAvailable() {
+    if (window.Translations && typeof window.Translations.applyToDOM === 'function') {
+        setTimeout(() => window.Translations.applyToDOM(), 50);
+    }
+}
+
+// Função para carregar scripts dinamicamente (com dedupe robusto)
+const __scriptLoadPromises = new Map();
 function loadScript(src) {
-    return new Promise((resolve, reject) => {
+    if (__scriptLoadPromises.has(src)) {
+        return __scriptLoadPromises.get(src);
+    }
+
+    // Se já existe uma tag <script> com este src (ex.: incluída no HTML), aguarda o load dela
+    const existing = Array.from(document.getElementsByTagName('script'))
+        .find(s => s.src && s.src.includes(src));
+
+    if (existing) {
+        const p = new Promise((resolve, reject) => {
+            if (existing.dataset.loaded === '1' || existing.readyState === 'complete') {
+                resolve();
+                return;
+            }
+            const onLoad = () => {
+                existing.dataset.loaded = '1';
+                resolve();
+            };
+            const onError = () => reject(new Error(`Erro ao carregar ${src}`));
+            existing.addEventListener('load', onLoad, { once: true });
+            existing.addEventListener('error', onError, { once: true });
+        });
+        __scriptLoadPromises.set(src, p);
+        return p;
+    }
+
+    const p = new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = src;
         script.onload = () => {
+            script.dataset.loaded = '1';
             console.log(`Script ${src} carregado com sucesso!`);
             resolve();
         };
         script.onerror = () => reject(new Error(`Erro ao carregar ${src}`));
         document.head.appendChild(script);
     });
+    __scriptLoadPromises.set(src, p);
+    return p;
 }
 
 // =========================
@@ -59,6 +359,8 @@ function showWeightRange() {
 
 
 function hideAllContainers() {
+    console.log('[MAIN] 🧹 Escondendo todos os containers e limpando recursos...');
+    
     const containers = [
         'grid-container',
         'alarm-container',
@@ -74,7 +376,9 @@ function hideAllContainers() {
         'viewer3d-container', // Adicionar viewer3d-container
         'samples-container', // Adicionar samples-container
         'panels-container', // Adicionar panels-container
-        'solenoids-container' // Adicionar solenoids-container
+        'solenoids-container', // Adicionar solenoids-container
+        'synchronism-container', // Adicionar synchronism-container
+        'information-container' // Adicionar information-container
     ];
     containers.forEach(id => {
         const el = document.getElementById(id);
@@ -210,10 +514,88 @@ function hideAllContainers() {
             console.warn('Erro ao fazer cleanup da tela de solenoides:', e);
         }
     }
+
+    // Cleanup da tela de painéis
+    if (typeof window.cleanupPanels === 'function') {
+        try {
+            window.cleanupPanels();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de painéis:', e);
+        }
+    }
     
-    // ✅ NOTA: NÃO resetamos as flags de inicialização aqui
-    // As telas técnicas (washer, dryer, etc) verificam suas flags para evitar re-inicialização
-    // Os intervalos são limpos pelo cleanup, mas os event listeners permanecem ativos
+    // Cleanup da tela de sincronismo
+    if (typeof window.cleanupSynchronism === 'function') {
+        try {
+            window.cleanupSynchronism();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de sincronismo:', e);
+        }
+    }
+    
+    // Cleanup da tela de informações
+    if (typeof window.cleanupInformation === 'function') {
+        try {
+            window.cleanupInformation();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de informações:', e);
+        }
+    }
+    
+    // ✅ CRÍTICO: Para o background feed de gráficos (roda SEMPRE, mesmo com telas ocultas)
+    // Será reiniciado quando grid ou graphics forem abertos
+    if (typeof window.stopGraphicsBackgroundFeed === 'function') {
+        try {
+            window.stopGraphicsBackgroundFeed();
+        } catch (e) {
+            console.warn('[MAIN] Erro ao parar background feed de gráficos:', e);
+        }
+    }
+    
+    // ✅ CRÍTICO: Desconecta Socket.IO global quando não há telas que precisam dele
+    // Isso evita tentativas infinitas de reconexão que consomem memória
+    if (window.supervisorSocket) {
+        try {
+            // Antes de desconectar, verifica se alguma tela precisa do socket
+            // Grid e Graphics são as principais telas que usam o socket
+            const gridVisible = document.getElementById('grid-container')?.style.display !== 'none';
+            const graphicsVisible = document.getElementById('graphics-container')?.style.display !== 'none';
+            const samplesVisible = document.getElementById('samples-container')?.style.display !== 'none';
+            
+            // Se nenhuma dessas telas está visível, pode desconectar o socket
+            if (!gridVisible && !graphicsVisible && !samplesVisible) {
+                console.log('[MAIN] 🔌 Desconectando Socket.IO global (nenhuma tela precisa dele)...');
+                
+                // Remove todos os listeners antes de desconectar
+                window.supervisorSocket.removeAllListeners();
+                
+                // Desconecta o socket
+                window.supervisorSocket.disconnect();
+                
+                // Define como null para permitir reconexão quando necessário
+                window.supervisorSocket = null;
+                
+                console.log('[MAIN] ✅ Socket.IO desconectado');
+            }
+        } catch (e) {
+            console.warn('[MAIN] ⚠️ Erro ao desconectar Socket.IO:', e);
+        }
+    }
+    
+    // ✅ CRÍTICO: Resetamos as flags de inicialização para permitir reinicialização
+    // Agora que temos funções de cleanup adequadas, as telas podem ser reinicializadas com segurança
+    window.washerInitialized = false;
+    window.dryerInitialized = false;
+    window.diagramInitialized = false;
+    window.windowsInitialized = false;
+    window.panelsInitialized = false;
+    window.solenoidsInitialized = false;
+    window.viewer3dInitialized = false;
+    window._classificationInitialized = false;
+    window.synchronismInitialized = false;
+    window.informationInitialized = false;
+    
+    console.log('[MAIN] ✅ Cleanup de todos os containers concluído');
 }
 
 // Função para exibir o grid
@@ -242,11 +624,88 @@ function showGrid(event) {
         window.startDateTimeUpdate();
     }
     
+    // ✅ CRÍTICO: Inicia background feed de gráficos (mini-gráfico do grid)
+    if (typeof window.startGraphicsBackgroundFeed === 'function') {
+        setTimeout(() => window.startGraphicsBackgroundFeed(), 100);
+    }
+    
     // ✅ Garante que subscription seja ativada quando tela inicial (grid) for aberta
     // O grid também tem um mini-gráfico que precisa dos dados
     if (typeof window.checkGraphicsSubscription === 'function') {
-        setTimeout(() => window.checkGraphicsSubscription(), 100);
+        setTimeout(() => window.checkGraphicsSubscription(), 200);
     }
+    
+    // Re-inicializa o grid se necessário (após cleanup)
+    if (typeof window.inicializarVelocimetro === 'function') {
+        try {
+            window.inicializarVelocimetro();
+        } catch (e) {
+            console.warn('Erro ao reinicializar grid:', e);
+        }
+    }
+    
+    // ✅ CRÍTICO: Inicia processos do grid sob demanda (evita vazamento de memória)
+    // Estas funções foram desabilitadas do auto-start no DOMContentLoaded
+    // e agora só iniciam quando o grid está visível
+    setTimeout(() => {
+        // Inicia atualização de data/hora
+        if (typeof window.startDateTimeUpdate === 'function') {
+            try {
+                window.startDateTimeUpdate();
+            } catch (e) {
+                console.warn('[GRID] Erro ao iniciar data/hora:', e);
+            }
+        }
+        
+        // Inicia jogs e velocidades fixas
+        if (typeof window.setupJogAcumuladora === 'function') {
+            try { window.setupJogAcumuladora(); } catch (e) { console.warn('[GRID] Erro setupJogAcumuladora:', e); }
+        }
+        if (typeof window.bindVelocidadeFixaAcumuladora === 'function') {
+            try { window.bindVelocidadeFixaAcumuladora(); } catch (e) { console.warn('[GRID] Erro bindVelocidadeFixaAcumuladora:', e); }
+        }
+        if (typeof window.setupJogDosificadora === 'function') {
+            try { window.setupJogDosificadora(); } catch (e) { console.warn('[GRID] Erro setupJogDosificadora:', e); }
+        }
+        if (typeof window.bindVelocidadeFixaDosificadora === 'function') {
+            try { window.bindVelocidadeFixaDosificadora(); } catch (e) { console.warn('[GRID] Erro bindVelocidadeFixaDosificadora:', e); }
+        }
+        if (typeof window.setupJogEscova === 'function') {
+            try { window.setupJogEscova(); } catch (e) { console.warn('[GRID] Erro setupJogEscova:', e); }
+        }
+        if (typeof window.bindVelocidadeFixaEscova === 'function') {
+            try { window.bindVelocidadeFixaEscova(); } catch (e) { console.warn('[GRID] Erro bindVelocidadeFixaEscova:', e); }
+        }
+        
+        // Inicia periféricos
+        if (typeof window.initPeripherals === 'function') {
+            try { window.initPeripherals(); } catch (e) { console.warn('[GRID] Erro initPeripherals:', e); }
+        }
+        if (typeof window.startPeripheralsSync === 'function') {
+            try {
+                setTimeout(() => window.startPeripheralsSync(), 1000);
+            } catch (e) {
+                console.warn('[GRID] Erro startPeripheralsSync:', e);
+            }
+        }
+        
+        // Inicia intervalo de garantia do botão de power no lugar correto
+        if (!window.__ensurePowerBtnInterval && typeof window.ensurePowerButtonInCorrectPlace === 'function') {
+            try {
+                window.__ensurePowerBtnInterval = setInterval(window.ensurePowerButtonInCorrectPlace, 10000);
+            } catch (e) {
+                console.warn('[GRID] Erro ao criar __ensurePowerBtnInterval:', e);
+            }
+        }
+        
+        // Configura drag and drop do grid
+        if (typeof window.configurarDragAndDrop === 'function') {
+            try { window.configurarDragAndDrop(); } catch (e) { console.warn('[GRID] Erro configurarDragAndDrop:', e); }
+        }
+        
+        // ✅ Aplica traduções após mostrar a tela
+        applyTranslationsIfAvailable();
+    }, 300);
 }
 
 // Função para exibir gráficos
@@ -265,6 +724,11 @@ function showGraphics(event) {
         event.currentTarget.classList.add('active');
     }
 
+    // ✅ CRÍTICO: Inicia background feed de gráficos
+    if (typeof window.startGraphicsBackgroundFeed === 'function') {
+        setTimeout(() => window.startGraphicsBackgroundFeed(), 100);
+    }
+    
     // Inicializa gráficos se necessário
     if (typeof window.initGraphics === 'function') {
         const chart = window.classesChart;
@@ -291,7 +755,7 @@ function showGraphics(event) {
     
     // ✅ Garante que subscription seja ativada quando tela de gráficos for aberta
     if (typeof window.checkGraphicsSubscription === 'function') {
-        setTimeout(() => window.checkGraphicsSubscription(), 100);
+        setTimeout(() => window.checkGraphicsSubscription(), 200);
     }
 }
 
@@ -658,6 +1122,66 @@ function showSolenoids(event) {
     }
 }
 
+// ✅ Exibe a tela de sincronismo
+function showSynchronism(event) {
+    setLastScreen('synchronism');
+    hideAllContainers();
+    const synchronismContainer = document.getElementById('synchronism-container');
+    if (synchronismContainer) {
+        synchronismContainer.style.display = 'block';
+        synchronismContainer.style.visibility = 'visible';
+    }
+
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
+
+    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+    if (event?.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+    
+    // Inicializa o sincronismo se ainda não foi inicializado
+    if (typeof window.inicializarSynchronism === 'function' && !window.synchronismInitialized) {
+        console.log('🔄 Inicializando sistema de Sincronismo...');
+        window.inicializarSynchronism();
+        window.synchronismInitialized = true; // Evita reinicializar
+    }
+    
+    // ✅ Aplica traduções após mostrar a tela
+    applyTranslationsIfAvailable();
+}
+
+// ✅ Exibe a tela de informações
+function showInformation(event) {
+    setLastScreen('information');
+    hideAllContainers();
+    const informationContainer = document.getElementById('information-container');
+    if (informationContainer) {
+        informationContainer.style.display = 'block';
+        informationContainer.style.visibility = 'visible';
+    }
+
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
+
+    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+    if (event?.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+    
+    // Inicializa as informações se ainda não foi inicializado
+    if (typeof window.inicializarInformation === 'function' && !window.informationInitialized) {
+        console.log('ℹ️ Inicializando sistema de Informações...');
+        window.inicializarInformation();
+        window.informationInitialized = true; // Evita reinicializar
+    }
+    
+    // ✅ Aplica traduções após mostrar a tela
+    applyTranslationsIfAvailable();
+}
+
 // Função para exibir a tela do visualizador 3D
 function showViewer3D(event) {
     setLastScreen('viewer3d');
@@ -739,7 +1263,9 @@ Promise.all([
     loadScript('/static/scripts/partials/windows.js'),
     loadScript('/static/scripts/partials/graphics.js'),
     loadScript('/static/scripts/partials/viewer3d.js'),
-    loadScript('/static/scripts/partials/samples.js') // ✅ Script de amostras
+    loadScript('/static/scripts/partials/samples.js'), // ✅ Script de amostras
+    loadScript('/static/scripts/partials/synchronism.js'),
+    loadScript('/static/scripts/partials/information.js')
 
 ])
 .then(() => {
@@ -757,10 +1283,12 @@ Promise.all([
         console.warn('Falha ao restaurar usuário salvo:', e);
     }
     
-    // Verificar se a função do velocímetro existe antes de chamá-la
-    if (typeof inicializarVelocimetro === 'function') {
+    // Inicializa o grid somente se estiver visível
+    const gridContainer = document.getElementById('grid-container');
+    const gridVisible = gridContainer && gridContainer.style.display !== 'none';
+    if (gridVisible && typeof inicializarVelocimetro === 'function') {
         inicializarVelocimetro();
-    } else {
+    } else if (gridVisible) {
         console.warn('Função inicializarVelocimetro não encontrada!');
     }
     
@@ -814,7 +1342,9 @@ document.addEventListener('DOMContentLoaded', function() {
         viewer3d: showViewer3D,
         samples: showSamples,
         panels: showPanels,
-        solenoids: showSolenoids
+        solenoids: showSolenoids,
+        synchronism: showSynchronism,
+        information: showInformation
     };
 
     // Regra:
@@ -849,5 +1379,5 @@ window.showViewer3D = showViewer3D; // ✅ Exportação global da função do vi
 window.showSamples = showSamples; // ✅ Exportação global da função de amostras
 window.showPanels = showPanels; // ✅ Exportação global da função de painéis
 window.showSolenoids = showSolenoids; // ✅ Exportação global da função de solenoides
-
-
+window.showSynchronism = showSynchronism; // ✅ Exportação global da função de sincronismo
+window.showInformation = showInformation; // ✅ Exportação global da função de informações

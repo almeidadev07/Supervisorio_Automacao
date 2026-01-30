@@ -1,14 +1,22 @@
-# Script para iniciar o Flask usando o venv correto
-Write-Host "Ativando ambiente virtual..." -ForegroundColor Green
-& .\venv\Scripts\Activate.ps1
+# Script PowerShell - execute com: .\start_flask.ps1 (NAO use "python start_flask.ps1")
+$venvPath = if (Test-Path ".\.venv") { ".\.venv" } else { ".\venv" }
+$pythonExe = Join-Path $venvPath "Scripts\python.exe"
+$pipExe = Join-Path $venvPath "Scripts\pip.exe"
 
-Write-Host "Verificando se requests está instalado..." -ForegroundColor Yellow
-.\venv\Scripts\python.exe -m pip show requests | Out-Null
+Write-Host "Usando ambiente virtual: $venvPath" -ForegroundColor Green
+
+if (-not (Test-Path $pythonExe)) {
+    Write-Host "Erro: Python do venv nao encontrado em $pythonExe" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "Verificando modulo requests..." -ForegroundColor Yellow
+& $pythonExe -m pip show requests 2>$null | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Instalando requests..." -ForegroundColor Yellow
-    .\venv\Scripts\pip.exe install requests
+    & $pipExe install requests
 }
 
 Write-Host "Iniciando servidor Flask..." -ForegroundColor Green
-.\venv\Scripts\python.exe app.py
+& $pythonExe app.py
 

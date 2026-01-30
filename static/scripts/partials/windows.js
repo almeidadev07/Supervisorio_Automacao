@@ -1,5 +1,41 @@
 // windows.js - Modal Centralizado e Controle de Um Por Vez
 
+// ============================================
+// GERENCIAMENTO DE EVENT LISTENERS
+// ============================================
+let windowsEventListeners = [];
+let windowsEscHandler = null; // Handler especial para ESC no document
+
+function registerWindowsEventListener(element, event, handler) {
+    if (element) {
+        element.addEventListener(event, handler);
+        windowsEventListeners.push({ element, event, handler });
+    }
+}
+
+// Função de cleanup
+function cleanupWindows() {
+    console.log('[WINDOWS] 🧹 Iniciando cleanup...');
+    
+    // Remove todos os event listeners registrados
+    windowsEventListeners.forEach(({ element, event, handler }) => {
+        if (element) {
+            element.removeEventListener(event, handler);
+        }
+    });
+    windowsEventListeners = [];
+    
+    // Remove o handler ESC do document
+    if (windowsEscHandler) {
+        document.removeEventListener('keydown', windowsEscHandler);
+        windowsEscHandler = null;
+    }
+    
+    console.log('[WINDOWS] ✅ Cleanup concluído');
+}
+
+window.cleanupWindows = cleanupWindows;
+
 // Estado global do sistema de captura
 let captureState = {
     completedStations: new Set(),
@@ -29,6 +65,9 @@ const stationToPinMap = {
 
 function inicializarWindows() {
     console.log("🚀 Sistema de Windows/Captura Inicializado - Modal Centralizado");
+    
+    // CRÍTICO: Limpa listeners anteriores para evitar duplicação
+    cleanupWindows();
     
     // Aguarda um pouco para garantir que o DOM está pronto
     setTimeout(() => {
@@ -210,26 +249,25 @@ function setupCaptureButtons() {
     }
     
     captureButtons.forEach(button => {
-        // Remove listeners antigos
-        button.removeEventListener("click", handleButtonClick);
-        
-        // Adiciona novo listener
-        button.addEventListener("click", handleButtonClick);
+        // Registra novo listener - USANDO FUNÇÃO DE REGISTRO
+        registerWindowsEventListener(button, "click", handleButtonClick);
         
         // Adiciona efeitos hover
-        button.addEventListener("mouseenter", function() {
+        const mouseEnterHandler = function() {
             if (!this.classList.contains('processing')) {
                 this.style.transform = "translateY(-3px) scale(1.02)";
                 this.style.boxShadow = "0 10px 25px rgba(0,0,0,0.35)";
             }
-        });
+        };
+        registerWindowsEventListener(button, "mouseenter", mouseEnterHandler.bind(button));
         
-        button.addEventListener("mouseleave", function() {
+        const mouseLeaveHandler = function() {
             if (!this.classList.contains('processing')) {
                 this.style.transform = "translateY(0) scale(1)";
                 this.style.boxShadow = "0 6px 16px rgba(0,0,0,0.25)";
             }
-        });
+        };
+        registerWindowsEventListener(button, "mouseleave", mouseLeaveHandler.bind(button));
     });
     
     console.log(`📋 Configurados ${captureButtons.length} botões de captura`);
@@ -293,38 +331,36 @@ function setupModal() {
     overlay.style.background = 'rgba(0, 0, 0, 0.7)';
     overlay.style.backdropFilter = 'blur(3px)';
     
-    // Fechar modal
+    // Fechar modal - USANDO FUNÇÃO DE REGISTRO
     [closeBtn, overlay].forEach(element => {
         if (element) {
-            element.addEventListener("click", closeModal);
+            registerWindowsEventListener(element, "click", closeModal);
         }
     });
     
-    // Ações do modal
+    // Ações do modal - USANDO FUNÇÃO DE REGISTRO
     if (capturaInicialBtn) {
-        capturaInicialBtn.addEventListener("click", () => {
-            executeCaptureAction("inicial");
-        });
+        const inicialHandler = () => executeCaptureAction("inicial");
+        registerWindowsEventListener(capturaInicialBtn, "click", inicialHandler);
     }
     
     if (capturaFinalBtn) {
-        capturaFinalBtn.addEventListener("click", () => {
-            executeCaptureAction("final");
-        });
+        const finalHandler = () => executeCaptureAction("final");
+        registerWindowsEventListener(capturaFinalBtn, "click", finalHandler);
     }
     
     if (buscaOffsetBtn) {
-        buscaOffsetBtn.addEventListener("click", () => {
-            executeCaptureAction("offset");
-        });
+        const offsetHandler = () => executeCaptureAction("offset");
+        registerWindowsEventListener(buscaOffsetBtn, "click", offsetHandler);
     }
     
-    // Fechar modal com ESC
-    document.addEventListener("keydown", (e) => {
+    // Fechar modal com ESC - ARMAZENA REFERÊNCIA PARA CLEANUP
+    windowsEscHandler = (e) => {
         if (e.key === "Escape" && captureState.modal.isOpen) {
             closeModal();
         }
-    });
+    };
+    document.addEventListener("keydown", windowsEscHandler);
     
     console.log("🎭 Modal configurado com centralização forçada");
 }

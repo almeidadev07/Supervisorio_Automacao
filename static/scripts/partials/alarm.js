@@ -1,4 +1,12 @@
 let alarmesInicializados = false;
+let alarmEventListeners = [];
+
+function registerAlarmEventListener(element, event, handler, options) {
+    if (element) {
+        element.addEventListener(event, handler, options);
+        alarmEventListeners.push({ element, event, handler, options });
+    }
+}
 
 function inicializarAlarmes() {
     // Verifica se o DOM está completamente carregado
@@ -21,14 +29,15 @@ function inicializarAlarmes() {
     if (!alarmesInicializados) {
         filterButtons.forEach(btn => {
             console.log('Configurando botão de filtro:', btn.dataset.prioridade);
-            btn.addEventListener('click', function() {
+            const filterHandler = function() {
                 // Remove active class de todos os botões
                 filterButtons.forEach(b => b.classList.remove('active'));
                 // Adiciona active class ao botão clicado
                 this.classList.add('active');
                 // Aplica o filtro
                 aplicarFiltro(this.dataset.prioridade);
-            });
+            };
+            registerAlarmEventListener(btn, 'click', filterHandler);
         });
     }
 
@@ -120,6 +129,7 @@ let alarmSocket = null;
 let alarmPollIntervalId = null;
 let currentViewMode = 'instantaneos'; // Controla se está em modo instantâneo ou histórico
 const ALARM_POLL_MS = 3000; // ✅ CORRIGIDO: Aumentado para 3 segundos (era 1 segundo) - reduz uso de CPU/memória
+let alarmRefreshInFlight = false;
 
 function carregarAlarmes(tipo) {
     console.log(`Carregando alarmes ${tipo}...`);
@@ -170,6 +180,11 @@ function carregarAlarmesReais() {
         mostrarMensagemDesconexaoAlarmes();
         return;
     }
+
+    if (alarmRefreshInFlight) {
+        return;
+    }
+    alarmRefreshInFlight = true;
     
     console.log('Carregando alarmes reais do PLC...');
     
@@ -192,6 +207,9 @@ function carregarAlarmesReais() {
             console.error('[ALARM] Erro ao carregar alarmes:', error);
             // Em caso de erro, mostra mensagem
             mostrarMensagemErroAlarmes();
+        })
+        .finally(() => {
+            alarmRefreshInFlight = false;
         });
 }
 
@@ -660,6 +678,7 @@ function determinarPrioridade(name, description) {
 let quickButtonsInitialized = false;
 let syncInterval = null; // Intervalo de sincronização global
 let isWriting = false; // Lock para evitar escritas simultâneas
+let syncStatusInFlight = false;
 let lastSyncTime = 0; // Timestamp da última sincronização
 
 // ✅ NOVA PROTEÇÃO: Sistema de fila e bloqueio para evitar conflitos
@@ -983,10 +1002,15 @@ function inicializarBotoesRapidos() {
             console.log('[QUICK_BUTTONS] Sincronização ignorada - escrita em andamento');
             return;
         }
+        if (syncStatusInFlight) {
+            return;
+        }
+        syncStatusInFlight = true;
         
         // Throttle: não sincroniza se foi sincronizado recentemente (menos de 500ms)
         const now = Date.now();
         if (now - lastSyncTime < 500) {
+            syncStatusInFlight = false;
             return;
         }
         
@@ -1005,16 +1029,18 @@ function inicializarBotoesRapidos() {
             }
         } catch (e) {
             console.error('[QUICK_BUTTONS] Erro na sincronização:', e);
+        } finally {
+            syncStatusInFlight = false;
         }
     }
 
     // Setup listeners
     console.log('[QUICK_BUTTONS] Configurando event listeners...');
-    btnSolenoide.addEventListener('click', (e) => {
+    registerAlarmEventListener(btnSolenoide, 'click', (e) => {
         e.preventDefault();
         clickBitHandler(btnSolenoide, 0);
     });
-    btnBalanca.addEventListener('click', (e) => {
+    registerAlarmEventListener(btnBalanca, 'click', (e) => {
         e.preventDefault();
         clickBitHandler(btnBalanca, 1);
     });
@@ -1046,7 +1072,7 @@ function inicializarBotoesRapidos() {
     }, 5000);
     
     // Limpa o intervalo quando a página é fechada
-    window.addEventListener('beforeunload', () => {
+    registerAlarmEventListener(window, 'beforeunload', () => {
         if (syncInterval) {
             clearInterval(syncInterval);
             syncInterval = null;
@@ -1066,6 +1092,8 @@ function cleanupAlarm() {
     
     // Para o polling de alarmes
     stopAlarmAutoRefresh();
+    alarmRefreshInFlight = false;
+    syncStatusInFlight = false;
     
     // Para o sync interval dos botões rápidos
     if (syncInterval) {
@@ -1073,10 +1101,28 @@ function cleanupAlarm() {
         syncInterval = null;
     }
     
-    // ✅ NÃO reseta alarmesInicializados - os event listeners são adicionados apenas uma vez
-    // e não devem ser re-adicionados ao reabrir a tela
+    // Remove listeners registrados
+    if (alarmEventListeners.length) {
+        alarmEventListeners.forEach(({ element, event, handler, options }) => {
+            if (element) {
+                element.removeEventListener(event, handler, options);
+            }
+        });
+        alarmEventListeners = [];
+    }
     
-    // ✅ Reseta a flag de botões rápidos para permitir re-inicialização
+    // Desconecta Socket.IO de alarmes
+    if (alarmSocket) {
+        try {
+            alarmSocket.off('telemetry');
+            alarmSocket.off('plc_connection_changed');
+            alarmSocket.disconnect();
+        } catch (_) {}
+        alarmSocket = null;
+    }
+    
+    // ✅ Reseta flags para permitir re-inicialização limpa
+    alarmesInicializados = false;
     quickButtonsInitialized = false;
     
     console.log('[ALARM] ✅ Cleanup concluído');

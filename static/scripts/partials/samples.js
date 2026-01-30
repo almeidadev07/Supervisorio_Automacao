@@ -9,7 +9,9 @@ function inicializarSamples() {
             cells: Array.from({ length: 10 }, () => ({ value: null, color: 'empty' }))
         })),
         pollingInterval: null,
+        pollingInFlight: false,
         socket: null,
+        telemetryHandler: null, // Handler do Socket.IO para cleanup
         isActive: true,
         firstUpdate: true // Flag para primeira atualização
     };
@@ -177,10 +179,15 @@ function inicializarSamples() {
         if (!state.isActive) {
             return;
         }
+        if (state.pollingInFlight) {
+            return;
+        }
+        state.pollingInFlight = true;
         
         // Verifica se o container está visível
         const container = document.getElementById('samples-container');
         if (!container || container.style.display === 'none') {
+            state.pollingInFlight = false;
             return;
         }
         
@@ -207,6 +214,8 @@ function inicializarSamples() {
             
         } catch (error) {
             console.error('[SAMPLES] Erro ao ler dados do PLC:', error);
+        } finally {
+            state.pollingInFlight = false;
         }
     }
     
@@ -234,14 +243,17 @@ function inicializarSamples() {
                 })
             );
             
-            // Remove listeners antigos se houver para evitar duplicação
-            state.socket.off('telemetry');
+            // ✅ CRÍTICO: Remove listener antigo antes de adicionar novo (evita duplicação)
+            if (state.telemetryHandler) {
+                state.socket.off('telemetry', state.telemetryHandler);
+            }
             
-            // Escuta evento telemetry para atualização em tempo real
-            state.socket.on('telemetry', (data) => {
+            // Escuta evento telemetry para atualização em tempo real (armazena handler para cleanup)
+            state.telemetryHandler = (data) => {
                 if (!data) return;
                 processDataFromPLC(data);
-            });
+            };
+            state.socket.on('telemetry', state.telemetryHandler);
             
             console.log('[SAMPLES] ✅ Socket.IO configurado para atualizações em tempo real');
             
@@ -291,8 +303,10 @@ function inicializarSamples() {
     
     // Função para desconectar Socket.IO
     function disconnectSocket() {
-        if (state.socket) {
-            state.socket.off('telemetry');
+        if (state.socket && state.telemetryHandler) {
+            // ✅ CRÍTICO: Remove listener usando handler armazenado
+            state.socket.off('telemetry', state.telemetryHandler);
+            state.telemetryHandler = null;
             // Não desconecta o socket global, apenas remove os listeners
             state.socket = null;
             console.log('[SAMPLES] Socket.IO desconectado');

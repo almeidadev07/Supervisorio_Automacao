@@ -1,0 +1,234 @@
+{
+    "_meta": {
+        "version": "1.0.0",
+        "languages": ["pt", "en", "es", "zh", "ja"],
+        "languageNames": {
+            "pt": "Português",
+            "en": "English",
+            "es": "Español",
+            "zh": "中文",
+            "ja": "日本語"
+        },
+        "description": "Arquivo de traduções do sistema supervisório. Coluna PT (Português) é a default. Demais colunas podem ser editadas manualmente para tradução."
+    },
+    "translations": {
+        "menu": {
+            "inicio":            { "pt": "Início",         "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "alarmes":           { "pt": "Alarmes",        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "faixa_peso":        { "pt": "Faixa Peso",     "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "balanca":           { "pt": "Balança",        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "classificacao":     { "pt": "Classificação",  "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "graficos":          { "pt": "Gráficos",       "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "lavadora":          { "pt": "Lavadora",       "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "secadora":          { "pt": "Secadora",       "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "amostras":          { "pt": "Amostras",       "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "diagramas":         { "pt": "Diagramas",      "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "sincronismo":       { "pt": "Sincronismo",    "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "janelas":           { "pt": "Janelas",        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "solenoides":        { "pt": "Solenoides",     "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "paineis":           { "pt": "Painéis",        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "placas":            { "pt": "Placas",         "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "informacoes":       { "pt": "Informações",    "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "information": {
+            "titulo":            { "pt": "Informações",               "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "info_software":     { "pt": "Informações de Software",   "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "cliente":           { "pt": "Cliente:",                  "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "backup":            { "pt": "Backup:",                   "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "info_sistema":      { "pt": "Informações de Sistema",    "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "data_hora":         { "pt": "Data e Hora:",              "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "ip":                { "pt": "IP:",                       "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "linguagem":         { "pt": "Linguagem",                 "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "maquina":           { "pt": "Máquina",                   "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "classificadora":    { "pt": "Classificadora",            "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "grid": {
+            "titulo":            { "pt": "Tela Principal",      "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "velocidade":        { "pt": "Velocidade",          "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "ovos_hora":         { "pt": "Ovos/Hora",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "producao":          { "pt": "Produção",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "contagem":          { "pt": "Contagem",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "tempo_ligado":      { "pt": "Tempo Ligado",        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "ciclos":            { "pt": "Ciclos",              "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "ligar":             { "pt": "Ligar",               "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "desligar":          { "pt": "Desligar",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "parar":             { "pt": "Parar",               "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "iniciar":           { "pt": "Iniciar",             "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "reset":             { "pt": "Reset",               "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "embaladora":        { "pt": "Embaladora",          "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "acumuladora":       { "pt": "Acumuladora",         "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "dosificadora":      { "pt": "Dosificadora",        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "escova":            { "pt": "Escova",              "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "caixas_30":         { "pt": "Caixas 30",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "caixas_12":         { "pt": "Caixas 12",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "selecionar_receita":{ "pt": "Selecionar Receita",  "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "magnavi":           { "pt": "Magna Visio",         "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "crack":             { "pt": "Crack",               "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "nebulizador":       { "pt": "Nebulizador Óleo",    "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "lampada_uv":        { "pt": "Lâmpada UV",          "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "alarm": {
+            "titulo":            { "pt": "Alarmes",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "ativos":            { "pt": "Ativos",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "historico":         { "pt": "Histórico",         "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "todos":             { "pt": "Todos",             "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "data":              { "pt": "Data",              "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "hora":              { "pt": "Hora",              "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "descricao":         { "pt": "Descrição",         "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "status":            { "pt": "Status",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "reconhecer":        { "pt": "Reconhecer",        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "reconhecer_todos":  { "pt": "Reconhecer Todos",  "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "limpar_historico":  { "pt": "Limpar Histórico",  "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "ativo":             { "pt": "Ativo",             "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "inativo":           { "pt": "Inativo",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "reconhecido":       { "pt": "Reconhecido",       "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "weight_range": {
+            "titulo":            { "pt": "Faixa de Peso",     "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "classe":            { "pt": "Classe",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "peso_minimo":       { "pt": "Peso Mínimo",       "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "peso_maximo":       { "pt": "Peso Máximo",       "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "tolerancia":        { "pt": "Tolerância",        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "salvar":            { "pt": "Salvar",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "cancelar":          { "pt": "Cancelar",          "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "balance": {
+            "titulo":            { "pt": "Balança",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "tara":              { "pt": "Tara",              "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "calibrar":          { "pt": "Calibrar",          "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "peso_atual":        { "pt": "Peso Atual",        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "peso_referencia":   { "pt": "Peso Referência",   "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "estabilidade":      { "pt": "Estabilidade",      "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "estavel":           { "pt": "Estável",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "instavel":          { "pt": "Instável",          "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "classification": {
+            "titulo":            { "pt": "Classificação",     "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "classe":            { "pt": "Classe",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "cor":               { "pt": "Cor",               "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "destino":           { "pt": "Destino",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "contagem":          { "pt": "Contagem",          "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "percentual":        { "pt": "Percentual",        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "total":             { "pt": "Total",             "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "reset_contagem":    { "pt": "Reset Contagem",    "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "graphics": {
+            "titulo":            { "pt": "Gráficos",          "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "producao_diaria":   { "pt": "Produção Diária",   "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "producao_semanal":  { "pt": "Produção Semanal",  "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "producao_mensal":   { "pt": "Produção Mensal",   "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "por_classe":        { "pt": "Por Classe",        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "quantidade":        { "pt": "Quantidade",        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "periodo":           { "pt": "Período",           "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "washer": {
+            "titulo":            { "pt": "Lavadora",          "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "temperatura":       { "pt": "Temperatura",       "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "nivel_agua":        { "pt": "Nível de Água",     "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "pressao":           { "pt": "Pressão",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "motor_principal":   { "pt": "Motor Principal",   "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "bomba":             { "pt": "Bomba",             "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "ventilador":        { "pt": "Ventilador",        "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "dryer": {
+            "titulo":            { "pt": "Secadora",          "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "temperatura":       { "pt": "Temperatura",       "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "umidade":           { "pt": "Umidade",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "velocidade_ar":     { "pt": "Velocidade do Ar",  "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "resistencia":       { "pt": "Resistência",       "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "ventilador":        { "pt": "Ventilador",        "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "samples": {
+            "titulo":            { "pt": "Amostras",          "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "nova_amostra":      { "pt": "Nova Amostra",      "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "data_coleta":       { "pt": "Data de Coleta",    "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "tipo":              { "pt": "Tipo",              "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "resultado":         { "pt": "Resultado",         "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "observacoes":       { "pt": "Observações",       "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "synchronism": {
+            "titulo":              { "pt": "Sincronismo",         "en": "Synchronism",      "es": "",  "zh": "",  "ja": "" },
+            "classificadora":      { "pt": "Classificadora",      "en": "Classifier",       "es": "",  "zh": "",  "ja": "" },
+            "ovoscopia":           { "pt": "Ovoscopia",           "en": "Ovoscopy",         "es": "",  "zh": "",  "ja": "" },
+            "pos_classificadora":  { "pt": "Pos. Classificadora", "en": "Classifier Pos.",  "es": "",  "zh": "",  "ja": "" },
+            "pos_ovoscopia":       { "pt": "Pos. Ovoscopia",      "en": "Ovoscopy Pos.",    "es": "",  "zh": "",  "ja": "" },
+            "buscar":              { "pt": "Buscar",              "en": "Search",           "es": "",  "zh": "",  "ja": "" },
+            "sincronizar":         { "pt": "Sincronismo",         "en": "Synchronism",      "es": "",  "zh": "",  "ja": "" },
+            "posicao_atual":       { "pt": "Posição Atual",       "en": "Current Position", "es": "",  "zh": "",  "ja": "" },
+            "busca_pos":           { "pt": "Busca Pos.",          "en": "Search Pos.",      "es": "",  "zh": "",  "ja": "" },
+            "velocidade_jog":      { "pt": "Velocidade Jog:",     "en": "Jog Speed:",       "es": "",  "zh": "",  "ja": "" },
+            "busca_posicao":       { "pt": "Busca Posição:",      "en": "Search Position:", "es": "",  "zh": "",  "ja": "" }
+        },
+        "windows": {
+            "titulo":            { "pt": "Janelas de Captura", "en": "Windows",  "es": "",  "zh": "",  "ja": "" },
+            "captura_inicial":   { "pt": "Captura Inicial",    "en": "",         "es": "",  "zh": "",  "ja": "" },
+            "captura_final":     { "pt": "Captura Final",      "en": "",         "es": "",  "zh": "",  "ja": "" },
+            "busca_offset":      { "pt": "Busca Offset",       "en": "",         "es": "",  "zh": "",  "ja": "" }
+        },
+        "solenoids": {
+            "titulo":            { "pt": "Solenoides",        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "solenoide":         { "pt": "Solenoide",         "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "estado":            { "pt": "Estado",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "ativar":            { "pt": "Ativar",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "desativar":         { "pt": "Desativar",         "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "panels": {
+            "titulo":            { "pt": "Painéis",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "conexao":           { "pt": "Conexão",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "conectado":         { "pt": "Conectado",         "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "desconectado":      { "pt": "Desconectado",      "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "teste":             { "pt": "Teste",             "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "diagram": {
+            "titulo":            { "pt": "Diagramas Elétricos", "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "pagina":            { "pt": "Página",              "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "anterior":          { "pt": "Anterior",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "proximo":           { "pt": "Próximo",             "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "zoom_in":           { "pt": "Aumentar Zoom",       "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "zoom_out":          { "pt": "Diminuir Zoom",       "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "common": {
+            "confirmar":         { "pt": "Confirmar",         "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "cancelar":          { "pt": "Cancelar",          "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "salvar":            { "pt": "Salvar",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "fechar":            { "pt": "Fechar",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "editar":            { "pt": "Editar",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "excluir":           { "pt": "Excluir",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "adicionar":         { "pt": "Adicionar",         "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "buscar":            { "pt": "Buscar",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "filtrar":           { "pt": "Filtrar",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "exportar":          { "pt": "Exportar",          "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "importar":          { "pt": "Importar",          "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "atualizar":         { "pt": "Atualizar",         "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "carregando":        { "pt": "Carregando...",     "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "erro":              { "pt": "Erro",              "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "sucesso":           { "pt": "Sucesso",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "aviso":             { "pt": "Aviso",             "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "sim":               { "pt": "Sim",               "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "nao":               { "pt": "Não",               "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "ligado":            { "pt": "Ligado",            "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "desligado":         { "pt": "Desligado",         "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "ativo":            { "pt": "Ativo",              "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "inativo":           { "pt": "Inativo",           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "habilitado":        { "pt": "Habilitado",        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "desabilitado":      { "pt": "Desabilitado",      "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "versao":            { "pt": "Versão",            "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "login": {
+            "titulo":            { "pt": "Login",                          "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "usuario":           { "pt": "Usuário",                        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "senha":             { "pt": "Senha",                          "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "entrar":            { "pt": "Entrar",                         "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "sair":              { "pt": "Sair",                           "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "operador":          { "pt": "Operador",                       "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "tecnico":           { "pt": "Técnico",                        "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "administrador":     { "pt": "Administrador",                  "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "usuario_invalido":  { "pt": "Usuário ou senha inválidos",     "en": "",  "es": "",  "zh": "",  "ja": "" }
+        },
+        "shutdown": {
+            "titulo":                  { "pt": "Desligar Sistema",                     "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "confirmar_desligamento":  { "pt": "Deseja realmente desligar o sistema?", "en": "",  "es": "",  "zh": "",  "ja": "" },
+            "desligando":              { "pt": "Desligando...",                        "en": "",  "es": "",  "zh": "",  "ja": "" }
+        }
+    }
+}

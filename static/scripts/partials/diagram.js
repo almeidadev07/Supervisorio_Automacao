@@ -1,5 +1,41 @@
 // static/scripts/partials/diagram.js
 
+// ============================================
+// GERENCIAMENTO DE EVENT LISTENERS
+// ============================================
+let diagramEventListeners = [];
+let diagramInitTimeout = null;
+
+function registerDiagramEventListener(element, event, handler) {
+    if (element) {
+        element.addEventListener(event, handler);
+        diagramEventListeners.push({ element, event, handler });
+    }
+}
+
+// Função de cleanup
+function cleanupDiagram() {
+    console.log('[DIAGRAM] 🧹 Iniciando cleanup...');
+    
+    // Remove todos os event listeners registrados
+    diagramEventListeners.forEach(({ element, event, handler }) => {
+        if (element) {
+            element.removeEventListener(event, handler);
+        }
+    });
+    diagramEventListeners = [];
+    
+    // Limpa timeout de inicialização
+    if (diagramInitTimeout) {
+        clearTimeout(diagramInitTimeout);
+        diagramInitTimeout = null;
+    }
+    
+    console.log('[DIAGRAM] ✅ Cleanup concluído');
+}
+
+window.cleanupDiagram = cleanupDiagram;
+
 // Variáveis globais para controlar o estado do visualizador de PDF
 let currentPdfPath = null;
 let currentPdfName = null;
@@ -133,6 +169,9 @@ async function loadPDF(pdfFile, buttonText) {
 function inicializarDiagrama() {
     console.log('🚀 Sistema de Diagramas v2.0 Inicializado');
     
+    // CRÍTICO: Limpa listeners anteriores para evitar duplicação
+    cleanupDiagram();
+    
     const buttons = document.querySelectorAll('.diagram-btn');
     if (buttons.length === 0) {
         console.warn('⚠️ Nenhum botão de diagrama encontrado.');
@@ -141,7 +180,7 @@ function inicializarDiagrama() {
     }
 
     buttons.forEach(button => {
-        button.addEventListener('click', function() {
+        const clickHandler = function() {
             // Remove a classe 'active' de todos os botões
             buttons.forEach(btn => btn.classList.remove('active'));
             // Adiciona a classe 'active' ao botão clicado
@@ -155,11 +194,12 @@ function inicializarDiagrama() {
             } else {
                 showError("Botão Mal Configurado", `O botão "${buttonText}" não tem o atributo 'data-pdf'.`);
             }
-        });
+        };
+        registerDiagramEventListener(button, 'click', clickHandler.bind(button));
     });
 
     // Clica no primeiro botão para carregar o diagrama inicial automaticamente
-    setTimeout(() => {
+    diagramInitTimeout = setTimeout(() => {
         if (buttons.length > 0) {
             console.log('🎯 Carregando primeiro diagrama automaticamente...');
             buttons[0].click();

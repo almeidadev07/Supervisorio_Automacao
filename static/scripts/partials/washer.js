@@ -1,5 +1,53 @@
 // washer.js - Versão Corrigida baseada no input.js funcional
 
+// ============================================
+// GERENCIAMENTO DE INTERVALOS E EVENT LISTENERS
+// ============================================
+// Arrays para rastrear todos os intervalos e listeners criados
+let washerIntervals = [];
+let washerEventListeners = [];
+
+// Função auxiliar para registrar intervalos
+function registerWasherInterval(intervalId) {
+    washerIntervals.push(intervalId);
+    return intervalId;
+}
+
+// Função auxiliar para registrar event listeners
+function registerWasherEventListener(element, event, handler) {
+    if (element) {
+        element.addEventListener(event, handler);
+        washerEventListeners.push({ element, event, handler });
+    }
+}
+
+// Função de cleanup - CRÍTICA para evitar vazamento de memória
+function cleanupWasher() {
+    console.log('[WASHER] 🧹 Iniciando cleanup...');
+    
+    // Limpa todos os intervalos
+    washerIntervals.forEach(intervalId => {
+        if (intervalId) {
+            clearInterval(intervalId);
+            console.log('[WASHER] ✅ Intervalo limpo:', intervalId);
+        }
+    });
+    washerIntervals = [];
+    
+    // Remove todos os event listeners registrados
+    washerEventListeners.forEach(({ element, event, handler }) => {
+        if (element) {
+            element.removeEventListener(event, handler);
+        }
+    });
+    washerEventListeners = [];
+    
+    console.log('[WASHER] ✅ Cleanup concluído');
+}
+
+// Exporta a função de cleanup globalmente
+window.cleanupWasher = cleanupWasher;
+
 function setupGauge(sliderId, gaugeId, textId, limiteId) {
     const slider = document.getElementById(sliderId);
     const gauge = document.getElementById(gaugeId);
@@ -15,7 +63,7 @@ function setupGauge(sliderId, gaugeId, textId, limiteId) {
     
     console.log('✅ Configurando gauge:', sliderId);
     
-    slider.addEventListener("input", () => {
+    const gaugeInputHandler = () => {
         const val = slider.value;
         console.log(`📊 Atualizando ${sliderId} para: ${val}%`);
         
@@ -24,7 +72,8 @@ function setupGauge(sliderId, gaugeId, textId, limiteId) {
         
         // Esta é a sintaxe correta que funciona no input.js
         gauge.style.background = `conic-gradient(#00cc66 0% ${val}%, #eee ${val}% 100%)`;
-    });
+    };
+    registerWasherEventListener(slider, "input", gaugeInputHandler);
     
     // Inicializa com valor 0
     const initialVal = slider.value;
@@ -35,6 +84,10 @@ function setupGauge(sliderId, gaugeId, textId, limiteId) {
 
 function inicializarWasher() {
     console.log('🚀 Tela Lavadora Inicializada');
+    
+    // CRÍTICO: Limpa intervalos e listeners anteriores para evitar duplicação
+    cleanupWasher();
+    
     // Inicializa bindings do Sugador de Gotas
     setupSugadorBindings();
     setupAquecedor1Bindings();
@@ -198,11 +251,11 @@ function setupAquecedor1Bindings() {
         }
     };
     const powerToggle = root.querySelector('.power-toggle');
-    if (powerToggle) powerToggle.addEventListener('click', doToggle);
+    registerWasherEventListener(powerToggle, 'click', doToggle);
     const powerOnImg = root.querySelector('.power-on');
     const powerOffImg = root.querySelector('.power-off');
-    if (powerOnImg) powerOnImg.addEventListener('click', doToggle);
-    if (powerOffImg) powerOffImg.addEventListener('click', doToggle);
+    registerWasherEventListener(powerOnImg, 'click', doToggle);
+    registerWasherEventListener(powerOffImg, 'click', doToggle);
 
     // Exibe controles imediatamente para permitir clique sem esperar primeiro polling
     const controlsRow = root.querySelector('.controls-row');
@@ -214,11 +267,19 @@ function setupAquecedor1Bindings() {
         if (controlsRow) controlsRow.style.visibility = 'visible';
     });
 
-    // Poll tags e renderiza
-    setInterval(async () => {
-        const values = await readTags([TAG_CMD, TAG_ALM]);
-        renderByTags(values);
+    // Poll tags e renderiza - REGISTRADO para cleanup
+    let aquecedor1InFlight = false;
+    const aquecedor1IntervalId = setInterval(async () => {
+        if (aquecedor1InFlight) return;
+        aquecedor1InFlight = true;
+        try {
+            const values = await readTags([TAG_CMD, TAG_ALM]);
+            renderByTags(values);
+        } finally {
+            aquecedor1InFlight = false;
+        }
     }, 1000);
+    registerWasherInterval(aquecedor1IntervalId);
 }
 async function readTags(names) {
     const res = await fetch(`/api/read_tags?names=${encodeURIComponent(names.join(','))}`, { cache: 'no-store' }).then(r=>r.json()).catch(()=>null);
@@ -280,30 +341,40 @@ function setupSugadorBindings() {
     }
 
     // Toggle Auto/Manual (bit5)
-    root.querySelector('.mode-toggle').addEventListener('click', async () => {
+    const modeToggleHandler = async () => {
         const values = await readTags([TAG_CMD]);
         let v = Number(values[TAG_CMD] || 0) >>> 0;
         v = v ^ (1 << 5);
         await writeTag(TAG_CMD, v);
         const after = await readTags([TAG_CMD, TAG_ALM]);
         renderByTags(after);
-    });
+    };
+    registerWasherEventListener(root.querySelector('.mode-toggle'), 'click', modeToggleHandler);
 
     // Toggle Liga/Desliga (bit8)
-    root.querySelector('.power-toggle').addEventListener('click', async () => {
+    const powerToggleHandler = async () => {
         const values = await readTags([TAG_CMD]);
         let v = Number(values[TAG_CMD] || 0) >>> 0;
         v = v ^ (1 << 8);
         await writeTag(TAG_CMD, v);
         const after = await readTags([TAG_CMD, TAG_ALM]);
         renderByTags(after);
-    });
+    };
+    registerWasherEventListener(root.querySelector('.power-toggle'), 'click', powerToggleHandler);
 
-    // Poll tags e renderiza
-    setInterval(async () => {
-        const values = await readTags([TAG_CMD, TAG_ALM]);
-        renderByTags(values);
+    // Poll tags e renderiza - REGISTRADO para cleanup
+    let sugadorInFlight = false;
+    const sugadorIntervalId = setInterval(async () => {
+        if (sugadorInFlight) return;
+        sugadorInFlight = true;
+        try {
+            const values = await readTags([TAG_CMD, TAG_ALM]);
+            renderByTags(values);
+        } finally {
+            sugadorInFlight = false;
+        }
     }, 1000);
+    registerWasherInterval(sugadorIntervalId);
 }
 
 function setupAquecedor2Bindings() {
@@ -439,11 +510,11 @@ function setupAquecedor2Bindings() {
         }
     };
     const powerToggle = root.querySelector('.power-toggle');
-    if (powerToggle) powerToggle.addEventListener('click', doToggle);
+    registerWasherEventListener(powerToggle, 'click', doToggle);
     const powerOnImg = root.querySelector('.power-on');
     const powerOffImg = root.querySelector('.power-off');
-    if (powerOnImg) powerOnImg.addEventListener('click', doToggle);
-    if (powerOffImg) powerOffImg.addEventListener('click', doToggle);
+    registerWasherEventListener(powerOnImg, 'click', doToggle);
+    registerWasherEventListener(powerOffImg, 'click', doToggle);
 
     const controlsRow = root.querySelector('.controls-row');
     if (controlsRow) controlsRow.style.visibility = 'visible';
@@ -453,10 +524,19 @@ function setupAquecedor2Bindings() {
         if (controlsRow) controlsRow.style.visibility = 'visible';
     });
 
-    setInterval(async () => {
-        const values = await readTags([TAG_CMD, TAG_ALM]);
-        renderByTags(values);
+    // Poll tags e renderiza - REGISTRADO para cleanup
+    let aquecedor2InFlight = false;
+    const aquecedor2IntervalId = setInterval(async () => {
+        if (aquecedor2InFlight) return;
+        aquecedor2InFlight = true;
+        try {
+            const values = await readTags([TAG_CMD, TAG_ALM]);
+            renderByTags(values);
+        } finally {
+            aquecedor2InFlight = false;
+        }
     }, 1000);
+    registerWasherInterval(aquecedor2IntervalId);
 }
 
 function setupAutoLimpezaBindings() {
@@ -632,15 +712,15 @@ function setupAutoLimpezaBindings() {
         isToggling = false;
     };
 
-    // Event listeners
+    // Event listeners - REGISTRADOS para cleanup
     const modeToggle = root.querySelector('.mode-toggle');
-    if (modeToggle) modeToggle.addEventListener('click', doToggleMode);
+    registerWasherEventListener(modeToggle, 'click', doToggleMode);
     
     const powerToggle = root.querySelector('.power-toggle');
-    if (powerToggle) powerToggle.addEventListener('click', doTogglePower);
+    registerWasherEventListener(powerToggle, 'click', doTogglePower);
     
     const directionToggle = root.querySelector('.direction-toggle');
-    if (directionToggle) directionToggle.addEventListener('click', doToggleDirection);
+    registerWasherEventListener(directionToggle, 'click', doToggleDirection);
 
     const controlsRow = root.querySelector('.controls-row');
     const directionRow = root.querySelector('.direction-row');
@@ -654,10 +734,19 @@ function setupAutoLimpezaBindings() {
         if (directionRow) directionRow.style.visibility = 'visible';
     });
 
-    setInterval(async () => {
-        const values = await readTags([TAG_CMD, TAG_ALM]);
-        renderByTags(values);
+    // Poll tags e renderiza - REGISTRADO para cleanup
+    let autoLimpezaInFlight = false;
+    const autoLimpezaIntervalId = setInterval(async () => {
+        if (autoLimpezaInFlight) return;
+        autoLimpezaInFlight = true;
+        try {
+            const values = await readTags([TAG_CMD, TAG_ALM]);
+            renderByTags(values);
+        } finally {
+            autoLimpezaInFlight = false;
+        }
     }, 1000);
+    registerWasherInterval(autoLimpezaIntervalId);
 }
 
 // Exporta a função para o escopo global

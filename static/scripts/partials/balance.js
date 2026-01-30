@@ -54,6 +54,8 @@ function inicializarBalance() {
     let isToggling = false; // Flag para evitar múltiplos cliques
     let pollingInterval = null; // Referência do intervalo de polling
     let calibrationPollingInterval = null; // Referência do intervalo de polling da calibração
+    let refreshInFlight = false;
+    let calibrationPollInFlight = false;
     
     // ✅ Obtém quantidade de linhas da configuração
     const lineQuantity = getLineQuantity();
@@ -756,6 +758,8 @@ function inicializarBalance() {
         }
         
         const pollCalibrationStatus = async () => {
+            if (calibrationPollInFlight) return;
+            calibrationPollInFlight = true;
             try {
                 const res = await fetch(`/api/read_tags?names=${encodeURIComponent(CALIBRATION_STATUS_TAG)}`, { cache: 'no-store' }).then(r=>r.json());
                 if (!res || !res.values) {
@@ -824,6 +828,8 @@ function inicializarBalance() {
                 setTimeout(() => {
                     toggleLoadingModal(false);
                 }, 500);
+            } finally {
+                calibrationPollInFlight = false;
             }
         };
         
@@ -901,12 +907,13 @@ function inicializarBalance() {
 
     // Função de refresh do PLC
     async function refreshFromPLC() {
-        // Não atualiza se estiver fazendo toggle manual
-        if (isToggling) {
-            return;
-        }
-        
+        if (refreshInFlight) return;
+        refreshInFlight = true;
         try {
+            // Não atualiza se estiver fazendo toggle manual
+            if (isToggling) {
+                return;
+            }
             // Lê tags principais e de status em uma única chamada
             const SPEED_TAG = 'XLCLASS_DB1_PRINCIPAL_REFERENCIAS_VELOC_REAL';
             const CMD_TAG = 'XLCLASS_DB229_PESAGEM_COMANDO_STATUS';
@@ -993,12 +1000,15 @@ function inicializarBalance() {
             
             // Em falha, oculta visualmente mantendo o espaço
             if (toggleBtn) toggleBtn.style.visibility = 'hidden';
+        } finally {
+            refreshInFlight = false;
         }
     }
 
     // ========== Subscrição por tela (ativa drivers só quando a tela está aberta) ==========
     const clientId = `balance-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
     let heartbeatTimer = null;
+    let heartbeatInFlight = false;
 
     function buildSubscribedTags() {
         const tags = [];
@@ -1049,6 +1059,8 @@ function inicializarBalance() {
     }
 
     async function heartbeatScreen() {
+        if (heartbeatInFlight) return;
+        heartbeatInFlight = true;
         try {
             await fetch('/api/heartbeat', {
                 method: 'POST',
@@ -1057,6 +1069,8 @@ function inicializarBalance() {
             });
         } catch (error) {
             console.error('❌ Erro no heartbeat:', error);
+        } finally {
+            heartbeatInFlight = false;
         }
     }
 

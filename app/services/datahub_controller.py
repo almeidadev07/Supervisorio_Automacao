@@ -807,6 +807,19 @@ class DataHubController:
     def is_connected(self):
         """Verifica se está conectado."""
         return self._stats.get('datahub_connected', False)
+
+    def _prune_subscriptions(self):
+        """Remove inscrições expiradas para evitar crescimento infinito de memória."""
+        now = time.time()
+        expired = [
+            cid for cid, sub in self._active_subscriptions.items()
+            if now - sub.get('last_heartbeat', 0) > self._heartbeat_timeout
+        ]
+        for cid in expired:
+            try:
+                del self._active_subscriptions[cid]
+            except Exception:
+                pass
     
     def force_reconnect(self):
         """
@@ -824,6 +837,7 @@ class DataHubController:
         print(f"[DATAHUB_CONTROLLER] Subscribe tags chamado para client {client_id}: {len(tags) if isinstance(tags, list) else 1} tags")
         
         with self._subscription_lock:
+            self._prune_subscriptions()
             self._active_subscriptions[client_id] = {
                 'tags': tags if isinstance(tags, list) else [tags],
                 'last_heartbeat': time.time()
@@ -846,6 +860,7 @@ class DataHubController:
         """
         if client_id:
             with self._subscription_lock:
+                self._prune_subscriptions()
                 if client_id in self._active_subscriptions:
                     self._active_subscriptions[client_id]['last_heartbeat'] = time.time()
                     return True
@@ -873,6 +888,7 @@ class DataHubController:
         Para compatibilidade.
         """
         with self._subscription_lock:
+            self._prune_subscriptions()
             tags = set()
             for sub in self._active_subscriptions.values():
                 tags.update(sub.get('tags', []))
@@ -919,4 +935,3 @@ class DataHubController:
         if self._polling_thread:
             self._polling_thread.join(timeout=2)
         print("[DATAHUB_CONTROLLER] Parado")
-

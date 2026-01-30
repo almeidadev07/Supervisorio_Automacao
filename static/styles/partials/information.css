@@ -1,0 +1,314 @@
+/* information.css - Tela de Informações do Sistema */
+
+/* Container principal */
+#information-container {
+    display: none;
+    height: calc(100vh - var(--menu-height, 100px) - 20px) !important;
+    padding: 20px !important;
+    margin: 0 !important;
+    background: #f8f9fa !important;
+    position: relative !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+}
+
+/* Layout principal */
+#information-container .information-layout,
+.information-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 24px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+/* Box do título (header) - mesmo estilo da tela de Janelas */
+.information-header-box {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-radius: 16px !important;
+    padding: 25px 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    min-height: 100px !important;
+    flex: 0 0 auto !important;
+    box-sizing: border-box !important;
+}
+
+.information-title {
+    font-size: 2.2rem !important;
+    font-weight: 700 !important;
+    color: #4a5568 !important;
+    margin: 0 !important;
+    text-align: center !important;
+}
+
+/* Box do conteúdo - mesmo espaço em cima e embaixo */
+.information-content-box {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-radius: 16px !important;
+    padding: 28px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    flex: 1 !important;
+    overflow: auto !important;
+    box-sizing: border-box !important;
+}
+
+/* Grid principal: coluna esquerda (3 boxes) + coluna direita (Linguagem), mesma altura */
+.information-grid {
+    display: flex;
+    flex-direction: row;
+    gap: 28px;
+    height: 100%;
+    align-items: stretch;
+}
+
+/* Coluna esquerda: Software, Sistema, Máquina - 3 boxes com mesma altura */
+.info-left-column {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    flex: 1;
+    min-width: 0;
+}
+
+.info-left-column .info-card {
+    flex: 0 0 auto; /* mantém os três boxes empilhados na vertical com altura natural */
+}
+
+/* Coluna direita: Linguagem (canto direito) - mesma altura total da coluna esquerda */
+.info-right-column {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 300px;
+    max-width: 300px;
+}
+
+.info-right-column .info-card {
+    flex: 1;
+    min-height: 0;
+}
+
+/* Cards de informação - todos mesma altura (stretch no eixo) */
+.info-card {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.info-card:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Header dos cards */
+.info-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.info-card-icon {
+    width: 32px;
+    height: 32px;
+    color: #495057;
+    flex-shrink: 0;
+}
+
+.info-card-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.info-card-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #343a40;
+    margin: 0;
+}
+
+/* Conteúdo dos cards */
+.info-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Campos de informação */
+.info-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.info-label {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.info-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #343a40;
+    padding: 10px 16px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.info-value-highlight {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border: none;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+/* Botões de idioma */
+.info-language-content {
+    gap: 12px !important;
+}
+
+.language-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
+    width: 100%;
+}
+
+.language-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+}
+
+.language-btn.active {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    box-shadow: 0 3px 10px rgba(40, 167, 69, 0.3);
+}
+
+.language-btn.active:hover {
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+}
+
+.lang-name {
+    font-size: 1rem;
+}
+
+/* Botão de máquina */
+.info-machine-content {
+    align-items: flex-start;
+}
+
+.machine-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 32px;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    min-width: 180px;
+}
+
+.machine-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(220, 53, 69, 0.4);
+}
+
+.machine-btn:active {
+    transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .information-grid {
+        flex-wrap: wrap;
+    }
+    
+    .info-right-column {
+        flex: 1 1 100%;
+        max-width: none;
+    }
+}
+
+@media (max-width: 900px) {
+    .information-content-box {
+        padding: 24px !important;
+    }
+    
+    .information-grid {
+        flex-direction: column;
+        gap: 24px;
+    }
+    
+    .info-left-column {
+        gap: 24px;
+    }
+    
+    .info-right-column {
+        flex: 1 1 auto;
+        max-width: none;
+    }
+    
+    .info-left-column .info-card {
+        flex: 0 0 auto;
+    }
+}
+
+@media (max-width: 600px) {
+    .information-header-box {
+        padding: 18px 24px !important;
+        min-height: 80px !important;
+    }
+    
+    .information-title {
+        font-size: 1.8rem !important;
+    }
+    
+    .info-card {
+        padding: 18px;
+    }
+    
+    .info-card-title {
+        font-size: 1.1rem;
+    }
+    
+    .language-btn {
+        padding: 12px 16px;
+        font-size: 0.95rem;
+    }
+}

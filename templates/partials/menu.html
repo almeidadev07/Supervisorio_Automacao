@@ -74,7 +74,7 @@
 
     <!-- Menu Técnico - Esquerda (3 botões) -->
     <div class="menu-left" id="menu-tecnico-left" style="display: none;">
-        <button class="menu-btn menu-btn-tecnico" onclick="zoomButton(this)">
+        <button class="menu-btn menu-btn-tecnico" onclick="showSynchronism(event);zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Sinc.png') }}" alt="Sincronismo" class="menu-icon">
             <span class="menu-text">Sincronismo</span>
         </button>
@@ -98,7 +98,7 @@
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Placas.png') }}" alt="Ícone Placas" class="menu-icon">
             <span class="menu-text">Placas</span>
         </button>
-        <button class="menu-btn menu-btn-tecnico" onclick="zoomButton(this)">
+        <button class="menu-btn menu-btn-tecnico" onclick="showInformation(event);zoomButton(this)">
             <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Informacao.png') }}" alt="Ícone Informação" class="menu-icon">
             <span class="menu-text">Informações</span>
         </button>

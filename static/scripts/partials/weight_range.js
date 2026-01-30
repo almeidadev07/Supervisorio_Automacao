@@ -133,6 +133,7 @@ function inicializarWeightRange() {
     // Subscrição por tela (ativa drivers só quando a tela está aberta)
     const clientId = `weight-range-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
     let heartbeatTimer = null;
+    let heartbeatInFlight = false;
     let refreshLabelsInterval = null;
 
     function buildSubscribedTags(presetIdx) {
@@ -168,6 +169,8 @@ function inicializarWeightRange() {
     }
 
     async function heartbeatScreen() {
+        if (heartbeatInFlight) return;
+        heartbeatInFlight = true;
         try {
             await fetch('/api/heartbeat', {
                 method: 'POST',
@@ -175,6 +178,9 @@ function inicializarWeightRange() {
                 body: JSON.stringify({ client_id: clientId })
             });
         } catch (_) {}
+        finally {
+            heartbeatInFlight = false;
+        }
     }
 
     function startHeartbeat() {
@@ -600,60 +606,67 @@ function inicializarWeightRange() {
     // ✅ Rastreamento de conexão PLC (DataHub ↔ PLC)
     let plcConnected = true;
     let consecutiveFailures = 0;
+    let refreshLabelsInFlight = false;
     
     async function refreshLabelsFromPLC() {
-        if (labelsRefreshPaused) return;
-        
-        // ✅ VERIFICA STATUS DA CONEXÃO PLC ↔ DataHub
-        const isConnected = await api.checkPLCConnection();
-        
-        // ✅ Detecta DESCONEXÃO (PLC ↔ DataHub)
-        if (!isConnected) {
-            consecutiveFailures++;
-            if (consecutiveFailures >= 2) {  // 2 falhas = ~4 segundos
-                if (plcConnected) {
-                    // ✅ ACABOU DE DESCONECTAR
-                    console.log('[WEIGHT_RANGE] ❌ Conexão PLC perdida - mostrando ###');
-                    plcConnected = false;
-                    
-                    // Mostra ### em todos os valores
-                    updateDisplay(true);
-                    
-                    // Limpa nomes das classes
-                    labels.forEach(label => {
-                        if (label) label.textContent = '';
-                    });
-                }
-            }
-            return; // Para aqui, não tenta ler dados
-        }
-        
-        // ✅ Detecta RECONEXÃO (PLC ↔ DataHub)
-        if (!plcConnected && isConnected) {
-            console.log('[WEIGHT_RANGE] 🔄 Conexão PLC restaurada - recarregando dados');
-            plcConnected = true;
-            consecutiveFailures = 0;
+        if (refreshLabelsInFlight) return;
+        refreshLabelsInFlight = true;
+        try {
+            if (labelsRefreshPaused) return;
             
-            // Força reload completo do preset ativo
-            const plcValues = await api.getPresetValues(activeSetup);
-            if (plcValues) {
-                setups[activeSetup] = plcValues;
-                persistSetups();
-                updateDisplay(false); // ✅ Mostra valores normais
+            // ✅ VERIFICA STATUS DA CONEXÃO PLC ↔ DataHub
+            const isConnected = await api.checkPLCConnection();
+            
+            // ✅ Detecta DESCONEXÃO (PLC ↔ DataHub)
+            if (!isConnected) {
+                consecutiveFailures++;
+                if (consecutiveFailures >= 2) {  // 2 falhas = ~4 segundos
+                    if (plcConnected) {
+                        // ✅ ACABOU DE DESCONECTAR
+                        console.log('[WEIGHT_RANGE] ❌ Conexão PLC perdida - mostrando ###');
+                        plcConnected = false;
+                        
+                        // Mostra ### em todos os valores
+                        updateDisplay(true);
+                        
+                        // Limpa nomes das classes
+                        labels.forEach(label => {
+                            if (label) label.textContent = '';
+                        });
+                    }
+                }
+                return; // Para aqui, não tenta ler dados
             }
-        } else {
-            // Conexão OK
-            consecutiveFailures = 0;
-            plcConnected = true;
+            
+            // ✅ Detecta RECONEXÃO (PLC ↔ DataHub)
+            if (!plcConnected && isConnected) {
+                console.log('[WEIGHT_RANGE] 🔄 Conexão PLC restaurada - recarregando dados');
+                plcConnected = true;
+                consecutiveFailures = 0;
+                
+                // Força reload completo do preset ativo
+                const plcValues = await api.getPresetValues(activeSetup);
+                if (plcValues) {
+                    setups[activeSetup] = plcValues;
+                    persistSetups();
+                    updateDisplay(false); // ✅ Mostra valores normais
+                }
+            } else {
+                // Conexão OK
+                consecutiveFailures = 0;
+                plcConnected = true;
+            }
+            
+            // ✅ Lê labels do PLC (só se conectado)
+            const plcLabels = await api.getLabels();
+            plcLabels.forEach((txt, i) => {
+                if (!labels[i]) return;
+                const val = (txt === null || typeof txt === 'undefined' || txt === '########') ? '' : String(txt);
+                labels[i].textContent = val;
+            });
+        } finally {
+            refreshLabelsInFlight = false;
         }
-        
-        // ✅ Lê labels do PLC (só se conectado)
-        const plcLabels = await api.getLabels();
-        plcLabels.forEach((txt, i) => {
-            if (!labels[i]) return;
-            const val = (txt === null || typeof txt === 'undefined' || txt === '########') ? '' : String(txt);
-            labels[i].textContent = val;
-        });
     }
 
     // ✅ CORRIGIDO: Armazena ID do intervalo para poder limpar depois

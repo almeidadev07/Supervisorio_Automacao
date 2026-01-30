@@ -5,6 +5,8 @@
 
 let scene, camera, renderer, controls, model = null;
 let isInitialized = false;
+let animationFrameId = null; // Para controlar o loop de animação
+let resizeHandler = null; // Para remover o listener de resize
 
 // Função para carregar Three.js e dependências
 function loadThreeJS() {
@@ -80,21 +82,24 @@ function initViewer3D() {
         return;
     }
     
-    // Se já foi inicializado, limpa a cena anterior antes de reinicializar
-    if (isInitialized && scene) {
-        console.log('[VIEWER3D] Reinicializando...');
-        // Limpa a cena anterior
-        while(scene.children.length > 0) {
-            scene.remove(scene.children[0]);
-        }
-        if (renderer) {
-            renderer.dispose();
-        }
-        if (controls) {
-            controls.dispose();
-        }
-        isInitialized = false;
-        model = null;
+    // Se já foi inicializado, limpa completamente antes de reinicializar
+    if (isInitialized) {
+        console.log('[VIEWER3D] Reinicializando... limpando recursos anteriores');
+        cleanupViewer3D();
+        // Aguarda um pouco para garantir que o cleanup foi concluído
+        // e então reinicializa
+        setTimeout(() => {
+            // Força reinicialização completa
+            isInitialized = false;
+            scene = null;
+            camera = null;
+            renderer = null;
+            controls = null;
+            model = null;
+            // Chama novamente para inicializar do zero
+            initViewer3D();
+        }, 150);
+        return;
     }
 
     // Carrega Three.js primeiro
@@ -112,13 +117,15 @@ function initViewer3D() {
             camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
             camera.position.set(0, 0, 5);
 
-            // Cria o renderer
+            // Cria o renderer (configuração focada em desempenho e abertura mais rápida)
             renderer = new THREE.WebGLRenderer({ 
                 canvas: canvas,
-                antialias: true 
+                // Desabilita antialias para reduzir carga da GPU e acelerar renderização
+                antialias: false 
             });
             renderer.setSize(width, height);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            // Usa pixel ratio fixo para evitar imagens muito pesadas em monitores de alta densidade
+            renderer.setPixelRatio(1);
             renderer.shadowMap.enabled = true;
 
             // Adiciona luzes - configuração para máxima clareza e mínimas sombras
@@ -183,18 +190,21 @@ function initViewer3D() {
 
             // Loop de animação
             function animate() {
-                requestAnimationFrame(animate);
+                animationFrameId = requestAnimationFrame(animate);
                 
                 if (controls) {
                     controls.update();
                 }
                 
-                renderer.render(scene, camera);
+                if (renderer && scene && camera) {
+                    renderer.render(scene, camera);
+                }
             }
             animate();
 
             // Ajusta tamanho quando a janela redimensiona
-            window.addEventListener('resize', () => {
+            resizeHandler = () => {
+                if (!canvas || !camera || !renderer) return;
                 const container = canvas.parentElement;
                 const width = container.clientWidth || 400;
                 const height = container.clientHeight || 300;
@@ -202,7 +212,8 @@ function initViewer3D() {
                 camera.aspect = width / height;
                 camera.updateProjectionMatrix();
                 renderer.setSize(width, height);
-            });
+            };
+            window.addEventListener('resize', resizeHandler);
 
             isInitialized = true;
             console.log('[VIEWER3D] Visualizador 3D inicializado com sucesso');
@@ -215,7 +226,7 @@ function initViewer3D() {
         });
 }
 
-// Carrega o modelo padrão (embaladora.glb)
+// Carrega o modelo padrão
 function loadDefaultModel() {
     if (!scene || !renderer) {
         console.warn('[VIEWER3D] Cena não inicializada, aguardando...');
@@ -223,7 +234,9 @@ function loadDefaultModel() {
         return;
     }
 
-    const modelPath = '/static/3D/embadora.glb';
+    // Usa o modelo menor para reduzir tempo de carregamento e evitar avisos de arquivo grande
+    // Certifique-se de que "embaladora2.glb" esteja em "static/3D"
+    const modelPath = '/static/3D/embadora2.glb';
     console.log('[VIEWER3D] Carregando modelo padrão:', modelPath);
     loadGLBModelFromURL(modelPath);
 }
@@ -304,12 +317,16 @@ function loadGLBModelFromURL(url, isBlobURL = false) {
             // Ajusta a câmera para visualizar o modelo com zoom mais próximo e centralizado
             // Usa o tamanho final do modelo (após escala)
             const finalMaxDim = Math.max(size.x * model.scale.x, size.y * model.scale.y, size.z * model.scale.z);
-            // Distância para zoom próximo
-            const distance = finalMaxDim * 0.6;
+            
+            // Calcula a distância ideal para preencher ~80% da tela
+            // Usa FOV da câmera para calcular a distância necessária
+            const fov = camera.fov * (Math.PI / 180); // Converte para radianos
+            const distance = (finalMaxDim / 2) / Math.tan(fov / 2) * 1.2; // 1.2 = preenche ~80% da altura
+            
             // Posiciona a câmera em um ângulo simétrico para centralizar o objeto
             // Usa valores iguais em X e Y para garantir centralização
             const cameraDistance = distance;
-            camera.position.set(cameraDistance, cameraDistance, cameraDistance);
+            camera.position.set(cameraDistance, cameraDistance * 0.8, cameraDistance); // Y ligeiramente menor para melhor visualização
             // Garante que a câmera olha para o centro (0, 0, 0)
             camera.lookAt(0, 0, 0);
             
@@ -317,11 +334,14 @@ function loadGLBModelFromURL(url, isBlobURL = false) {
                 // Define o alvo no centro do objeto
                 controls.target.set(0, 0, 0);
                 // Ajusta os limites de zoom para permitir aproximar mais
-                controls.minDistance = finalMaxDim * 0.2;
-                controls.maxDistance = finalMaxDim * 2;
+                controls.minDistance = finalMaxDim * 0.3;
+                controls.maxDistance = finalMaxDim * 3;
                 // Força atualização dos controles para centralizar
                 controls.update();
             }
+            
+            // Renderiza imediatamente para garantir que o modelo apareça
+            renderer.render(scene, camera);
 
             console.log('[VIEWER3D] Modelo carregado com sucesso');
             
@@ -348,6 +368,85 @@ function loadGLBModelFromURL(url, isBlobURL = false) {
     );
 }
 
-// Exporta a função de inicialização para ser chamada quando a tela for exibida
-window.initViewer3D = initViewer3D;
+// Função de cleanup para limpar recursos quando sair da tela
+function cleanupViewer3D() {
+    console.log('[VIEWER3D] Fazendo cleanup...');
+    
+    // Para o loop de animação
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+    if (renderer && renderer.setAnimationLoop) {
+        renderer.setAnimationLoop(null);
+    }
+    
+    // Remove listener de resize
+    if (resizeHandler) {
+        window.removeEventListener('resize', resizeHandler);
+        resizeHandler = null;
+    }
+    
+    // Remove o modelo da cena e libera recursos
+    if (model && scene) {
+        scene.remove(model);
+        model.traverse((child) => {
+            if (child.isMesh) {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(mat => {
+                            if (mat.map) mat.map.dispose();
+                            mat.dispose();
+                        });
+                    } else {
+                        if (child.material.map) child.material.map.dispose();
+                        child.material.dispose();
+                    }
+                }
+            }
+        });
+        model = null;
+    }
+    
+    // Limpa a cena (exceto luzes)
+    if (scene) {
+        const objectsToRemove = [];
+        scene.traverse((child) => {
+            if (child !== model && !child.isLight && !child.isCamera) {
+                objectsToRemove.push(child);
+            }
+        });
+        objectsToRemove.forEach(obj => scene.remove(obj));
+    }
+    
+    // Remove controles
+    if (controls) {
+        controls.dispose();
+        controls = null;
+    }
+    
+    // Limpa o renderer
+    if (renderer) {
+        // Limpa o canvas
+        const canvas = renderer.domElement;
+        if (canvas && canvas.parentNode) {
+            // Remove event listeners do canvas
+            const newCanvas = canvas.cloneNode(true);
+            canvas.parentNode.replaceChild(newCanvas, canvas);
+        }
+        renderer.dispose();
+        renderer = null;
+    }
+    
+    // Limpa variáveis (IMPORTANTE: resetar isInitialized por último)
+    scene = null;
+    camera = null;
+    isInitialized = false; // ✅ Resetar a flag para permitir reinicialização
+    
+    console.log('[VIEWER3D] Cleanup concluído - pronto para reinicialização');
+}
 
+// Exporta as funções para serem chamadas externamente
+window.initViewer3D = initViewer3D;
+window.cleanupViewer3D = cleanupViewer3D;

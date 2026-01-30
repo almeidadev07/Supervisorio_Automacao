@@ -48,8 +48,20 @@ const HAB_CONTROLE_BITS = [8, 9, 10, 11, 12, 13, 14];
 let graphicsClientId = null;
 let graphicsHeartbeatTimer = null;
 let graphicsSocket = null;
+let graphicsTelemetryHandler = null; // Handler do Socket.IO para cleanup
 let isGraphicsScreenVisible = false;
 let isGridScreenVisible = false;
+let graphicsEventListeners = [];
+let graphicsNameUpdateInFlight = false;
+let graphicsHeartbeatInFlight = false;
+let graphicsSubscriptionInFlight = false;
+
+function registerGraphicsEventListener(element, event, handler, options) {
+    if (element) {
+        element.addEventListener(event, handler, options);
+        graphicsEventListeners.push({ element, event, handler, options });
+    }
+}
 
 // ✅ IDs dos intervalos para poder limpar depois (CRÍTICO para evitar vazamento de memória)
 let graphicsSubscriptionCheckInterval = null;
@@ -441,7 +453,7 @@ function setupEventListeners() {
     // Botão de atualizar
     const refreshBtn = document.getElementById('btn-refresh-graphics');
     if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
+        registerGraphicsEventListener(refreshBtn, 'click', () => {
             updateChartData();
             updateLastUpdateTime();
             renderClassesLegend();
@@ -452,7 +464,7 @@ function setupEventListeners() {
     // Botão de exportar
     const exportBtn = document.getElementById('btn-export-graphics');
     if (exportBtn) {
-        exportBtn.addEventListener('click', exportChart);
+        registerGraphicsEventListener(exportBtn, 'click', exportChart);
     }
 
     // Abas de gráficos
@@ -464,7 +476,7 @@ function setupEventListeners() {
         tabs.forEach(t => t && t.classList.remove('active'));
         btn && btn.classList.add('active');
     };
-    if (tabFlow) tabFlow.addEventListener('click', () => {
+    if (tabFlow) registerGraphicsEventListener(tabFlow, 'click', () => {
         setActive(tabFlow);
         try {
             classesChart.options.plugins.title.text = 'Gráfico de fluxo';
@@ -472,7 +484,7 @@ function setupEventListeners() {
             classesChart.update('none');
         } catch(_) {}
     });
-    if (tabWeight) tabWeight.addEventListener('click', () => {
+    if (tabWeight) registerGraphicsEventListener(tabWeight, 'click', () => {
         setActive(tabWeight);
         try {
             classesChart.options.plugins.title.text = 'Gráfico de peso';
@@ -480,7 +492,7 @@ function setupEventListeners() {
             classesChart.update('none');
         } catch(_) {}
     });
-    if (tabSpeed) tabSpeed.addEventListener('click', () => {
+    if (tabSpeed) registerGraphicsEventListener(tabSpeed, 'click', () => {
         setActive(tabSpeed);
         try {
             classesChart.options.plugins.title.text = 'Gráfico de velocidade';
@@ -802,6 +814,8 @@ function buildGraphicsSubscribedTags() {
  * Faz subscription das tags de fluxo
  */
 async function subscribeGraphicsScreen() {
+    if (graphicsSubscriptionInFlight) return;
+    graphicsSubscriptionInFlight = true;
     if (!graphicsClientId) {
         graphicsClientId = `graphics-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     }
@@ -822,6 +836,8 @@ async function subscribeGraphicsScreen() {
         console.log('[GRAPHICS] ✅ Subscrição de tags ativada para tela de gráficos');
     } catch (error) {
         console.error('[GRAPHICS] ❌ Erro ao ativar subscrição de tags:', error);
+    } finally {
+        graphicsSubscriptionInFlight = false;
     }
 }
 
@@ -829,6 +845,8 @@ async function subscribeGraphicsScreen() {
  * Remove subscription das tags de fluxo
  */
 async function unsubscribeGraphicsScreen() {
+    if (graphicsSubscriptionInFlight) return;
+    graphicsSubscriptionInFlight = true;
     try {
         stopGraphicsHeartbeat();
         if (graphicsClientId) {
@@ -841,6 +859,9 @@ async function unsubscribeGraphicsScreen() {
         }
     } catch (error) {
         console.error('[GRAPHICS] ❌ Erro ao desativar subscrição de tags:', error);
+    } finally {
+        graphicsClientId = null;
+        graphicsSubscriptionInFlight = false;
     }
 }
 
@@ -848,6 +869,8 @@ async function unsubscribeGraphicsScreen() {
  * Envia heartbeat para manter subscription ativa
  */
 async function heartbeatGraphicsScreen() {
+    if (graphicsHeartbeatInFlight) return;
+    graphicsHeartbeatInFlight = true;
     try {
         if (graphicsClientId) {
             await fetch('/api/heartbeat', {
@@ -858,6 +881,8 @@ async function heartbeatGraphicsScreen() {
         }
     } catch (error) {
         console.error('[GRAPHICS] ❌ Erro no heartbeat:', error);
+    } finally {
+        graphicsHeartbeatInFlight = false;
     }
 }
 
@@ -917,16 +942,19 @@ function initGraphicsSocketIO() {
                 })
             );
             
-            // Remove listeners antigos se houver para evitar duplicação
-            graphicsSocket.off('telemetry');
+            // ✅ CRÍTICO: Remove listener antigo antes de adicionar novo (evita duplicação)
+            if (graphicsTelemetryHandler) {
+                graphicsSocket.off('telemetry', graphicsTelemetryHandler);
+            }
             
-            // Escuta evento telemetry para atualizar gráfico em tempo real
-            graphicsSocket.on('telemetry', (data) => {
+            // Escuta evento telemetry para atualizar gráfico em tempo real (armazena handler para cleanup)
+            graphicsTelemetryHandler = (data) => {
                 if (!data) return;
                 
                 // Atualiza gráfico com dados recebidos
                 updateChartDataFromPLC(data);
-            });
+            };
+            graphicsSocket.on('telemetry', graphicsTelemetryHandler);
             
             console.log('[GRAPHICS] ✅ Socket.IO configurado para gráficos');
         } else {
@@ -975,8 +1003,12 @@ function checkGraphicsSubscription() {
 function cleanupGraphics() {
     console.log('[GRAPHICS] 🧹 Executando cleanup de gráficos...');
     
+    // ✅ CRÍTICO: Para o background feed
+    stopGraphicsBackgroundFeed();
+    
     // Para o heartbeat
     stopGraphicsHeartbeat();
+    graphicsHeartbeatInFlight = false;
     
     // Limpa intervalo de atualização de dados
     if (dataUpdateIntervalId) {
@@ -984,29 +1016,49 @@ function cleanupGraphics() {
         dataUpdateIntervalId = null;
     }
     
-    // Limpa intervalo de verificação de subscription
+    // Limpa intervalo de verificação de subscription (redundante mas seguro)
     if (graphicsSubscriptionCheckInterval) {
         clearInterval(graphicsSubscriptionCheckInterval);
         graphicsSubscriptionCheckInterval = null;
     }
     
-    // Limpa intervalo de atualização de nomes
+    // Limpa intervalo de atualização de nomes (redundante mas seguro)
     if (graphicsNameUpdateInterval) {
         clearInterval(graphicsNameUpdateInterval);
         graphicsNameUpdateInterval = null;
     }
+    graphicsNameUpdateInFlight = false;
     
-    // Remove listeners do Socket.IO
-    if (graphicsSocket) {
+    // ✅ CRÍTICO: Remove listeners do Socket.IO usando handler armazenado
+    if (graphicsSocket && graphicsTelemetryHandler) {
         try {
-            graphicsSocket.off('telemetry');
+            graphicsSocket.off('telemetry', graphicsTelemetryHandler);
+            graphicsTelemetryHandler = null;
         } catch (_) {}
+    }
+
+    // Remove event listeners registrados
+    if (graphicsEventListeners.length) {
+        graphicsEventListeners.forEach(({ element, event, handler, options }) => {
+            if (element) {
+                element.removeEventListener(event, handler, options);
+            }
+        });
+        graphicsEventListeners = [];
     }
     
     // Faz unsubscribe das tags
     try {
         unsubscribeGraphicsScreen();
     } catch (_) {}
+
+    // Libera o gráfico e memória associada
+    if (classesChart) {
+        try {
+            classesChart.destroy();
+        } catch (_) {}
+        classesChart = null;
+    }
     
     console.log('[GRAPHICS] ✅ Cleanup concluído');
 }
@@ -1028,16 +1080,19 @@ window.getGraphicsSummary = function getGraphicsSummary() {
     });
 };
 
-// Inicia um feed de dados em background para alimentar o mini-gráfico do grid
-// mesmo que a tela de gráficos não tenha sido aberta ainda.
-// ✅ CORRIGIDO: Agora armazena IDs dos intervalos para poder limpar depois
-(function startGraphicsBackgroundFeed() {
-    async function start() {
-        // ✅ CRÍTICO: Evita iniciar múltiplas vezes
-        if (graphicsBackgroundStarted) return;
-        graphicsBackgroundStarted = true;
-        
-        // ✅ Busca os nomes das classes diretamente do PLC via DataHub
+// ✅ CRÍTICO: Função para iniciar background feed sob demanda
+// Só inicia quando grid ou graphics estão visíveis
+function startGraphicsBackgroundFeed() {
+    // ✅ CRÍTICO: Evita iniciar múltiplas vezes
+    if (graphicsBackgroundStarted) {
+        console.log('[GRAPHICS] Background feed já está rodando');
+        return;
+    }
+    graphicsBackgroundStarted = true;
+    console.log('[GRAPHICS] 🚀 Iniciando background feed...');
+    
+    // ✅ Busca os nomes das classes diretamente do PLC via DataHub
+    (async () => {
         try {
             await refreshClassLabelsFromPLC();
         } catch(_) {
@@ -1051,95 +1106,124 @@ window.getGraphicsSummary = function getGraphicsSummary() {
                 }
             } catch(_) {}
         }
-        
-        // ✅ Inicializa subscription e Socket.IO para dados em tempo real
-        // Subscription será ativada se grid estiver visível
-        initGraphicsSubscription();
-        initGraphicsSocketIO();
-        
-        // ✅ CORRIGIDO: Armazena ID do intervalo para poder limpar depois
-        // Monitora mudanças de visibilidade das telas para gerenciar subscription
-        if (graphicsSubscriptionCheckInterval) {
-            clearInterval(graphicsSubscriptionCheckInterval);
-        }
-        graphicsSubscriptionCheckInterval = setInterval(() => {
-            checkGraphicsSubscription();
-        }, 5000); // ✅ Aumentado para 5 segundos (era 2) - reduz uso de CPU
-        
-        // ✅ CORRIGIDO: Armazena ID do intervalo para poder limpar depois
-        // Atualiza os nomes a cada 60s (era 30s) + monitora conexão PLC ↔ DataHub
-        let plcConnected = true;
-        let consecutiveFailures = 0;
-        
-        if (graphicsNameUpdateInterval) {
-            clearInterval(graphicsNameUpdateInterval);
-        }
-        graphicsNameUpdateInterval = setInterval(async () => {
-            try {
-                // ✅ VERIFICA STATUS DA CONEXÃO PLC ↔ DataHub
-                const isConnected = await graphicsApi.checkPLCConnection();
-                
-                // ✅ Detecta DESCONEXÃO (PLC ↔ DataHub)
-                if (!isConnected) {
-                    consecutiveFailures++;
-                    if (consecutiveFailures >= 2) {
-                        if (plcConnected) {
-                            console.log('[GRAPHICS] ❌ Conexão PLC perdida');
-                            plcConnected = false;
-                            
-                            // Volta para nomes padrão C1-C7
-                            CLASS_NAMES = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'];
-                            if (classesChart && classesChart.data) {
-                                classesChart.data.labels = CLASS_NAMES;
-                                classesChart.update('none');
-                            }
-                            try { 
-                                renderClassesLegend(); 
-                                renderSymbolsLegend();
-                            } catch(_) {}
-                        }
-                    }
-                    return;
-                }
-                
-                // ✅ Detecta RECONEXÃO (PLC ↔ DataHub)
-                if (!plcConnected && isConnected) {
-                    console.log('[GRAPHICS] 🔄 Conexão PLC restaurada - recarregando nomes');
-                    plcConnected = true;
-                    consecutiveFailures = 0;
-                    
-                    // Força atualização dos dados do gráfico
-                    try { 
-                        await refreshClassLabelsFromPLC();
-                        updateChartData(); 
-                    } catch (_) {}
-                } else {
-                    // Conexão OK - atualiza normalmente
-                    consecutiveFailures = 0;
-                    plcConnected = true;
-                    try { await refreshClassLabelsFromPLC(); } catch (_) {}
-                }
-            } catch (_) {
+    })();
+    
+    // ✅ Inicializa subscription e Socket.IO para dados em tempo real
+    // Subscription será ativada se grid estiver visível
+    initGraphicsSubscription();
+    initGraphicsSocketIO();
+    
+    // ✅ CORRIGIDO: Armazena ID do intervalo para poder limpar depois
+    // Monitora mudanças de visibilidade das telas para gerenciar subscription
+    if (graphicsSubscriptionCheckInterval) {
+        clearInterval(graphicsSubscriptionCheckInterval);
+    }
+    graphicsSubscriptionCheckInterval = setInterval(() => {
+        checkGraphicsSubscription();
+    }, 5000); // ✅ Aumentado para 5 segundos (era 2) - reduz uso de CPU
+    
+    // ✅ CORRIGIDO: Armazena ID do intervalo para poder limpar depois
+    // Atualiza os nomes a cada 60s (era 30s) + monitora conexão PLC ↔ DataHub
+    let plcConnected = true;
+    let consecutiveFailures = 0;
+    
+    if (graphicsNameUpdateInterval) {
+        clearInterval(graphicsNameUpdateInterval);
+    }
+    graphicsNameUpdateInterval = setInterval(async () => {
+        if (graphicsNameUpdateInFlight) return;
+        graphicsNameUpdateInFlight = true;
+        try {
+            // ✅ VERIFICA STATUS DA CONEXÃO PLC ↔ DataHub
+            const isConnected = await graphicsApi.checkPLCConnection();
+            
+            // ✅ Detecta DESCONEXÃO (PLC ↔ DataHub)
+            if (!isConnected) {
                 consecutiveFailures++;
                 if (consecutiveFailures >= 2) {
                     if (plcConnected) {
+                        console.log('[GRAPHICS] ❌ Conexão PLC perdida');
                         plcConnected = false;
+                        
+                        // Volta para nomes padrão C1-C7
                         CLASS_NAMES = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'];
                         if (classesChart && classesChart.data) {
                             classesChart.data.labels = CLASS_NAMES;
                             classesChart.update('none');
                         }
+                        try { 
+                            renderClassesLegend(); 
+                            renderSymbolsLegend();
+                        } catch(_) {}
+                    }
+                }
+                return;
+            }
+            
+            // ✅ Detecta RECONEXÃO (PLC ↔ DataHub)
+            if (!plcConnected && isConnected) {
+                console.log('[GRAPHICS] 🔄 Conexão PLC restaurada - recarregando nomes');
+                plcConnected = true;
+                consecutiveFailures = 0;
+                
+                // Força atualização dos dados do gráfico
+                try { 
+                    await refreshClassLabelsFromPLC();
+                    updateChartData(); 
+                } catch (_) {}
+            } else {
+                // Conexão OK - atualiza normalmente
+                consecutiveFailures = 0;
+                plcConnected = true;
+                try { await refreshClassLabelsFromPLC(); } catch (_) {}
+            }
+        } catch (_) {
+            consecutiveFailures++;
+            if (consecutiveFailures >= 2) {
+                if (plcConnected) {
+                    plcConnected = false;
+                    CLASS_NAMES = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'];
+                    if (classesChart && classesChart.data) {
+                        classesChart.data.labels = CLASS_NAMES;
+                        classesChart.update('none');
                     }
                 }
             }
-        }, 60000); // ✅ Aumentado para 60 segundos (era 30) - reduz uso de CPU/memória
-        
-        console.log('[GRAPHICS] ✅ Background feed iniciado com intervalos controlados');
-    }
+        } finally {
+            graphicsNameUpdateInFlight = false;
+        }
+    }, 60000); // ✅ Aumentado para 60 segundos (era 30) - reduz uso de CPU/memória
+    
+    console.log('[GRAPHICS] ✅ Background feed iniciado com intervalos controlados');
+}
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', start);
-    } else {
-        setTimeout(start, 0);
+// ✅ CRÍTICO: Função para parar background feed quando não é necessário
+function stopGraphicsBackgroundFeed() {
+    if (!graphicsBackgroundStarted) {
+        console.log('[GRAPHICS] Background feed já está parado');
+        return;
     }
-})();
+    
+    console.log('[GRAPHICS] 🛑 Parando background feed...');
+    
+    // Limpa intervalo de verificação de subscription
+    if (graphicsSubscriptionCheckInterval) {
+        clearInterval(graphicsSubscriptionCheckInterval);
+        graphicsSubscriptionCheckInterval = null;
+    }
+    
+    // Limpa intervalo de atualização de nomes
+    if (graphicsNameUpdateInterval) {
+        clearInterval(graphicsNameUpdateInterval);
+        graphicsNameUpdateInterval = null;
+    }
+    
+    // ✅ CRÍTICO: Reseta a flag para permitir reiniciar quando necessário
+    graphicsBackgroundStarted = false;
+    
+    console.log('[GRAPHICS] ✅ Background feed parado');
+}
+
+// Exporta funções de controle do background feed
+window.startGraphicsBackgroundFeed = startGraphicsBackgroundFeed;
+window.stopGraphicsBackgroundFeed = stopGraphicsBackgroundFeed;

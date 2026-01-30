@@ -34,7 +34,7 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Header - Box branco do título */
+/* Header - Box branco do título (mesmo padrão da tela de Janelas) */
 .solenoids-header {
     text-align: center;
     margin-bottom: 0;
@@ -44,12 +44,13 @@
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 30px;
+    padding: 25px 40px;
+    min-height: 100px;
     box-sizing: border-box;
 }
 
 .solenoids-title {
-    font-size: 2.8rem;
+    font-size: 2.2rem;
     font-weight: 700;
     color: #4a5568;
     margin: 0;

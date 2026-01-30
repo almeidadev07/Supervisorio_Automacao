@@ -442,6 +442,7 @@ function inicializarClassification() {
     // Subscrição por tela (habilita somente as tags necessárias quando a tela está aberta)
     const clientId = `classification-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
     let heartbeatTimer = null;
+    let heartbeatInFlight = false;
     function buildSubscribedTags() {
         const tags = [];
         // Palavras de classificação por P e índices 0 e 1 (DB200/DB201)
@@ -485,6 +486,8 @@ function inicializarClassification() {
         } catch (_) {}
     }
     async function heartbeatScreen() {
+        if (heartbeatInFlight) return;
+        heartbeatInFlight = true;
         try {
             await fetch('/api/heartbeat', {
                 method: 'POST',
@@ -492,6 +495,9 @@ function inicializarClassification() {
                 body: JSON.stringify({ client_id: clientId })
             }).catch(() => {});
         } catch (_) {}
+        finally {
+            heartbeatInFlight = false;
+        }
     }
     function startHeartbeat() {
         if (heartbeatTimer) clearInterval(heartbeatTimer);
@@ -3513,5 +3519,4 @@ if (document.readyState === 'loading') {
 // ✅ IMPORTANTE (SPA): a inicialização da tela de classificação é controlada pelo menu em `static/scripts/main.js`
 // (função `showClassification`). Não inicialize aqui no DOMContentLoaded, senão cria múltiplas instâncias/timers
 // e a RAM dispara ao abrir a tela.
-
 

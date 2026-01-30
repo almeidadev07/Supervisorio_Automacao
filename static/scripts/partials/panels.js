@@ -2,6 +2,24 @@
 
 // Estado dos painéis
 const panelStates = {};
+let panelsEventListeners = [];
+
+function registerPanelsEventListener(element, event, handler) {
+    if (element) {
+        element.addEventListener(event, handler);
+        panelsEventListeners.push({ element, event, handler });
+    }
+}
+
+function cleanupPanels() {
+    console.log('[PANELS] 🧹 Limpando listeners...');
+    panelsEventListeners.forEach(({ element, event, handler }) => {
+        if (element) {
+            element.removeEventListener(event, handler);
+        }
+    });
+    panelsEventListeners = [];
+}
 
 // Chave para localStorage
 const PANELS_STATE_KEY = 'supervisor_panels_state';
@@ -11,6 +29,9 @@ const PANELS_STATE_KEY = 'supervisor_panels_state';
  */
 function inicializarPanels() {
     console.log('🚀 Tela de Painéis Inicializada');
+    
+    // Evita duplicação de listeners
+    cleanupPanels();
     
     // Carrega estados salvos
     loadPanelStates();
@@ -61,13 +82,10 @@ function setupPanelClickEvents() {
         const panelId = item.dataset.panel;
         
         if (button && panelId) {
-            // Remove listeners anteriores para evitar duplicação
-            button.removeEventListener('click', handlePanelClick);
-            
-            // Adiciona novo listener
-            button.addEventListener('click', function(e) {
+            const clickHandler = function(e) {
                 handlePanelClick(e, item, panelId);
-            });
+            };
+            registerPanelsEventListener(button, 'click', clickHandler);
             
             console.log(`[PANELS] Evento configurado para: ${panelId}`);
         }
@@ -205,6 +223,9 @@ function disconnectAllPanels() {
     savePanelStates();
     console.log('[PANELS] Todos os painéis desconectados');
 }
+
+// Exporta cleanup
+window.cleanupPanels = cleanupPanels;
 
 /**
  * Dispara evento customizado quando um painel muda de estado

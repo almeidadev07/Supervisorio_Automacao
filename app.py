@@ -1,7 +1,8 @@
 import os
 import sys
+import socket
 import importlib.util
-from flask import send_from_directory, make_response
+from flask import send_from_directory, make_response, jsonify
 
 # Carrega o pacote 'app' (diretório) sob um nome alternativo para evitar conflito com este arquivo 'app.py'
 _pkg_dir = os.path.join(os.path.dirname(__file__), 'app')
@@ -57,6 +58,45 @@ def serve_3d(filename):
     except Exception as e:
         print(f"[3D] ERRO ao servir arquivo 3D {filename}: {e}")
         return f"Erro ao carregar arquivo 3D: {e}", 404
+
+# ============================================
+# API de Informações do Sistema
+# ============================================
+
+@app.route('/api/system/ip')
+def get_system_ip():
+    """Retorna o endereço IP da máquina"""
+    try:
+        # Tenta obter o IP conectando a um servidor externo (não faz conexão real)
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        # Fallback: usa hostname
+        try:
+            ip = socket.gethostbyname(socket.gethostname())
+        except Exception:
+            ip = "127.0.0.1"
+    
+    return jsonify({'ip': ip})
+
+@app.route('/api/system/backup-version')
+def get_backup_version():
+    """Retorna a versão do backup/software"""
+    # Versão pode ser lida de um arquivo de configuração ou definida aqui
+    version = "v1.0.0"
+    
+    # Tenta ler de um arquivo de versão se existir
+    version_file = os.path.join(os.path.dirname(__file__), 'VERSION')
+    if os.path.exists(version_file):
+        try:
+            with open(version_file, 'r') as f:
+                version = f.read().strip()
+        except Exception:
+            pass
+    
+    return jsonify({'version': version})
 
 if __name__ == "__main__":
     host = os.environ.get('APP_HOST', '127.0.0.1')

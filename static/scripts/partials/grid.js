@@ -830,35 +830,40 @@ function applySpeedAutoText() {
 
 // Polling dedicado para a tag de AUTO (garante atualização rápida mesmo se telemetria não trouxer a WORD)
 let __pollAutoLoopAtivo = false;
+let __pollAutoLoopStopped = false;
+let __pollAutoLoopTimeoutId = null;
 function pollSpeedAutoLoop() {
     if (__pollAutoLoopAtivo) return;
     __pollAutoLoopAtivo = true;
+    __pollAutoLoopStopped = false;
 
     const INTERVAL_MS = 1000; // 1s para resposta rápida na UI
+
+    const scheduleNext = () => {
+        if (__pollAutoLoopStopped) return;
+        __pollAutoLoopTimeoutId = setTimeout(loop, INTERVAL_MS);
+    };
 
     async function loop() {
         try {
             // Só atualiza se o grid estiver visível
             const grid = document.getElementById('grid-container');
             const visivel = grid && grid.offsetParent !== null && getComputedStyle(grid).display !== 'none';
-            if (!visivel) {
-                setTimeout(loop, INTERVAL_MS);
-                return;
-            }
-
-            const values = await fetchTagsWithFallback([SPEED_TAG_AUTO]);
-            if (values) {
-                const autoAtivo = isSpeedAuto(values);
-                setSpeedAutoActive(autoAtivo);
+            if (visivel) {
+                const values = await fetchTagsWithFallback([SPEED_TAG_AUTO]);
+                if (values) {
+                    const autoAtivo = isSpeedAuto(values);
+                    setSpeedAutoActive(autoAtivo);
+                }
             }
         } catch (e) {
             console.warn('[GRID][AUTO] Erro no polling da tag de velocidade AUTO:', e);
         } finally {
-            setTimeout(loop, INTERVAL_MS);
+            scheduleNext();
         }
     }
 
-    setTimeout(loop, INTERVAL_MS);
+    scheduleNext();
 }
 
 // Lê tags via /api/read_tags (GET)
@@ -986,11 +991,19 @@ function bindTelemetryVelocidadeReal(){
         ) : null;
         if (!socket) return false;
         console.log('[GRID] Socket.IO conectado para velocidade real');
+        
+        // ✅ CRÍTICO: Remove listeners antigos antes de adicionar novos (evita duplicação)
+        Object.keys(gridSocketHandlers).forEach(event => {
+            if (gridSocketHandlers[event]) {
+                socket.off(event, gridSocketHandlers[event]);
+            }
+        });
+        
         // usar timestamp global
         SPEED_LAST_OK_TS = Date.now();
         
-        // Tratamento de erros de conexão
-        socket.on('connect_error', (error) => {
+        // Tratamento de erros de conexão (armazena handler para cleanup)
+        gridSocketHandlers.connect_error = (error) => {
             console.log('[GRID] ❌ Erro de conexão Socket.IO:', error);
             const sinceLastOk = Date.now() - (SPEED_LAST_OK_TS || 0);
             if (sinceLastOk >= PLC_OFFLINE_DEBOUNCE_MS) {
@@ -999,9 +1012,10 @@ function bindTelemetryVelocidadeReal(){
             } else {
                 console.log(`[GRID] ⚠️ connect_error breve (${sinceLastOk}ms) ignorado (debounce ${PLC_OFFLINE_DEBOUNCE_MS}ms)`);
             }
-        });
+        };
+        socket.on('connect_error', gridSocketHandlers.connect_error);
         
-        socket.on('disconnect', (reason) => {
+        gridSocketHandlers.disconnect = (reason) => {
             console.log('[GRID] 📡 Socket.IO desconectado:', reason);
             const sinceLastOk = Date.now() - (SPEED_LAST_OK_TS || 0);
             if (sinceLastOk >= PLC_OFFLINE_DEBOUNCE_MS) {
@@ -1010,9 +1024,10 @@ function bindTelemetryVelocidadeReal(){
             } else {
                 console.log(`[GRID] ⚠️ disconnect breve (${sinceLastOk}ms) ignorado (debounce ${PLC_OFFLINE_DEBOUNCE_MS}ms)`);
             }
-        });
+        };
+        socket.on('disconnect', gridSocketHandlers.disconnect);
         
-        socket.on('connect', () => {
+        gridSocketHandlers.connect = () => {
             console.log('[GRID] ✅ Socket.IO conectado');
             PLC_CONNECTED = true;
             // Ao conectar/reconectar, força uma leitura imediata
@@ -1039,8 +1054,10 @@ function bindTelemetryVelocidadeReal(){
                 })
                 .catch(() => {});
             ensureMachineSelected();
-        });
-        socket.on('telemetry', data => {
+        };
+        socket.on('connect', gridSocketHandlers.connect);
+        
+        gridSocketHandlers.telemetry = (data) => {
             if (!data) return;
             
             // ✅ PRIORIDADE com DEBOUNCE: Se recebeu status offline, aplica tolerância para quedas rápidas
@@ -1412,9 +1429,11 @@ function bindTelemetryVelocidadeReal(){
                     console.error('[GRID][telemetry] ❌ Erro ao atualizar alarmes:', e);
                 }
             }
-        });
+        };
+        socket.on('telemetry', gridSocketHandlers.telemetry);
+        
         // Quando reconectar, faça uma leitura imediata por HTTP para repopular
-        socket.on('plc_connection_changed', (s) => {
+        gridSocketHandlers.plc_connection_changed = (s) => {
             console.log('[GRID] 🔔 Estado do PLC mudou:', s);
             if (s && s.connected){
                 // ✅ Não marca como conectado imediatamente - aguarda confirmação estável
@@ -1484,9 +1503,11 @@ function bindTelemetryVelocidadeReal(){
                     console.log('[GRID] 📡 PLC desconectado via notificação');
                 }
             }
-        });
+        };
+        socket.on('plc_connection_changed', gridSocketHandlers.plc_connection_changed);
+        
         // Comando remoto para recarregar a página
-        socket.on('force_reload', (data) => {
+        gridSocketHandlers.force_reload = (data) => {
             console.log('[GRID] 🔔 Evento force_reload recebido:', data);
             
             // Evita reload se já foi feito recentemente
@@ -1500,10 +1521,11 @@ function bindTelemetryVelocidadeReal(){
             console.log('[GRID] 🔄 Executando reload da página...');
             localStorage.setItem('lastReload', now.toString());
             window.location.reload();
-        });
+        };
+        socket.on('force_reload', gridSocketHandlers.force_reload);
         
         // Evento quando PLC é detectado automaticamente
-        socket.on('plc_detected', (data) => {
+        gridSocketHandlers.plc_detected = (data) => {
             console.log('[GRID] 🔔 Evento plc_detected recebido:', data);
             if (data && data.machine) {
                 console.log(`[GRID] ✅ PLC ${data.machine} detectado automaticamente!`);
@@ -1522,7 +1544,9 @@ function bindTelemetryVelocidadeReal(){
                     window.location.reload();
                 }, 1000);
             }
-        });
+        };
+        socket.on('plc_detected', gridSocketHandlers.plc_detected);
+        
         // ✅ WATCHDOG DESABILITADO: Causava oscilação e reloads desnecessários
         // Confia na lógica de estabilidade e cache do DataHub
         if (window.supervisorSpeedWatchdog) clearInterval(window.supervisorSpeedWatchdog);
@@ -1549,6 +1573,20 @@ let valorDigitado = "";
 let deveSubstituir = false;
 const teclado = document.getElementById("teclado-virtual");
 let intervaloAjuste;
+let gridMouseDownHandler = null;
+let gridKeydownHandler = null;
+let gridResizeHandler = null;
+
+// Rastreamento de handlers do Socket.IO para cleanup
+let gridSocketHandlers = {
+    connect_error: null,
+    disconnect: null,
+    connect: null,
+    telemetry: null,
+    plc_connection_changed: null,
+    force_reload: null,
+    plc_detected: null
+};
 
 // Color helper utilities used by gauges
 function hexToRgb(hex) {
@@ -1562,51 +1600,62 @@ function mix(c1, c2, t){
     return [Math.round(c1[0] + (c2[0]-c1[0])*t), Math.round(c1[1] + (c2[1]-c1[1])*t), Math.round(c1[2] + (c2[2]-c1[2])*t)];
 }
 
-// Adiciona listener para clicks em toda a página
-document.addEventListener('mousedown', function(event) {
-    // Verifica se o teclado está visível e se o clique foi fora dele
-    if (teclado.style.display === "grid" && 
-        !teclado.contains(event.target) && 
-        !event.target.classList.contains('velocimetro-input')) {
-        // Cancela a digitação e fecha o teclado SEM escrever
-        try {
-            USER_TYPING_VELOCITY = false;
-            const input = document.getElementById(teclado.dataset.target);
-            if (input) { input.blur(); }
-        } catch(_) {}
-        teclado.style.display = "none";
-        valorDigitado = "";
+function ensureGridGlobalHandlers() {
+    // Adiciona listener para clicks em toda a página (registrado para cleanup)
+    if (!gridMouseDownHandler) {
+        gridMouseDownHandler = function(event) {
+            // Verifica se o teclado está visível e se o clique foi fora dele
+            if (teclado.style.display === "grid" && 
+                !teclado.contains(event.target) && 
+                !event.target.classList.contains('velocimetro-input')) {
+                // Cancela a digitação e fecha o teclado SEM escrever
+                try {
+                    USER_TYPING_VELOCITY = false;
+                    const input = document.getElementById(teclado.dataset.target);
+                    if (input) { input.blur(); }
+                } catch(_) {}
+                teclado.style.display = "none";
+                valorDigitado = "";
+            }
+        };
+        document.addEventListener('mousedown', gridMouseDownHandler);
     }
-});
 
-// Adiciona listener para ESC para cancelar digitação
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape' && teclado.style.display === "grid") {
-        // Cancela a digitação sem salvar
-        USER_TYPING_VELOCITY = false;
-        teclado.style.display = "none";
-        valorDigitado = "";
-        const input = document.getElementById(teclado.dataset.target);
-        if (input) {
-            input.blur();
-        }
+    // Adiciona listener para ESC para cancelar digitação (registrado para cleanup)
+    if (!gridKeydownHandler) {
+        gridKeydownHandler = function(event) {
+            if (event.key === 'Escape' && teclado.style.display === "grid") {
+                // Cancela a digitação sem salvar
+                USER_TYPING_VELOCITY = false;
+                teclado.style.display = "none";
+                valorDigitado = "";
+                const input = document.getElementById(teclado.dataset.target);
+                if (input) {
+                    input.blur();
+                }
+            }
+        };
+        document.addEventListener('keydown', gridKeydownHandler);
     }
-});
 
-// Reposiciona o teclado quando a janela for redimensionada
-window.addEventListener('resize', function() {
-    if (teclado.style.display === "grid") {
-        const input = document.getElementById(teclado.dataset.target);
-        if (input) {
-            // Simula um novo clique para reposicionar o teclado
-            const event = new MouseEvent('click', {
-                bubbles: true,
-                cancelable: true
-            });
-            input.dispatchEvent(event);
-        }
+    // Reposiciona o teclado quando a janela for redimensionada (registrado para cleanup)
+    if (!gridResizeHandler) {
+        gridResizeHandler = function() {
+            if (teclado.style.display === "grid") {
+                const input = document.getElementById(teclado.dataset.target);
+                if (input) {
+                    // Simula um novo clique para reposicionar o teclado
+                    const event = new MouseEvent('click', {
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    input.dispatchEvent(event);
+                }
+            }
+        };
+        window.addEventListener('resize', gridResizeHandler);
     }
-});
+}
 
 
 function abrirTeclado(e) {
@@ -2078,6 +2127,7 @@ let __pollSpeedLoopAtivo = false;
 let __pollSpeedLoopStopped = false; // flag para parar o loop recursivo
 let __pollSpeedLoopTimeoutId = null; // armazena o último timeout para poder limpar
 let __alarmWatchdogInterval = null;
+let gridHeartbeatInFlight = false;
 
 // Modificar a função inicializarVelocimetro para incluir a atualização dos contadores
 function inicializarVelocimetro() {
@@ -2087,6 +2137,7 @@ function inicializarVelocimetro() {
         return;
     }
     __velocimetroInicializado = true;
+    ensureGridGlobalHandlers();
     
     console.log("Velocímetro e contadores inicializados.");
 
@@ -2130,11 +2181,15 @@ function inicializarVelocimetro() {
         }).then(()=>{
             if (window.__gridHeartbeat) clearInterval(window.__gridHeartbeat);
             window.__gridHeartbeat = setInterval(() => {
+                if (gridHeartbeatInFlight) return;
+                gridHeartbeatInFlight = true;
                 fetch('/api/heartbeat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ client_id: GRID_CLIENT_ID })
-                }).catch(()=>{});
+                })
+                .catch(()=>{})
+                .finally(() => { gridHeartbeatInFlight = false; });
             }, 10000);
         }).catch(()=>{});
     } catch(_) {}
@@ -2425,17 +2480,16 @@ function inicializarVelocimetro() {
     pollSpeedAutoLoop();
 }
 
-// Inicialização
-document.addEventListener("DOMContentLoaded", () => {
-    inicializarVelocimetro();
-    // ✅ Garante que o botão Plasson Farm seja configurado mesmo se inicializarVelocimetro falhar
-    setTimeout(() => {
-        const btn = document.querySelector('.draggable-btn[data-station="plasson-farm"]');
-        if (btn && !btn.hasAttribute('data-plasson-configured')) {
-            configurarBotaoPlassonFarm();
-        }
-    }, 500);
-});
+// ✅ CRÍTICO: NÃO inicializa automaticamente no DOMContentLoaded
+// A inicialização agora é feita por demanda no showGrid()
+// Isso evita que intervalos rodem em background quando a tela do grid não está visível
+// 
+// Comentado para evitar vazamento de memória:
+// document.addEventListener("DOMContentLoaded", () => {
+//     inicializarVelocimetro();
+// });
+//
+// A função será chamada explicitamente no showGrid() do main.js
 
 // Função global para resetar posições (pode ser chamada do console ou por botão)
 window.resetGridPositions = resetGridPositions;
@@ -3582,15 +3636,18 @@ function stopDateTimeUpdate() {
     }
 }
 
-// Inicializar data/hora mesmo se o script carregar após DOMContentLoaded
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        startDateTimeUpdate();
-    });
-} else {
-    // DOM já pronto
-    startDateTimeUpdate();
-}
+// ✅ CRÍTICO: NÃO inicializa automaticamente
+// startDateTimeUpdate será chamado apenas quando showGrid() for executado
+// Isso evita que intervalos rodem em background quando grid não está visível
+//
+// Comentado para evitar vazamento de memória:
+// if (document.readyState === 'loading') {
+//     document.addEventListener('DOMContentLoaded', function() {
+//         startDateTimeUpdate();
+//     });
+// } else {
+//     startDateTimeUpdate();
+// }
 
 // Exportar funções para uso global
 window.startDateTimeUpdate = startDateTimeUpdate;
@@ -3613,6 +3670,7 @@ const JOG_BIT_INDEX = 13;
 let jogAcPollInterval = null;
 let LAST_WRITE_JOG_ACC_TS = 0;
 const WRITE_JOG_ACC_COOLDOWN_MS = 2000; // 2 segundos de cooldown após escrita
+let jogAccSyncInFlight = false;
 
 function bitIsSet(word, bit) {
     return ((Number(word) >>> bit) & 1) === 1;
@@ -3723,6 +3781,9 @@ function setJogUIActive(active) {
 }
 
 async function syncJogFromPLC() {
+    if (jogAccSyncInFlight) return;
+    jogAccSyncInFlight = true;
+    try {
     // Não sincroniza se acabou de escrever (evita sobrescrever escrita do usuário)
     const nowTs = Date.now();
     if (nowTs - (LAST_WRITE_JOG_ACC_TS || 0) < WRITE_JOG_ACC_COOLDOWN_MS) {
@@ -3733,6 +3794,9 @@ async function syncJogFromPLC() {
     if (word === null) return;
     const on = bitIsSet(word, JOG_BIT_INDEX);
     setJogUIActive(on);
+    } finally {
+        jogAccSyncInFlight = false;
+    }
 }
 
 function setupJogAcumuladora() {
@@ -3742,20 +3806,23 @@ function setupJogAcumuladora() {
     const jogWrap = jog.closest('.jog-switch');
 
     // Evita iniciar drag ao interagir com o toggle
-    ['pointerdown','mousedown','click','pointerup','mouseup','touchstart','touchend'].forEach(evt => {
-        [jog, jogLabel, jogWrap].forEach(el => {
-            if (!el) return;
-            el.addEventListener(evt, (e) => {
-                try { e.stopPropagation(); e.stopImmediatePropagation(); } catch(_) {}
-                const parent = el.closest && el.closest('.draggable-btn');
-                if (evt === 'pointerdown' || evt === 'mousedown' || evt === 'touchstart') {
-                    if (parent) parent.removeAttribute('draggable');
-                } else if (evt === 'pointerup' || evt === 'mouseup' || evt === 'touchend') {
-                    if (parent) setTimeout(() => parent.setAttribute('draggable','true'), 120);
-                }
-            }, { passive: false });
+    if (!jog.dataset.dragBound) {
+        ['pointerdown','mousedown','click','pointerup','mouseup','touchstart','touchend'].forEach(evt => {
+            [jog, jogLabel, jogWrap].forEach(el => {
+                if (!el) return;
+                el.addEventListener(evt, (e) => {
+                    try { e.stopPropagation(); e.stopImmediatePropagation(); } catch(_) {}
+                    const parent = el.closest && el.closest('.draggable-btn');
+                    if (evt === 'pointerdown' || evt === 'mousedown' || evt === 'touchstart') {
+                        if (parent) parent.removeAttribute('draggable');
+                    } else if (evt === 'pointerup' || evt === 'mouseup' || evt === 'touchend') {
+                        if (parent) setTimeout(() => parent.setAttribute('draggable','true'), 120);
+                    }
+                }, { passive: false });
+            });
         });
-    });
+        jog.dataset.dragBound = '1';
+    }
 
     // Clique envia comando (escreve 1) e depois sincroniza via leitura
     if (!jog.dataset.bound) {
@@ -3806,11 +3873,16 @@ function setupJogAcumuladora() {
     jogAcPollInterval = setInterval(syncJogFromPLC, 1000);
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupJogAcumuladora);
-} else {
-    setTimeout(setupJogAcumuladora, 0);
-}
+// ✅ CRÍTICO: NÃO inicializa automaticamente
+// setupJogAcumuladora será chamado apenas quando showGrid() for executado
+// Isso evita que intervalos rodem em background quando grid não está visível
+//
+// Comentado para evitar vazamento de memória:
+// if (document.readyState === 'loading') {
+//     document.addEventListener('DOMContentLoaded', setupJogAcumuladora);
+// } else {
+//     setTimeout(setupJogAcumuladora, 0);
+// }
 
 // ================== Velocidade Fixa Acumuladora (DB901, offset 8.0 REAL) ==================
 const TAG_VELOCIDADE_FIXA_ACUMULADORA = 'XLCLASS_DB901_ESTEIRA_INLINE_VELOCIDADE_FIXA';
@@ -3843,38 +3915,44 @@ async function writeVelocidadeFixaAcumuladora(pct) {
 function bindVelocidadeFixaAcumuladora() {
     const slider = document.getElementById('slider1');
     if (!slider) { setTimeout(bindVelocidadeFixaAcumuladora, 200); return; }
-    // Marca dragging ao iniciar movimento
-    slider.addEventListener('pointerdown', (e) => {
-        try { e.stopPropagation(); } catch(_) {}
-        slider.dataset.dragging = '1';
-    });
-    slider.addEventListener('touchstart', (e) => {
-        try { e.stopPropagation(); } catch(_) {}
-        slider.dataset.dragging = '1';
-    });
-    // Escreve somente ao soltar (reduz tráfego)
-    slider.addEventListener('pointerup', (e) => {
-        try { e.stopPropagation(); } catch(_) {}
-        delete slider.dataset.dragging;
-        LAST_WRITE_PCT_ACC_TS = Date.now();
-        writeVelocidadeFixaAcumuladora(e.currentTarget.value);
-    });
-    // Touch fallback
-    slider.addEventListener('touchend', (e) => {
-        try { e.stopPropagation(); } catch(_) {}
-        delete slider.dataset.dragging;
-        LAST_WRITE_PCT_ACC_TS = Date.now();
-        writeVelocidadeFixaAcumuladora(e.currentTarget.value);
-    });
-    // Segurança: se cancelar, limpa dragging
-    slider.addEventListener('pointercancel', () => { delete slider.dataset.dragging; });
+    if (!slider.dataset.bound) {
+        // Marca dragging ao iniciar movimento
+        slider.addEventListener('pointerdown', (e) => {
+            try { e.stopPropagation(); } catch(_) {}
+            slider.dataset.dragging = '1';
+        });
+        slider.addEventListener('touchstart', (e) => {
+            try { e.stopPropagation(); } catch(_) {}
+            slider.dataset.dragging = '1';
+        });
+        // Escreve somente ao soltar (reduz tráfego)
+        slider.addEventListener('pointerup', (e) => {
+            try { e.stopPropagation(); } catch(_) {}
+            delete slider.dataset.dragging;
+            LAST_WRITE_PCT_ACC_TS = Date.now();
+            writeVelocidadeFixaAcumuladora(e.currentTarget.value);
+        });
+        // Touch fallback
+        slider.addEventListener('touchend', (e) => {
+            try { e.stopPropagation(); } catch(_) {}
+            delete slider.dataset.dragging;
+            LAST_WRITE_PCT_ACC_TS = Date.now();
+            writeVelocidadeFixaAcumuladora(e.currentTarget.value);
+        });
+        // Segurança: se cancelar, limpa dragging
+        slider.addEventListener('pointercancel', () => { delete slider.dataset.dragging; });
+        slider.dataset.bound = '1';
+    }
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindVelocidadeFixaAcumuladora);
-} else {
-    setTimeout(bindVelocidadeFixaAcumuladora, 0);
-}
+// ✅ CRÍTICO: NÃO inicializa automaticamente
+// bindVelocidadeFixaAcumuladora será chamado apenas quando necessário
+// Comentado para evitar vazamento de memória:
+// if (document.readyState === 'loading') {
+//     document.addEventListener('DOMContentLoaded', bindVelocidadeFixaAcumuladora);
+// } else {
+//     setTimeout(bindVelocidadeFixaAcumuladora, 0);
+// }
 
 // ================== Jog Dosificadora (DB911, bit 13 de COMANDOS) ==================
 const TAG_JOG_DOSIFICADORA = 'XLCLASS_DB911_DOSIFICADORA_COMANDOS';
@@ -3882,6 +3960,7 @@ const JOG_DOSI_BIT_INDEX = 13;
 let jogDosPollInterval = null;
 let LAST_WRITE_JOG_DOSI_TS = 0;
 const WRITE_JOG_DOSI_COOLDOWN_MS = 2000; // 2 segundos de cooldown após escrita
+let jogDosiSyncInFlight = false;
 
 async function readJogDosWord() {
     try {
@@ -3991,6 +4070,9 @@ function setJogDosUIActive(active) {
 }
 
 async function syncJogDosFromPLC() {
+    if (jogDosiSyncInFlight) return;
+    jogDosiSyncInFlight = true;
+    try {
     // Não sincroniza se acabou de escrever (evita sobrescrever escrita do usuário)
     const nowTs = Date.now();
     if (nowTs - (LAST_WRITE_JOG_DOSI_TS || 0) < WRITE_JOG_DOSI_COOLDOWN_MS) {
@@ -4003,6 +4085,9 @@ async function syncJogDosFromPLC() {
     setJogDosUIActive(on);
     // ✅ Atualiza estado conhecido para evitar leituras desnecessárias
     console.log('[JOG-DOSI] Estado sincronizado do PLC:', on, 'word=', word);
+    } finally {
+        jogDosiSyncInFlight = false;
+    }
 }
 
 function setupJogDosificadora() {
@@ -4011,20 +4096,23 @@ function setupJogDosificadora() {
     const jogLabel = document.querySelector('label[for="jog2"]');
     const jogWrap = jog.closest('.jog-switch');
     // Evita drag
-    ['pointerdown','mousedown','click','pointerup','mouseup','touchstart','touchend'].forEach(evt => {
-        [jog, jogLabel, jogWrap].forEach(el => {
-            if (!el) return;
-            el.addEventListener(evt, (e) => {
-                try { e.stopPropagation(); e.stopImmediatePropagation(); } catch(_) {}
-                const parent = el.closest && el.closest('.draggable-btn');
-                if (evt === 'pointerdown' || evt === 'mousedown' || evt === 'touchstart') {
-                    if (parent) parent.removeAttribute('draggable');
-                } else if (evt === 'pointerup' || evt === 'mouseup' || evt === 'touchend') {
-                    if (parent) setTimeout(() => parent.setAttribute('draggable','true'), 120);
-                }
-            }, { passive: false });
+    if (!jog.dataset.dragBound) {
+        ['pointerdown','mousedown','click','pointerup','mouseup','touchstart','touchend'].forEach(evt => {
+            [jog, jogLabel, jogWrap].forEach(el => {
+                if (!el) return;
+                el.addEventListener(evt, (e) => {
+                    try { e.stopPropagation(); e.stopImmediatePropagation(); } catch(_) {}
+                    const parent = el.closest && el.closest('.draggable-btn');
+                    if (evt === 'pointerdown' || evt === 'mousedown' || evt === 'touchstart') {
+                        if (parent) parent.removeAttribute('draggable');
+                    } else if (evt === 'pointerup' || evt === 'mouseup' || evt === 'touchend') {
+                        if (parent) setTimeout(() => parent.setAttribute('draggable','true'), 120);
+                    }
+                }, { passive: false });
+            });
         });
-    });
+        jog.dataset.dragBound = '1';
+    }
     if (!jog.dataset.bound) {
         const clickHandler = async (e) => {
             // ✅ Atualiza UI IMEDIATAMENTE no clique, ANTES de preventDefault
@@ -4054,11 +4142,14 @@ function setupJogDosificadora() {
     jogDosPollInterval = setInterval(syncJogDosFromPLC, 1000);
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupJogDosificadora);
-} else {
-    setTimeout(setupJogDosificadora, 0);
-}
+// ✅ CRÍTICO: NÃO inicializa automaticamente
+// setupJogDosificadora será chamado apenas quando necessário
+// Comentado para evitar vazamento de memória:
+// if (document.readyState === 'loading') {
+//     document.addEventListener('DOMContentLoaded', setupJogDosificadora);
+// } else {
+//     setTimeout(setupJogDosificadora, 0);
+// }
 
 // ================== Velocidade Fixa Dosificadora (DB911, offset 8.0 REAL) ==================
 // Constante já definida acima junto com as outras
@@ -4082,36 +4173,41 @@ async function writeVelocidadeFixaDosificadora(pct) {
 function bindVelocidadeFixaDosificadora() {
     const slider = document.getElementById('slider2');
     if (!slider) { setTimeout(bindVelocidadeFixaDosificadora, 200); return; }
-    // Marca dragging ao iniciar movimento
-    slider.addEventListener('pointerdown', (e) => {
-        try { e.stopPropagation(); } catch(_) {}
-        slider.dataset.dragging = '1';
-    });
-    slider.addEventListener('touchstart', (e) => {
-        try { e.stopPropagation(); } catch(_) {}
-        slider.dataset.dragging = '1';
-    });
-    slider.addEventListener('pointerup', (e) => {
-        try { e.stopPropagation(); } catch(_) {}
-        delete slider.dataset.dragging;
-        LAST_WRITE_PCT_DOSI_TS = Date.now();
-        writeVelocidadeFixaDosificadora(e.currentTarget.value);
-    });
-    slider.addEventListener('touchend', (e) => {
-        try { e.stopPropagation(); } catch(_) {}
-        delete slider.dataset.dragging;
-        LAST_WRITE_PCT_DOSI_TS = Date.now();
-        writeVelocidadeFixaDosificadora(e.currentTarget.value);
-    });
-    // Segurança: se cancelar, limpa dragging
-    slider.addEventListener('pointercancel', () => { delete slider.dataset.dragging; });
+    if (!slider.dataset.bound) {
+        // Marca dragging ao iniciar movimento
+        slider.addEventListener('pointerdown', (e) => {
+            try { e.stopPropagation(); } catch(_) {}
+            slider.dataset.dragging = '1';
+        });
+        slider.addEventListener('touchstart', (e) => {
+            try { e.stopPropagation(); } catch(_) {}
+            slider.dataset.dragging = '1';
+        });
+        slider.addEventListener('pointerup', (e) => {
+            try { e.stopPropagation(); } catch(_) {}
+            delete slider.dataset.dragging;
+            LAST_WRITE_PCT_DOSI_TS = Date.now();
+            writeVelocidadeFixaDosificadora(e.currentTarget.value);
+        });
+        slider.addEventListener('touchend', (e) => {
+            try { e.stopPropagation(); } catch(_) {}
+            delete slider.dataset.dragging;
+            LAST_WRITE_PCT_DOSI_TS = Date.now();
+            writeVelocidadeFixaDosificadora(e.currentTarget.value);
+        });
+        // Segurança: se cancelar, limpa dragging
+        slider.addEventListener('pointercancel', () => { delete slider.dataset.dragging; });
+        slider.dataset.bound = '1';
+    }
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindVelocidadeFixaDosificadora);
-} else {
-    setTimeout(bindVelocidadeFixaDosificadora, 0);
-}
+// ✅ CRÍTICO: NÃO inicializa automaticamente
+// Comentado para evitar vazamento de memória:
+// if (document.readyState === 'loading') {
+//     document.addEventListener('DOMContentLoaded', bindVelocidadeFixaDosificadora);
+// } else {
+//     setTimeout(bindVelocidadeFixaDosificadora, 0);
+// }
 
 // ================== Jog Escova (DB921, bit 13 de COMANDOS) ==================
 const TAG_JOG_ESCOVA = 'XLCLASS_DB921_ESCOVAS_COMANDOS';
@@ -4119,6 +4215,8 @@ const JOG_ESCOVA_BIT_INDEX = 13;
 let jogEscovaPollInterval = null;
 let LAST_WRITE_JOG_ESCOVA_TS = 0;
 const WRITE_JOG_ESCOVA_COOLDOWN_MS = 2000; // 2 segundos de cooldown após escrita
+let jogEscovaSyncInFlight = false;
+let powerSwitchSyncInFlight = false;
 
 async function readJogEscovaWord() {
     try {
@@ -4228,6 +4326,9 @@ function setJogEscovaUIActive(active) {
 }
 
 async function syncJogEscovaFromPLC() {
+    if (jogEscovaSyncInFlight) return;
+    jogEscovaSyncInFlight = true;
+    try {
     // Não sincroniza se acabou de escrever (evita sobrescrever escrita do usuário)
     const nowTs = Date.now();
     if (nowTs - (LAST_WRITE_JOG_ESCOVA_TS || 0) < WRITE_JOG_ESCOVA_COOLDOWN_MS) {
@@ -4240,6 +4341,9 @@ async function syncJogEscovaFromPLC() {
     setJogEscovaUIActive(on);
     // ✅ Atualiza estado conhecido para evitar leituras desnecessárias
     console.log('[JOG-ESCOVA] Estado sincronizado do PLC:', on, 'word=', word);
+    } finally {
+        jogEscovaSyncInFlight = false;
+    }
 }
 
 function setupJogEscova() {
@@ -4248,20 +4352,23 @@ function setupJogEscova() {
     const jogLabel = document.querySelector('label[for="jog3"]');
     const jogWrap = jog.closest('.jog-switch');
     // Evita drag
-    ['pointerdown','mousedown','click','pointerup','mouseup','touchstart','touchend'].forEach(evt => {
-        [jog, jogLabel, jogWrap].forEach(el => {
-            if (!el) return;
-            el.addEventListener(evt, (e) => {
-                try { e.stopPropagation(); e.stopImmediatePropagation(); } catch(_) {}
-                const parent = el.closest && el.closest('.draggable-btn');
-                if (evt === 'pointerdown' || evt === 'mousedown' || evt === 'touchstart') {
-                    if (parent) parent.removeAttribute('draggable');
-                } else if (evt === 'pointerup' || evt === 'mouseup' || evt === 'touchend') {
-                    if (parent) setTimeout(() => parent.setAttribute('draggable','true'), 120);
-                }
-            }, { passive: false });
+    if (!jog.dataset.dragBound) {
+        ['pointerdown','mousedown','click','pointerup','mouseup','touchstart','touchend'].forEach(evt => {
+            [jog, jogLabel, jogWrap].forEach(el => {
+                if (!el) return;
+                el.addEventListener(evt, (e) => {
+                    try { e.stopPropagation(); e.stopImmediatePropagation(); } catch(_) {}
+                    const parent = el.closest && el.closest('.draggable-btn');
+                    if (evt === 'pointerdown' || evt === 'mousedown' || evt === 'touchstart') {
+                        if (parent) parent.removeAttribute('draggable');
+                    } else if (evt === 'pointerup' || evt === 'mouseup' || evt === 'touchend') {
+                        if (parent) setTimeout(() => parent.setAttribute('draggable','true'), 120);
+                    }
+                }, { passive: false });
+            });
         });
-    });
+        jog.dataset.dragBound = '1';
+    }
     if (!jog.dataset.bound) {
         const clickHandler = async (e) => {
             // ✅ Atualiza UI IMEDIATAMENTE no clique, ANTES de preventDefault
@@ -4291,11 +4398,13 @@ function setupJogEscova() {
     jogEscovaPollInterval = setInterval(syncJogEscovaFromPLC, 1000);
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupJogEscova);
-} else {
-    setTimeout(setupJogEscova, 0);
-}
+// ✅ CRÍTICO: NÃO inicializa automaticamente
+// Comentado para evitar vazamento de memória:
+// if (document.readyState === 'loading') {
+//     document.addEventListener('DOMContentLoaded', setupJogEscova);
+// } else {
+//     setTimeout(setupJogEscova, 0);
+// }
 
 
 async function writeVelocidadeFixaEscova(pct) {
@@ -4317,36 +4426,41 @@ async function writeVelocidadeFixaEscova(pct) {
 function bindVelocidadeFixaEscova() {
     const slider = document.getElementById('slider3');
     if (!slider) { setTimeout(bindVelocidadeFixaEscova, 200); return; }
-    // Marca dragging ao iniciar movimento
-    slider.addEventListener('pointerdown', (e) => {
-        try { e.stopPropagation(); } catch(_) {}
-        slider.dataset.dragging = '1';
-    });
-    slider.addEventListener('touchstart', (e) => {
-        try { e.stopPropagation(); } catch(_) {}
-        slider.dataset.dragging = '1';
-    });
-    slider.addEventListener('pointerup', (e) => {
-        try { e.stopPropagation(); } catch(_) {}
-        delete slider.dataset.dragging;
-        LAST_WRITE_PCT_ESCOVA_TS = Date.now();
-        writeVelocidadeFixaEscova(e.currentTarget.value);
-    });
-    slider.addEventListener('touchend', (e) => {
-        try { e.stopPropagation(); } catch(_) {}
-        delete slider.dataset.dragging;
-        LAST_WRITE_PCT_ESCOVA_TS = Date.now();
-        writeVelocidadeFixaEscova(e.currentTarget.value);
-    });
-    // Segurança: se cancelar, limpa dragging
-    slider.addEventListener('pointercancel', () => { delete slider.dataset.dragging; });
+    if (!slider.dataset.bound) {
+        // Marca dragging ao iniciar movimento
+        slider.addEventListener('pointerdown', (e) => {
+            try { e.stopPropagation(); } catch(_) {}
+            slider.dataset.dragging = '1';
+        });
+        slider.addEventListener('touchstart', (e) => {
+            try { e.stopPropagation(); } catch(_) {}
+            slider.dataset.dragging = '1';
+        });
+        slider.addEventListener('pointerup', (e) => {
+            try { e.stopPropagation(); } catch(_) {}
+            delete slider.dataset.dragging;
+            LAST_WRITE_PCT_ESCOVA_TS = Date.now();
+            writeVelocidadeFixaEscova(e.currentTarget.value);
+        });
+        slider.addEventListener('touchend', (e) => {
+            try { e.stopPropagation(); } catch(_) {}
+            delete slider.dataset.dragging;
+            LAST_WRITE_PCT_ESCOVA_TS = Date.now();
+            writeVelocidadeFixaEscova(e.currentTarget.value);
+        });
+        // Segurança: se cancelar, limpa dragging
+        slider.addEventListener('pointercancel', () => { delete slider.dataset.dragging; });
+        slider.dataset.bound = '1';
+    }
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindVelocidadeFixaEscova);
-} else {
-    setTimeout(bindVelocidadeFixaEscova, 0);
-}
+// ✅ CRÍTICO: NÃO inicializa automaticamente
+// Comentado para evitar vazamento de memória:
+// if (document.readyState === 'loading') {
+//     document.addEventListener('DOMContentLoaded', bindVelocidadeFixaEscova);
+// } else {
+//     setTimeout(bindVelocidadeFixaEscova, 0);
+// }
 
 // ================== Periféricos (9 botões) ==================
 const PERIPHERALS_STATE_KEY = 'grid_peripherals_state';
@@ -5035,12 +5149,14 @@ function initPeripherals() {
     });
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPeripherals);
-} else {
-    // DOM já disponível
-    setTimeout(initPeripherals, 0);
-}
+// ✅ CRÍTICO: NÃO inicializa automaticamente
+// initPeripherals será chamado apenas quando showGrid() for executado
+// Comentado para evitar vazamento de memória:
+// if (document.readyState === 'loading') {
+//     document.addEventListener('DOMContentLoaded', initPeripherals);
+// } else {
+//     setTimeout(initPeripherals, 0);
+// }
 
 // ================== Sincronização dos Botões de Periféricos com o PLC ==================
 let peripheralsSyncInterval = null;
@@ -5324,14 +5440,16 @@ function stopPeripheralsSync() {
     }
 }
 
-// Inicia a sincronização quando o DOM estiver pronto
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(startPeripheralsSync, 1000); // Aguarda 1s para garantir que initPeripherals já rodou
-    });
-} else {
-    setTimeout(startPeripheralsSync, 1000);
-}
+// ✅ CRÍTICO: NÃO inicializa automaticamente
+// startPeripheralsSync será chamado apenas quando showGrid() for executado
+// Comentado para evitar vazamento de memória:
+// if (document.readyState === 'loading') {
+//     document.addEventListener('DOMContentLoaded', () => {
+//         setTimeout(startPeripheralsSync, 1000);
+//     });
+// } else {
+//     setTimeout(startPeripheralsSync, 1000);
+// }
 
 // ================== Botão Liga/Desliga no Grid de Periféricos ==================
 const POWER_STATUS_TAG_GRID = 'XLCLASS_DB1_PRINCIPAL_COMANDO_STATUS_01';
@@ -5566,29 +5684,33 @@ function initPowerSwitchGrid() {
         console.log('[POWER-GRID] Botão encontrado no grid de periféricos');
         
         // Adiciona event listener
-        powerBtn.addEventListener('click', togglePowerBitGrid);
-        
-        // Previne que o drag do grid seja iniciado ao clicar no botão
-        powerBtn.addEventListener('mousedown', (ev) => {
-            ev.stopPropagation();
-            const parent = powerBtn.closest('.draggable-btn');
-            if (parent) parent.removeAttribute('draggable');
-        });
-        powerBtn.addEventListener('pointerdown', (ev) => {
-            ev.stopPropagation();
-            const parent = powerBtn.closest('.draggable-btn');
-            if (parent) parent.removeAttribute('draggable');
-        });
-        powerBtn.addEventListener('mouseup', (ev) => {
-            ev.stopPropagation();
-            const parent = powerBtn.closest('.draggable-btn');
-            if (parent) setTimeout(() => parent.setAttribute('draggable', 'true'), 120);
-        });
-        powerBtn.addEventListener('pointerup', (ev) => {
-            ev.stopPropagation();
-            const parent = powerBtn.closest('.draggable-btn');
-            if (parent) setTimeout(() => parent.setAttribute('draggable', 'true'), 120);
-        });
+        if (!powerBtn.dataset.bound) {
+            powerBtn.addEventListener('click', togglePowerBitGrid);
+            
+            // Previne que o drag do grid seja iniciado ao clicar no botão
+            powerBtn.addEventListener('mousedown', (ev) => {
+                ev.stopPropagation();
+                const parent = powerBtn.closest('.draggable-btn');
+                if (parent) parent.removeAttribute('draggable');
+            });
+            powerBtn.addEventListener('pointerdown', (ev) => {
+                ev.stopPropagation();
+                const parent = powerBtn.closest('.draggable-btn');
+                if (parent) parent.removeAttribute('draggable');
+            });
+            powerBtn.addEventListener('mouseup', (ev) => {
+                ev.stopPropagation();
+                const parent = powerBtn.closest('.draggable-btn');
+                if (parent) setTimeout(() => parent.setAttribute('draggable', 'true'), 120);
+            });
+            powerBtn.addEventListener('pointerup', (ev) => {
+                ev.stopPropagation();
+                const parent = powerBtn.closest('.draggable-btn');
+                if (parent) setTimeout(() => parent.setAttribute('draggable', 'true'), 120);
+            });
+            
+            powerBtn.dataset.bound = '1';
+        }
         
         // Sincroniza estado inicial do PLC
         syncPowerSwitchFromPLC();
@@ -5606,6 +5728,8 @@ function initPowerSwitchGrid() {
 
 // Sincroniza o estado do botão com o PLC
 async function syncPowerSwitchFromPLC() {
+    if (powerSwitchSyncInFlight) return;
+    powerSwitchSyncInFlight = true;
     try {
         // Lê o valor da tag XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS
         const current = await readWordsGrid(['XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS']);
@@ -5614,6 +5738,8 @@ async function syncPowerSwitchFromPLC() {
         updatePowerButtonsFromStatusGrid(rawStatus);
     } catch (e) {
         console.error('[POWER-GRID] Erro ao sincronizar estado do PLC:', e);
+    } finally {
+        powerSwitchSyncInFlight = false;
     }
 }
 
@@ -5649,12 +5775,13 @@ if (document.readyState === 'loading') {
     }, 500);
 }
 
-// ✅ CORRIGIDO: Armazena ID do intervalo para poder limpar depois
-// Verifica periodicamente se o botão está no lugar correto (a cada 10 segundos - era 2 segundos)
-if (window.__ensurePowerBtnInterval) {
-    clearInterval(window.__ensurePowerBtnInterval);
-}
-window.__ensurePowerBtnInterval = setInterval(ensurePowerButtonInCorrectPlace, 10000);
+// ✅ CRÍTICO: NÃO cria intervalo automaticamente
+// __ensurePowerBtnInterval será criado apenas quando showGrid() for executado
+// Comentado para evitar vazamento de memória:
+// if (window.__ensurePowerBtnInterval) {
+//     clearInterval(window.__ensurePowerBtnInterval);
+// }
+// window.__ensurePowerBtnInterval = setInterval(ensurePowerButtonInCorrectPlace, 10000);
 
 // ========== Delegation de segurança para Jog Acumuladora (garante captura mesmo se bindings falharem) ==========
 document.addEventListener('click', async function(e){
@@ -5910,6 +6037,18 @@ window.setupJogAcumuladora = setupJogAcumuladora;
 window.cleanupGrid = function() {
     console.log('[GRID] 🧹 Limpando recursos do grid...');
     
+    // Limpa watchdog de velocidade
+    if (window.supervisorSpeedWatchdog) {
+        clearInterval(window.supervisorSpeedWatchdog);
+        window.supervisorSpeedWatchdog = null;
+    }
+    
+    // Limpa intervalo de ajuste do teclado virtual
+    if (intervaloAjuste) {
+        clearInterval(intervaloAjuste);
+        intervaloAjuste = null;
+    }
+    
     // Limpa intervalos de jog
     if (jogAcPollInterval) {
         clearInterval(jogAcPollInterval);
@@ -5934,6 +6073,25 @@ window.cleanupGrid = function() {
         window.__ensurePowerBtnInterval = null;
     }
     
+    // Limpa heartbeat do grid (DataHub)
+    if (window.__gridHeartbeat) {
+        clearInterval(window.__gridHeartbeat);
+        window.__gridHeartbeat = null;
+    }
+    gridHeartbeatInFlight = false;
+    
+    // Limpa watchdog de alarmes
+    if (__alarmWatchdogInterval) {
+        clearInterval(__alarmWatchdogInterval);
+        __alarmWatchdogInterval = null;
+    }
+    
+    // Limpa sync de periféricos
+    if (peripheralsSyncInterval) {
+        clearInterval(peripheralsSyncInterval);
+        peripheralsSyncInterval = null;
+    }
+    
     // Para o loop de polling de velocidade
     __pollSpeedLoopStopped = true; // Marca como parado para não criar novos timeouts
     __pollSpeedLoopAtivo = false; // Libera flag de execução
@@ -5942,6 +6100,14 @@ window.cleanupGrid = function() {
     if (__pollSpeedLoopTimeoutId) {
         clearTimeout(__pollSpeedLoopTimeoutId);
         __pollSpeedLoopTimeoutId = null;
+    }
+
+    // Para o loop de polling AUTO (evita explosão de timeouts quando grid está oculto)
+    __pollAutoLoopStopped = true;
+    __pollAutoLoopAtivo = false;
+    if (__pollAutoLoopTimeoutId) {
+        clearTimeout(__pollAutoLoopTimeoutId);
+        __pollAutoLoopTimeoutId = null;
     }
     
     // Limpa intervalos de data/hora
@@ -5954,5 +6120,51 @@ window.cleanupGrid = function() {
         serverTimeSyncInterval = null;
     }
     
+    // Remove listeners globais do teclado virtual
+    if (gridMouseDownHandler) {
+        document.removeEventListener('mousedown', gridMouseDownHandler);
+        gridMouseDownHandler = null;
+    }
+    if (gridKeydownHandler) {
+        document.removeEventListener('keydown', gridKeydownHandler);
+        gridKeydownHandler = null;
+    }
+    if (gridResizeHandler) {
+        window.removeEventListener('resize', gridResizeHandler);
+        gridResizeHandler = null;
+    }
+    
+    // ✅ CRÍTICO: Remove todos os listeners do Socket.IO (evita vazamento de memória)
+    if (window.supervisorSocket) {
+        try {
+            Object.keys(gridSocketHandlers).forEach(event => {
+                if (gridSocketHandlers[event]) {
+                    window.supervisorSocket.off(event, gridSocketHandlers[event]);
+                    gridSocketHandlers[event] = null;
+                }
+            });
+            console.log('[GRID] ✅ Listeners do Socket.IO removidos');
+        } catch (e) {
+            console.warn('[GRID] ⚠️ Erro ao remover listeners do Socket.IO:', e);
+        }
+    }
+    
+    // Permite reinicialização do grid
+    try { __velocimetroInicializado = false; } catch(_) {}
+    
     console.log('[GRID] ✅ Cleanup do grid concluído');
 };
+
+// Exporta funções para serem chamadas sob demanda pelo main.js
+window.setupJogAcumuladora = setupJogAcumuladora;
+window.bindVelocidadeFixaAcumuladora = bindVelocidadeFixaAcumuladora;
+window.setupJogDosificadora = setupJogDosificadora;
+window.bindVelocidadeFixaDosificadora = bindVelocidadeFixaDosificadora;
+window.setupJogEscova = setupJogEscova;
+window.bindVelocidadeFixaEscova = bindVelocidadeFixaEscova;
+window.inicializarVelocimetro = inicializarVelocimetro;
+window.initPeripherals = initPeripherals;
+window.startPeripheralsSync = startPeripheralsSync;
+window.stopPeripheralsSync = stopPeripheralsSync;
+window.ensurePowerButtonInCorrectPlace = ensurePowerButtonInCorrectPlace;
+window.configurarDragAndDrop = configurarDragAndDrop;

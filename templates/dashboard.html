@@ -88,6 +88,16 @@
                     {% include 'partials/solenoids.html' %}
                 </div>
                 
+                <!-- Synchronism container -->
+                <div id="synchronism-container" class="container" style="display: none;">
+                    {% include 'partials/synchronism.html' %}
+                </div>
+                
+                <!-- Information container -->
+                <div id="information-container" class="container" style="display: none;">
+                    {% include 'partials/information.html' %}
+                </div>
+                
                 <!-- Componentes de interface -->
                 {% include 'partials/virtual_keyboard.html' %}
             </div>
@@ -155,12 +165,12 @@
     <script src="{{ url_for('static', filename='scripts/recipe_loader.js') }}" defer></script>
     <script src="{{ url_for('static', filename='scripts/main.js') }}" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/dryer.css') }}">
-    <script src="{{ url_for('static', filename='scripts/partials/dryer.js') }}" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/graphics.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/viewer3d.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/panels.css') }}">
-    <script src="{{ url_for('static', filename='scripts/partials/panels.js') }}" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/solenoids.css') }}">
-    <script src="{{ url_for('static', filename='scripts/partials/solenoids.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/synchronism.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/information.css') }}">
+    <script src="{{ url_for('static', filename='scripts/translations.js') }}" defer></script>
 </body>
 </html>
