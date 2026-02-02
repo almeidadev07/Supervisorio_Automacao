@@ -76,15 +76,17 @@
 
 /* Coluna esquerda: Software, Sistema, Máquina - 3 boxes com mesma altura */
 .info-left-column {
-    display: flex;
-    flex-direction: column;
+    display: grid !important;
+    grid-template-columns: 1fr;
     gap: 28px;
     flex: 1;
     min-width: 0;
+    align-items: stretch;
 }
 
 .info-left-column .info-card {
     flex: 0 0 auto; /* mantém os três boxes empilhados na vertical com altura natural */
+    width: 100%;
 }
 
 /* Coluna direita: Linguagem (canto direito) - mesma altura total da coluna esquerda */
@@ -277,6 +279,7 @@
     
     .info-left-column {
         gap: 24px;
+    align-items: stretch;
     }
     
     .info-right-column {
@@ -286,6 +289,7 @@
     
     .info-left-column .info-card {
         flex: 0 0 auto;
+    width: 100%;
     }
 }
 

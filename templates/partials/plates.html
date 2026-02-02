@@ -1,0 +1,80 @@
+<!-- partials/plates.html - Tela de Placas -->
+<div class="plates-layout">
+    <div class="plates-header-box">
+        <h2 class="plates-title">Placas</h2>
+    </div>
+
+    <div class="plates-content-box">
+        <div class="plates-tabs">
+            <button class="plates-tab active" type="button" data-tab="inputs">Entradas</button>
+            <button class="plates-tab" type="button" data-tab="outputs">Saídas</button>
+        </div>
+
+        <!-- Painel de Entradas -->
+        <div class="plates-panel plates-panel-inputs active" id="plates-panel-inputs">
+            <div class="plates-panel-title">Remota 12LClass - Entradas</div>
+
+            <div class="plates-board-grid">
+                <div class="plates-board">
+                    <div class="plates-board-title">Placa - R1.1</div>
+                    <ul class="plates-status-list">
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I100 - Jog Manual</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I104 - Fonte 24V - Linha Controle CLP / Remotas</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I105 - Fonte 24V - Linha I/O's</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I106 - Fonte 24V - Linha 1 (Pré, Saída Ind., Emb 1 a 3)</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I107 - Fonte 24V - Linha 2 (Embaladora 4 a 8)</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I110 - Fonte 24V - Linha 3 (Embaladora 9 a 16)</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I112 - Linha - Inversores G120</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I113 - Linha - Motores Partida Direta</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I115 - Termostato do Painel</span></li>
+                    </ul>
+                </div>
+
+                <div class="plates-board">
+                    <div class="plates-board-title">Placa - R1.2</div>
+                    <ul class="plates-status-list">
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I120 - Rele de Segurança</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I121 - Emergência Painel Principal</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I122 - Botão - Liga Máquina</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I123 - Botão - Desliga Máquina</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I124 - Botão Reset dos Alarmes</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I125 - Botão - Jog Painel Principal</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I126 - Botão - "+" Velocidade</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I127 - Botão - "-" Velocidade</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I130 - Status Contator 1 - Partida Direta</span></li>
+                        <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>I131 - Status Contator 2 - Partida Direta</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Painel de Saídas -->
+        <div class="plates-panel plates-panel-outputs" id="plates-panel-outputs">
+            <div class="plates-panel-title">Remota 12LClass - Saídas</div>
+
+            <div class="plates-board-grid plates-board-grid-single">
+                <div class="plates-board plates-board-wide">
+                    <div class="plates-board-title">Placa - R1.3</div>
+                    <div class="plates-status-columns">
+                        <ul class="plates-status-list">
+                            <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>Q100 - Contator - Máquina Ligada</span></li>
+                            <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>Q101 - Contator - Máquina Emergência</span></li>
+                            <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>Q103 - Campainha</span></li>
+                            <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>Q104 - Sinalizador - Verde</span></li>
+                            <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>Q105 - Sinalizador - Amarelo</span></li>
+                            <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>Q106 - Sinalizador - Vermelho</span></li>
+                            <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>Q107 - Sinalização - Sirene</span></li>
+                        </ul>
+                        <ul class="plates-status-list">
+                            <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>Q110 - Sinalização - Máquina Ligada</span></li>
+                            <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>Q111 - Sinalização - Máquina Alarme</span></li>
+                            <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>Q112 - Sinalização - Jog Geral</span></li>
+                            <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>Q113 - Sinalização - Calibração Balança</span></li>
+                            <li class="plates-status-item"><span class="plates-status-indicator inactive"></span><span>Q114 - Reset dos Alarmes - Cliente</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

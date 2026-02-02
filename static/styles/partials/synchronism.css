@@ -70,7 +70,7 @@
 .sync-inner-layout {
     display: grid;
     grid-template-columns: 260px 1fr 260px;
-    grid-template-rows: 1fr; /* única linha para centralizar conteúdo no eixo vertical */
+    grid-template-rows: auto 1fr; /* topo + espaco livre para alinhar o box inferior */
     gap: 28px;
     width: 100%;
     height: 100%;
@@ -93,10 +93,10 @@
     font-size: 1.35rem;
     font-weight: 700;
     color: #fff;
-    margin-bottom: 10px;
     text-align: center;
     border-bottom: 2px solid rgba(255,255,255,0.3);
     padding-bottom: 6px;
+    margin-bottom: 10px;
 }
 
 .sync-position-content {
@@ -123,6 +123,73 @@
     color: #39ff14;
     font-family: 'Consolas', 'Courier New', monospace;
     letter-spacing: 1px;
+}
+
+/* ========== Canto Inferior Esquerdo - Correcao Dinamica ========== */
+.sync-correction-box {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: end;
+    justify-self: start;
+    background: #4a5568;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    padding: 20px 22px 24px;
+    min-width: 220px;
+    min-height: 260px;
+    text-align: center;
+}
+
+.sync-correction-title {
+    font-size: 1.35rem;
+}
+
+.sync-correction-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #39ff14;
+    font-family: 'Consolas', 'Courier New', monospace;
+    letter-spacing: 1px;
+    margin: 10px 0 18px;
+}
+
+.sync-correction-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+.sync-correction-btn {
+    width: 80px;
+    height: 60px;
+    border: none;
+    border-radius: 10px;
+    background: #d0d0d0;
+    color: #ffffff;
+    font-size: 2.35rem;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 3px 3px 8px rgba(0,0,0,0.2), -2px -2px 6px rgba(255,255,255,0.6);
+}
+
+.sync-correction-btn:hover {
+    transform: scale(1.04);
+}
+
+.sync-correction-btn:active {
+    transform: scale(0.98);
+}
+
+.sync-correction-btn.active {
+    background: #39ff14;
+    color: #fff;
+    box-shadow: 0 0 18px rgba(57, 255, 20, 0.55);
 }
 
 /* ========== Canto Superior Direito - Controles ========== */
@@ -152,19 +219,33 @@
 
 .sync-control-label {
     display: block;
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: 1.35rem;
+    font-weight: 700;
     color: #edf2f7;
     margin-bottom: 10px;
+}
+
+/* Divisor padrao para titulos de boxes */
+.sync-title-divider {
+    display: block;
+    text-align: center;
+    border-bottom: 2px solid rgba(255,255,255,0.3);
+    padding-bottom: 6px;
+}
+
+/* Em containers flex centrados, garante largura total do divisor */
+.sync-control-item .sync-title-divider {
+    align-self: stretch;
+    width: 100%;
 }
 
 /* Botão principal de sincronismo */
 .sync-btn-main {
     width: 80px;
-    height: 80px;
+    height: 65px;
     border: none;
     border-radius: 12px;
-    background: #e6e6e6 !important;
+    background: #d0d0d0 !important;
     cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
@@ -188,8 +269,8 @@
 }
 
 .sync-gear-icon {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
 }
 
 .sync-gear-icon svg {
@@ -198,12 +279,12 @@
 }
 
 .sync-btn-main .sync-gear-icon svg path {
-    stroke: #4a4a4a !important;
+    stroke: #ffffff !important;
     fill: none !important;
 }
 
 .sync-btn-main.active .sync-gear-icon svg path {
-    stroke: #0f8f2a !important;
+    stroke: #ffffff !important;
     fill: none !important;
 }
 
@@ -240,13 +321,14 @@
 /* ========== Centro - Conteúdo Principal ========== */
 .sync-main-content {
     grid-column: 2;
-    grid-row: 1;
+    grid-row: 1 / span 2;
     display: flex;
     justify-content: center;
     align-items: center; /* centraliza colunas no eixo vertical */
     gap: 60px;
     height: auto;
     justify-self: center;
+    align-self: center;
 }
 
 /* Colunas */
@@ -271,7 +353,7 @@
     font-size: 1.5rem;
     font-weight: 700;
     color: #fff;
-    margin: 0 0 15px 0;
+    margin: 0 0 10px 0;
 }
 
 /* Stack de motores */
@@ -297,6 +379,7 @@
     font-size: 1rem;
     color: #e2e8f0;
     margin-bottom: 10px;
+    font-weight: 700;
 }
 
 /* Grupo de checkboxes */
@@ -322,7 +405,7 @@
     width: 38px;
     height: 38px;
     background: #fff;
-    border: 2px solid #ddd;
+    border: 2px solid #d1d5db;
     border-radius: 6px;
     display: flex;
     align-items: center;
@@ -334,14 +417,16 @@
 .sync-checkbox-custom::after {
     content: '';
     display: none;
-    width: 18px;
-    height: 18px;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232ecc71'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z'/%3E%3C/svg%3E") center/contain no-repeat;
+    width: 22px;
+    height: 22px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230f8f2a'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z'/%3E%3C/svg%3E") center/contain no-repeat;
+    filter: drop-shadow(0 0 2px rgba(15, 143, 42, 0.45));
 }
 
 .sync-checkbox-item input[type="checkbox"]:checked + .sync-checkbox-custom {
-    border-color: #2ecc71;
-    background: #e8f8f0;
+    border-color: #22c55e;
+    background: #dff7e6;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.55), 0 0 10px rgba(34, 197, 94, 0.35);
 }
 
 .sync-checkbox-item input[type="checkbox"]:checked + .sync-checkbox-custom::after {
@@ -395,7 +480,7 @@
     font-size: 1.25rem;
     font-weight: 700;
     color: #fff;
-    margin: 0 0 12px 0;
+    margin: 0 0 10px 0;
 }
 
 .sync-pos-value-container {
@@ -482,9 +567,16 @@
         justify-content: flex-end;
     }
 
+    .sync-correction-box {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        align-self: center;
+        justify-self: center;
+    }
+
     .sync-main-content {
         grid-column: 1 / -1;
-        grid-row: 2 / -1;
+        grid-row: 3 / -1;
         flex-direction: column;
         align-items: center;
     }
@@ -505,3 +597,4 @@
         font-size: 1.1rem;
     }
 }
+

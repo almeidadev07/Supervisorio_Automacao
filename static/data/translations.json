@@ -157,7 +157,8 @@
             "posicao_atual":       { "pt": "Posição Atual",       "en": "Current Position", "es": "",  "zh": "",  "ja": "" },
             "busca_pos":           { "pt": "Busca Pos.",          "en": "Search Pos.",      "es": "",  "zh": "",  "ja": "" },
             "velocidade_jog":      { "pt": "Velocidade Jog:",     "en": "Jog Speed:",       "es": "",  "zh": "",  "ja": "" },
-            "busca_posicao":       { "pt": "Busca Posição:",      "en": "Search Position:", "es": "",  "zh": "",  "ja": "" }
+            "busca_posicao":       { "pt": "Busca Posição:",      "en": "Search Position:", "es": "",  "zh": "",  "ja": "" },
+            "correcao_dinamica":  { "pt": "Correção Dinâmica", "en": "Dynamic Correction",  "es": "",  "zh": "",  "ja": "" }
         },
         "windows": {
             "titulo":            { "pt": "Janelas de Captura", "en": "Windows",  "es": "",  "zh": "",  "ja": "" },

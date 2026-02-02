@@ -166,12 +166,13 @@
 #windows-container .capture-grid,
 .capture-grid {
     display: grid !important;
-    grid-template-columns: repeat(9, 1fr) !important;
-    grid-template-rows: repeat(2, auto) !important;
-    gap: 30px !important;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+    grid-auto-rows: auto !important;
+    gap: 24px !important;
     justify-items: center !important;
     align-items: center !important;
-    padding: 35px !important;
+    align-content: start !important;
+    padding: 30px !important;
     background: rgba(255, 255, 255, 0.95) !important;
     border-radius: 16px !important;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
@@ -188,13 +189,13 @@
     display: contents !important;
 }
 
-/* BOTÕES COM POSICIONAMENTO ESPECÍFICO NO GRID - AUMENTADOS */
+/* BOTÕES NO GRID */
 #windows-container .capture-btn,
 #windows-container button.capture-btn,
 .capture-btn,
 button.capture-btn {
-    width: 160px !important;
-    height: 160px !important;
+    width: 140px !important;
+    height: 140px !important;
     border: none !important;
     border-radius: 20px !important;
     background: #495057 !important;
@@ -210,83 +211,23 @@ button.capture-btn {
     position: relative !important;
     overflow: hidden !important;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-    font-size: 17px !important;
+    font-size: 15px !important;
     font-weight: 600 !important;
     text-align: center !important;
     line-height: 1.3 !important;
     padding: 15px !important;
     margin: 0 !important;
-    min-width: 160px !important;
-    min-height: 160px !important;
-    max-width: 160px !important;
-    max-height: 160px !important;
+    min-width: 140px !important;
+    min-height: 140px !important;
+    max-width: 140px !important;
+    max-height: 140px !important;
 }
 
-/* Posicionamento específico dos botões no grid */
-#windows-container .capture-btn[data-station="magna-visio"],
-.capture-btn[data-station="magna-visio"] {
-    grid-column: 1 !important;
-    grid-row: 1 !important;
-}
-
-#windows-container .capture-btn[data-station="grieta"],
-.capture-btn[data-station="grieta"] {
-    grid-column: 2 !important;
-    grid-row: 1 !important;
-}
-
-#windows-container .capture-btn[data-station="peso"],
-.capture-btn[data-station="peso"] {
-    grid-column: 3 !important;
-    grid-row: 1 !important;
-}
-
-#windows-container .capture-btn[data-station="cint-corr-ind"],
-.capture-btn[data-station="cint-corr-ind"] {
-    grid-column: 4 !important;
-    grid-row: 1 !important;
-}
-
-#windows-container .capture-btn[data-station="e01"],
-.capture-btn[data-station="e01"] {
-    grid-column: 5 !important;
-    grid-row: 1 !important;
-}
-
-#windows-container .capture-btn[data-station="e02"],
-.capture-btn[data-station="e02"] {
-    grid-column: 6 !important;
-    grid-row: 1 !important;
-}
-
-#windows-container .capture-btn[data-station="e03"],
-.capture-btn[data-station="e03"] {
-    grid-column: 7 !important;
-    grid-row: 1 !important;
-}
-
-#windows-container .capture-btn[data-station="e04"],
-.capture-btn[data-station="e04"] {
-    grid-column: 8 !important;
-    grid-row: 1 !important;
-}
-
-#windows-container .capture-btn[data-station="e05"],
-.capture-btn[data-station="e05"] {
-    grid-column: 9 !important;
-    grid-row: 1 !important;
-}
-
-#windows-container .capture-btn[data-station="e06"],
-.capture-btn[data-station="e06"] {
-    grid-column: 1 !important;
-    grid-row: 2 !important;
-}
-
-#windows-container .capture-btn[data-station="captura-final"],
-.capture-btn[data-station="captura-final"] {
-    grid-column: 2 !important;
-    grid-row: 2 !important;
+/* Garante layout fluido sem posicionamento fixo */
+#windows-container .capture-btn,
+.capture-btn {
+    grid-column: auto !important;
+    grid-row: auto !important;
 }
 
 /* Estados dos botões */
@@ -339,7 +280,7 @@ button.capture-btn.completed::after {
 
 #windows-container .capture-icon,
 .capture-icon {
-    font-size: 80px !important;
+    font-size: 64px !important;
     width: 1em !important;
     height: 1em !important;
     min-width: 0 !important;
@@ -353,7 +294,7 @@ button.capture-btn.completed::after {
 
 #windows-container .capture-label,
 .capture-label {
-    font-size: 18px !important;
+    font-size: 15px !important;
     font-weight: 600 !important;
     text-align: center !important;
     line-height: 1.3 !important;
@@ -598,49 +539,31 @@ button.capture-btn.completed::after {
 @media (max-width: 1200px) {
     #windows-container .capture-grid,
     .capture-grid {
-        grid-template-columns: repeat(8, 1fr) !important;
-    }
-    
-    #windows-container .capture-btn[data-station="e05"],
-    .capture-btn[data-station="e05"] {
-        grid-column: 1 !important;
-        grid-row: 2 !important;
-    }
-    
-    #windows-container .capture-btn[data-station="e06"],
-    .capture-btn[data-station="e06"] {
-        grid-column: 2 !important;
-        grid-row: 2 !important;
-    }
-    
-    #windows-container .capture-btn[data-station="captura-final"],
-    .capture-btn[data-station="captura-final"] {
-        grid-column: 3 !important;
-        grid-row: 2 !important;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
     }
 }
 
 @media (max-width: 992px) {
     #windows-container .capture-grid,
     .capture-grid {
-        grid-template-columns: repeat(6, 1fr) !important;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
         gap: 20px !important;
     }
     
     #windows-container .capture-btn,
     .capture-btn {
-        width: 130px !important;
-        height: 130px !important;
-        min-width: 130px !important;
-        min-height: 130px !important;
-        max-width: 130px !important;
-        max-height: 130px !important;
+        width: 120px !important;
+        height: 120px !important;
+        min-width: 120px !important;
+        min-height: 120px !important;
+        max-width: 120px !important;
+        max-height: 120px !important;
         font-size: 14px !important;
     }
     
     #windows-container .capture-icon,
     .capture-icon {
-        font-size: 65px !important;
+        font-size: 56px !important;
     }
 }
 
@@ -653,7 +576,7 @@ button.capture-btn.completed::after {
     
     #windows-container .capture-grid,
     .capture-grid {
-        grid-template-columns: repeat(4, 1fr) !important;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)) !important;
         gap: 18px !important;
     }
     
@@ -670,7 +593,7 @@ button.capture-btn.completed::after {
     
     #windows-container .capture-icon,
     .capture-icon {
-        font-size: 55px !important;
+        font-size: 50px !important;
     }
 }
 

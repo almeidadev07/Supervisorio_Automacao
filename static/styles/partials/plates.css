@@ -1,0 +1,222 @@
+/* plates.css - Tela de Placas */
+
+#plates-container {
+    display: none;
+    height: calc(100vh - var(--menu-height, 100px) - 20px) !important;
+    padding: 20px !important;
+    margin: 0 !important;
+    background: #f8f9fa !important;
+    position: relative !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+}
+
+#plates-container[style*="display: block"],
+#plates-container[style*="display:flex"] {
+    display: flex !important;
+}
+
+.plates-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f2f5;
+}
+
+.plates-header-box {
+    text-align: center;
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 25px 40px;
+    min-height: 100px;
+    box-sizing: border-box;
+}
+
+.plates-title {
+    font-size: 2.0rem;
+    font-weight: 700;
+    color: #4a5568;
+    margin: 0;
+}
+
+.plates-content-box {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 24px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.plates-tabs {
+    display: flex;
+    justify-content: flex-end;
+    gap: 22px;
+}
+
+.plates-tab {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2d3748;
+    padding: 4px 6px;
+}
+
+.plates-tab::before {
+    content: '';
+    width: 24px;
+    height: 24px;
+    border: 2px solid #c0c0c0;
+    border-radius: 4px;
+    background: #fff;
+    display: inline-block;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+}
+
+.plates-tab.active::before {
+    border-color: #9aa0a6;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2339ff14' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/18px 18px no-repeat;
+}
+
+.plates-panel {
+    display: none;
+    flex: 1;
+    overflow: auto;
+    padding-right: 6px;
+}
+
+.plates-panel.active {
+    display: block;
+}
+
+.plates-panel-title {
+    background: #9c9c9c;
+    color: #111;
+    font-weight: 700;
+    text-align: center;
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 18px;
+    letter-spacing: 0.3px;
+}
+
+.plates-board-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.plates-board-grid-single {
+    grid-template-columns: 1fr;
+}
+
+.plates-board {
+    background: #f5f6f8;
+    border: 1px solid #d2d6dc;
+    border-radius: 10px;
+    padding: 18px 20px 22px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6);
+}
+
+.plates-board-wide {
+    width: 100%;
+}
+
+.plates-board-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2d3748;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.plates-status-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+}
+
+.plates-status-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.plates-status-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #1f2937;
+    font-size: 0.98rem;
+}
+
+.plates-status-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: #b5b5b5;
+    border: 1px solid #a0a0a0;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4);
+    flex: 0 0 auto;
+}
+
+.plates-status-indicator.active {
+    background: #39ff14;
+    border-color: #19b300;
+    box-shadow: 0 0 10px rgba(57, 255, 20, 0.45);
+}
+
+.plates-status-indicator.inactive {
+    background: #b5b5b5;
+}
+
+@media (max-width: 1100px) {
+    .plates-board-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 900px) {
+    .plates-tabs {
+        justify-content: center;
+    }
+    .plates-status-columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .plates-header-box {
+        padding: 18px 24px;
+        min-height: 80px;
+    }
+    .plates-title {
+        font-size: 1.6rem;
+    }
+    .plates-content-box {
+        padding: 18px;
+    }
+}

@@ -23,10 +23,20 @@
                 </div>
             </div>
 
+            <!-- Canto Inferior Esquerdo - Correção Dinâmica -->
+            <div class="sync-correction-box">
+                <div class="sync-position-title sync-correction-title" data-i18n="synchronism.correcao_dinamica">Correção Dinâmica</div>
+                <div class="sync-correction-value" id="sync-correction-value">####</div>
+                <div class="sync-correction-buttons">
+                    <button class="sync-correction-btn sync-correction-btn-plus" id="btn-sync-correction-plus" title="Correção Dinâmica +" aria-pressed="false">+</button>
+                    <button class="sync-correction-btn sync-correction-btn-minus" id="btn-sync-correction-minus" title="Correção Dinâmica -" aria-pressed="false">-</button>
+                </div>
+            </div>
+
             <!-- Canto Superior Direito - Botão Sincronismo e Busca Pos -->
             <div class="sync-control-box">
                 <div class="sync-control-item">
-                    <span class="sync-control-label" data-i18n="synchronism.sincronizar">Sincronismo</span>
+                    <span class="sync-control-label sync-title-divider" data-i18n="synchronism.sincronizar">Sincronismo</span>
                     <button class="sync-btn-main" id="btn-sync-toggle" title="Ativar/Desativar Sincronismo">
                         <div class="sync-gear-icon">
                             <svg class="gear-active" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -36,7 +46,7 @@
                     </button>
                 </div>
                 <div class="sync-control-item">
-                    <span class="sync-control-label" data-i18n="synchronism.busca_pos">Busca Pos.</span>
+                    <span class="sync-control-label sync-title-divider" data-i18n="synchronism.busca_pos">Busca Pos.</span>
                     <button class="sync-btn-search-global" id="btn-sync-search-global" title="Buscar Posição Geral">
                         <img src="{{ url_for('static', filename='images/pages/icons/comandos/icone_buscar_verde.png') }}" alt="Buscar" />
                     </button>
@@ -48,7 +58,7 @@
                 <!-- Coluna Classificadora -->
                 <div class="sync-column">
                     <div class="sync-unit-box">
-                        <h3 class="sync-unit-title" data-i18n="synchronism.classificadora">Classificadora</h3>
+                        <h3 class="sync-unit-title sync-title-divider" data-i18n="synchronism.classificadora">Classificadora</h3>
                         <div class="sync-motor-stack">
                             <div class="motor-visual" style="position:relative; width:100px; height:100px; margin:8px auto;">
                                 <img class="motor-gray" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Motor Cinza.png') }}" alt="Motor Cinza" style="position:absolute; inset:0; width:100px; height:100px; display:block;" />
@@ -96,7 +106,7 @@
 
                     <!-- Box Pos. Classificadora -->
                     <div class="sync-pos-box">
-                        <h4 class="sync-pos-title" data-i18n="synchronism.pos_classificadora">Pos. Classificadora</h4>
+                        <h4 class="sync-pos-title sync-title-divider" data-i18n="synchronism.pos_classificadora">Pos. Classificadora</h4>
                         <div class="sync-pos-value-container">
                             <span class="sync-pos-value" id="sync-pos-classificadora-value">####</span>
                             <span class="sync-pos-unit">mm</span>
@@ -111,7 +121,7 @@
                 <!-- Coluna Ovoscopia -->
                 <div class="sync-column">
                     <div class="sync-unit-box">
-                        <h3 class="sync-unit-title" data-i18n="synchronism.ovoscopia">Ovoscopia</h3>
+                        <h3 class="sync-unit-title sync-title-divider" data-i18n="synchronism.ovoscopia">Ovoscopia</h3>
                         <div class="sync-motor-stack">
                             <div class="motor-visual" style="position:relative; width:100px; height:100px; margin:8px auto;">
                                 <img class="motor-gray" src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Motor Cinza.png') }}" alt="Motor Cinza" style="position:absolute; inset:0; width:100px; height:100px; display:block;" />
@@ -159,7 +169,7 @@
 
                     <!-- Box Pos. Ovoscopia -->
                     <div class="sync-pos-box">
-                        <h4 class="sync-pos-title" data-i18n="synchronism.pos_ovoscopia">Pos. Ovoscopia</h4>
+                        <h4 class="sync-pos-title sync-title-divider" data-i18n="synchronism.pos_ovoscopia">Pos. Ovoscopia</h4>
                         <div class="sync-pos-value-container">
                             <span class="sync-pos-value" id="sync-pos-ovoscopia-value">####</span>
                             <span class="sync-pos-unit">mm</span>

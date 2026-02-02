@@ -13,6 +13,9 @@ let syncState = {
     ovoscopiaPower: false,
     classificadoraJog: null,
     ovoscopiaJog: null,
+    correcaoPlusActive: false,
+    correcaoMinusActive: false,
+    correcaoValor: null,
     posClassificadora: 0,
     posOvoscopia: 0
 };
@@ -81,6 +84,8 @@ function inicializarSynchronism() {
     
     // Setup do botão de sincronismo principal
     setupSyncToggle();
+    // Setup dos botoes de correcao dinamica
+    setupCorrectionButtons();
     
     // Setup dos botões de busca
     setupSearchButtons();
@@ -218,6 +223,41 @@ function setupSyncToggle() {
     }
 }
 
+// ========== Setup dos Botoes de Correcao Dinamica ==========
+function setupCorrectionButtons() {
+    const btnPlus = document.getElementById('btn-sync-correction-plus');
+    if (btnPlus) {
+        updateCorrectionButton(btnPlus, syncState.correcaoPlusActive);
+        registerSyncEventListener(btnPlus, 'click', () => {
+            syncState.correcaoPlusActive = !syncState.correcaoPlusActive;
+            updateCorrectionButton(btnPlus, syncState.correcaoPlusActive);
+            console.log('[SYNC] Correcao +:', syncState.correcaoPlusActive ? 'ON' : 'OFF');
+            
+            // TODO: Enviar para o PLC
+            // writeCorrecaoPlus(syncState.correcaoPlusActive);
+        });
+    }
+    
+    const btnMinus = document.getElementById('btn-sync-correction-minus');
+    if (btnMinus) {
+        updateCorrectionButton(btnMinus, syncState.correcaoMinusActive);
+        registerSyncEventListener(btnMinus, 'click', () => {
+            syncState.correcaoMinusActive = !syncState.correcaoMinusActive;
+            updateCorrectionButton(btnMinus, syncState.correcaoMinusActive);
+            console.log('[SYNC] Correcao -:', syncState.correcaoMinusActive ? 'ON' : 'OFF');
+            
+            // TODO: Enviar para o PLC
+            // writeCorrecaoMinus(syncState.correcaoMinusActive);
+        });
+    }
+}
+
+function updateCorrectionButton(button, isOn) {
+    if (!button) return;
+    button.classList.toggle('active', isOn);
+    button.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+}
+
 // ========== Setup dos Botões de Busca ==========
 function setupSearchButtons() {
     // Busca Classificadora
@@ -299,6 +339,14 @@ function updateDisplayValues() {
     const posOvoscopiaEl = document.getElementById('sync-pos-ovoscopia');
     if (posOvoscopiaEl) {
         posOvoscopiaEl.textContent = formatPosition(syncState.posOvoscopia);
+    }
+    
+    // Correcao Dinamica
+    const correcaoValueEl = document.getElementById('sync-correction-value');
+    if (correcaoValueEl) {
+        correcaoValueEl.textContent = (syncState.correcaoValor === null || syncState.correcaoValor === undefined || isNaN(syncState.correcaoValor))
+            ? '####'
+            : syncState.correcaoValor.toFixed(0);
     }
     
     // Pos. Classificadora (valor com mm)

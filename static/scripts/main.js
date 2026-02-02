@@ -270,6 +270,11 @@ function applyTranslationsIfAvailable() {
 
 // Função para carregar scripts dinamicamente (com dedupe robusto)
 const __scriptLoadPromises = new Map();
+const SYNC_SCRIPT_SRC = '/static/scripts/partials/synchronism.js?v=20260202_sync_initfix';
+const PLATES_SCRIPT_SRC = '/static/scripts/partials/plates.js?v=20260202_plates';
+const SOLENOIDS_SCRIPT_SRC = '/static/scripts/partials/solenoids.js?v=20260202_solenoids';
+const PANELS_SCRIPT_SRC = '/static/scripts/partials/panels.js?v=20260202_panels';
+const WINDOWS_SCRIPT_SRC = '/static/scripts/partials/windows.js?v=20260202_windows';
 function loadScript(src) {
     if (__scriptLoadPromises.has(src)) {
         return __scriptLoadPromises.get(src);
@@ -376,6 +381,7 @@ function hideAllContainers() {
         'viewer3d-container', // Adicionar viewer3d-container
         'samples-container', // Adicionar samples-container
         'panels-container', // Adicionar panels-container
+        'plates-container', // Adicionar plates-container
         'solenoids-container', // Adicionar solenoids-container
         'synchronism-container', // Adicionar synchronism-container
         'information-container' // Adicionar information-container
@@ -521,6 +527,15 @@ function hideAllContainers() {
             window.cleanupPanels();
         } catch (e) {
             console.warn('Erro ao fazer cleanup da tela de painéis:', e);
+        }
+    }
+
+    // Cleanup da tela de placas
+    if (typeof window.cleanupPlates === 'function') {
+        try {
+            window.cleanupPlates();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de placas:', e);
         }
     }
     
@@ -1087,15 +1102,52 @@ function showPanels(event) {
         event.currentTarget.classList.add('active');
     }
     
-    // Inicializa os painéis se ainda não foi inicializado
-    if (typeof window.inicializarPanels === 'function' && !window.panelsInitialized) {
-        console.log('🔌 Inicializando sistema de Painéis...');
-        window.inicializarPanels();
-        window.panelsInitialized = true; // Evita reinicializar
-    }
+    loadScript(PANELS_SCRIPT_SRC)
+        .then(() => {
+            if (typeof window.inicializarPanels === 'function' && !window.panelsInitialized) {
+                console.log('Inicializando sistema de Painéis...');
+                window.inicializarPanels();
+                window.panelsInitialized = true; // Evita reinicializar
+            }
+        })
+        .catch((err) => {
+            console.error('[PANELS] Erro ao carregar script de painéis:', err);
+        });
 }
 
-// ✅ Exibe a tela de solenoides
+// Exibe a tela de placas
+function showPlates(event) {
+    setLastScreen('plates');
+    hideAllContainers();
+    const platesContainer = document.getElementById('plates-container');
+    if (platesContainer) {
+        platesContainer.style.display = 'flex';
+        platesContainer.style.visibility = 'visible';
+    }
+
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
+
+    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+    if (event?.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+
+    loadScript(PLATES_SCRIPT_SRC)
+        .then(() => {
+            if (typeof window.inicializarPlates === 'function' && !window.platesInitialized) {
+                console.log('Inicializando tela de Placas...');
+                window.inicializarPlates();
+                window.platesInitialized = true;
+            }
+        })
+        .catch((err) => {
+            console.error('[PLATES] Erro ao carregar script de placas:', err);
+        });
+}
+
+// Exibe a tela de solenoides
 function showSolenoids(event) {
     setLastScreen('solenoids');
     hideAllContainers();
@@ -1114,12 +1166,17 @@ function showSolenoids(event) {
         event.currentTarget.classList.add('active');
     }
     
-    // Inicializa os solenoides se ainda não foi inicializado
-    if (typeof window.inicializarSolenoids === 'function' && !window.solenoidsInitialized) {
-        console.log('🔧 Inicializando sistema de Solenoides...');
-        window.inicializarSolenoids();
-        window.solenoidsInitialized = true; // Evita reinicializar
-    }
+    loadScript(SOLENOIDS_SCRIPT_SRC)
+        .then(() => {
+            if (typeof window.inicializarSolenoids === 'function' && !window.solenoidsInitialized) {
+                console.log('Inicializando sistema de Solenoides...');
+                window.inicializarSolenoids();
+                window.solenoidsInitialized = true; // Evita reinicializar
+            }
+        })
+        .catch((err) => {
+            console.error('[SOLENOIDS] Erro ao carregar script de solenoides:', err);
+        });
 }
 
 // ✅ Exibe a tela de sincronismo
@@ -1141,12 +1198,18 @@ function showSynchronism(event) {
         event.currentTarget.classList.add('active');
     }
     
-    // Inicializa o sincronismo se ainda não foi inicializado
-    if (typeof window.inicializarSynchronism === 'function' && !window.synchronismInitialized) {
-        console.log('🔄 Inicializando sistema de Sincronismo...');
-        window.inicializarSynchronism();
-        window.synchronismInitialized = true; // Evita reinicializar
-    }
+    // Inicializa o sincronismo (garante script carregado antes)
+    loadScript(SYNC_SCRIPT_SRC)
+        .then(() => {
+            if (typeof window.inicializarSynchronism === 'function' && !window.synchronismInitialized) {
+                console.log('🔄 Inicializando sistema de Sincronismo...');
+                window.inicializarSynchronism();
+                window.synchronismInitialized = true; // Evita reinicializar
+            }
+        })
+        .catch((err) => {
+            console.error('[SYNC] Erro ao carregar script de sincronismo:', err);
+        });
     
     // ✅ Aplica traduções após mostrar a tela
     applyTranslationsIfAvailable();
@@ -1260,11 +1323,14 @@ Promise.all([
     loadScript('/static/scripts/partials/washer.js'), // ✅ Script da lavadora
     loadScript('/static/scripts/partials/dryer.js'), // ✅ Script da secadora
     loadScript('/static/scripts/partials/diagram.js'), 
-    loadScript('/static/scripts/partials/windows.js'),
+    loadScript(WINDOWS_SCRIPT_SRC),
     loadScript('/static/scripts/partials/graphics.js'),
     loadScript('/static/scripts/partials/viewer3d.js'),
     loadScript('/static/scripts/partials/samples.js'), // ✅ Script de amostras
-    loadScript('/static/scripts/partials/synchronism.js?v=20260130_sync_js'),
+    loadScript(PANELS_SCRIPT_SRC),
+    loadScript(PLATES_SCRIPT_SRC),
+    loadScript(SOLENOIDS_SCRIPT_SRC),
+    loadScript(SYNC_SCRIPT_SRC),
     loadScript('/static/scripts/partials/information.js')
 
 ])
@@ -1342,6 +1408,7 @@ document.addEventListener('DOMContentLoaded', function() {
         viewer3d: showViewer3D,
         samples: showSamples,
         panels: showPanels,
+        plates: showPlates,
         solenoids: showSolenoids,
         synchronism: showSynchronism,
         information: showInformation
@@ -1378,6 +1445,7 @@ window.showWindows = showWindows;
 window.showViewer3D = showViewer3D; // ✅ Exportação global da função do visualizador 3D
 window.showSamples = showSamples; // ✅ Exportação global da função de amostras
 window.showPanels = showPanels; // ✅ Exportação global da função de painéis
+window.showPlates = showPlates; // ✅ Exportação global da função de placas
 window.showSolenoids = showSolenoids; // ✅ Exportação global da função de solenoides
 window.showSynchronism = showSynchronism; // ✅ Exportação global da função de sincronismo
 window.showInformation = showInformation; // ✅ Exportação global da função de informações

@@ -5,6 +5,10 @@
 // ============================================
 let windowsEventListeners = [];
 let windowsEscHandler = null; // Handler especial para ESC no document
+let windowsGridButtonSize = 140;
+let windowsGridGap = 24;
+let windowsGridPadding = 30;
+let windowsGridResizeTimer = null;
 
 function registerWindowsEventListener(element, event, handler) {
     if (element) {
@@ -30,6 +34,11 @@ function cleanupWindows() {
         document.removeEventListener('keydown', windowsEscHandler);
         windowsEscHandler = null;
     }
+
+    if (windowsGridResizeTimer) {
+        clearTimeout(windowsGridResizeTimer);
+        windowsGridResizeTimer = null;
+    }
     
     console.log('[WINDOWS] ✅ Cleanup concluído');
 }
@@ -40,7 +49,7 @@ window.cleanupWindows = cleanupWindows;
 let captureState = {
     completedStations: new Set(),
     currentStation: null,
-    totalStations: 11,
+    totalStations: 28,
     modal: {
         isOpen: false,
         currentStation: null,
@@ -73,6 +82,7 @@ function inicializarWindows() {
     setTimeout(() => {
         // Força aplicação do layout de grid
         forceGridLayout();
+        setupGridResizeHandler();
         
         // Configura os botões de captura
         setupCaptureButtons();
@@ -90,27 +100,136 @@ function inicializarWindows() {
     }, 200);
 }
 
+function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+}
+
+function calculateGridLayout(captureGrid, buttonCount) {
+    const fallback = {
+        columns: 0,
+        size: 140,
+        gap: 24,
+        padding: 30,
+        template: 'repeat(auto-fit, minmax(120px, 1fr))',
+        autoRows: 'auto',
+        alignContent: 'start'
+    };
+
+    if (!captureGrid || !buttonCount) {
+        return fallback;
+    }
+
+    const width = captureGrid.clientWidth;
+    const height = captureGrid.clientHeight;
+
+    if (!width || !height) {
+        return fallback;
+    }
+
+    const config = {
+        minSize: 110,
+        maxSize: 190,
+        minGap: 12,
+        maxGap: 26,
+        padding: 24
+    };
+
+    const innerWidth = Math.max(0, width - config.padding * 2);
+    const innerHeight = Math.max(0, height - config.padding * 2);
+
+    if (innerWidth <= 0 || innerHeight <= 0) {
+        return fallback;
+    }
+
+    const maxColumns = Math.max(
+        1,
+        Math.min(
+            buttonCount,
+            Math.floor((innerWidth + config.minGap) / (config.minSize + config.minGap))
+        )
+    );
+
+    let best = null;
+
+    for (let columns = maxColumns; columns >= 1; columns--) {
+        const rows = Math.ceil(buttonCount / columns);
+        const gap = clamp(Math.round((innerWidth / columns) * 0.1), config.minGap, config.maxGap);
+        const sizeByWidth = (innerWidth - gap * (columns - 1)) / columns;
+        const sizeByHeight = (innerHeight - gap * (rows - 1)) / rows;
+        const size = Math.min(sizeByWidth, sizeByHeight);
+
+        if (size < config.minSize) {
+            continue;
+        }
+
+        const finalSize = Math.min(config.maxSize, Math.floor(size));
+
+        if (!best || finalSize > best.size) {
+            best = { columns, rows, size: finalSize, gap, padding: config.padding };
+        }
+    }
+
+    if (!best) {
+        return fallback;
+    }
+
+    return {
+        columns: best.columns,
+        size: best.size,
+        gap: best.gap,
+        padding: best.padding,
+        template: `repeat(${best.columns}, ${best.size}px)`,
+        autoRows: `${best.size}px`,
+        alignContent: 'space-evenly'
+    };
+}
+
+function setupGridResizeHandler() {
+    const resizeHandler = () => {
+        if (windowsGridResizeTimer) {
+            clearTimeout(windowsGridResizeTimer);
+        }
+
+        windowsGridResizeTimer = setTimeout(() => {
+            windowsGridResizeTimer = null;
+            forceGridLayout();
+        }, 120);
+    };
+
+    registerWindowsEventListener(window, "resize", resizeHandler);
+}
+
 function forceGridLayout() {
-    console.log("🎯 Forçando layout de grid...");
+    console.log("[WINDOWS] Forcando layout de grid...");
     
-    // Força o grid no container principal
+    // Forca o grid no container principal
     const captureGrid = document.querySelector('#windows-container .capture-grid') || 
                        document.querySelector('.capture-grid');
+    const buttons = document.querySelectorAll('#windows-container .capture-btn, .capture-btn');
     
     if (captureGrid) {
+        const layout = calculateGridLayout(captureGrid, buttons.length);
+        windowsGridButtonSize = layout.size;
+        windowsGridGap = layout.gap;
+        windowsGridPadding = layout.padding;
+
         // Aplica estilos de grid diretamente
-        captureGrid.style.display = 'grid';
-        captureGrid.style.gridTemplateColumns = 'repeat(9, 1fr)';
-        captureGrid.style.gridTemplateRows = 'repeat(2, auto)';
-        captureGrid.style.gap = '20px';
-        captureGrid.style.justifyItems = 'center';
-        captureGrid.style.alignItems = 'center';
-        captureGrid.style.padding = '25px';
-        captureGrid.style.background = 'white';
-        captureGrid.style.borderRadius = '16px';
-        captureGrid.style.boxShadow = '0 6px 20px rgba(0,0,0,0.15)';
+        captureGrid.style.setProperty('display', 'grid', 'important');
+        captureGrid.style.setProperty('grid-template-columns', layout.template, 'important');
+        captureGrid.style.setProperty('grid-auto-rows', layout.autoRows, 'important');
+        captureGrid.style.setProperty('gap', `${layout.gap}px`, 'important');
+        captureGrid.style.setProperty('justify-items', 'stretch', 'important');
+        captureGrid.style.setProperty('align-items', 'stretch', 'important');
+        captureGrid.style.setProperty('justify-content', 'space-evenly', 'important');
+        captureGrid.style.setProperty('align-content', layout.alignContent, 'important');
+        captureGrid.style.setProperty('padding', `${layout.padding}px`, 'important');
+        captureGrid.style.setProperty('height', '100%', 'important');
+        captureGrid.style.setProperty('box-sizing', 'border-box', 'important');
+        captureGrid.style.setProperty('background', 'white', 'important');
+        captureGrid.style.setProperty('border-radius', '16px', 'important');
+        captureGrid.style.setProperty('box-shadow', '0 6px 20px rgba(0,0,0,0.15)', 'important');
         
-        console.log("✅ Grid aplicado ao container principal");
+        console.log("[WINDOWS] Grid aplicado ao container principal");
     }
     
     // Remove display das linhas (capture-row)
@@ -119,50 +238,26 @@ function forceGridLayout() {
         row.style.display = 'contents';
     });
     
-    // Posiciona cada botão especificamente no grid
-    const buttonPositions = {
-        'magna-visio': { column: 1, row: 1 },
-        'grieta': { column: 2, row: 1 },
-        'peso': { column: 3, row: 1 },
-        'cint-corr-ind': { column: 4, row: 1 },
-        'e01': { column: 5, row: 1 },
-        'e02': { column: 6, row: 1 },
-        'e03': { column: 7, row: 1 },
-        'e04': { column: 8, row: 1 },
-        'e05': { column: 9, row: 1 },
-        'e06': { column: 1, row: 2 },
-        'captura-final': { column: 2, row: 2 }
-    };
-    
-    // Aplica posicionamento e estilos em cada botão
-    Object.keys(buttonPositions).forEach(station => {
-        const button = document.querySelector(`#windows-container .capture-btn[data-station="${station}"]`) ||
-                      document.querySelector(`.capture-btn[data-station="${station}"]`);
-        
-        if (button) {
-            const pos = buttonPositions[station];
-            
-            // Posicionamento no grid
-            button.style.gridColumn = pos.column.toString();
-            button.style.gridRow = pos.row.toString();
-            
-            // Estilos do botão
-            applyButtonStyles(button);
-            
-            console.log(`✅ Botão ${station} posicionado em coluna ${pos.column}, linha ${pos.row}`);
-        }
+    // Aplica estilos base em cada botao
+    buttons.forEach(button => {
+        button.style.setProperty('grid-column', 'auto', 'important');
+        button.style.setProperty('grid-row', 'auto', 'important');
+        applyButtonStyles(button, windowsGridButtonSize);
     });
     
-    console.log("🎨 Layout de grid forçado aplicado com sucesso!");
+    console.log("[WINDOWS] Layout de grid forcado aplicado com sucesso!");
 }
 
-function applyButtonStyles(button) {
-    button.style.width = '120px';
-    button.style.height = '120px';
-    button.style.minWidth = '120px';
-    button.style.minHeight = '120px';
-    button.style.maxWidth = '120px';
-    button.style.maxHeight = '120px';
+function applyButtonStyles(button, sizeOverride) {
+    const size = sizeOverride || windowsGridButtonSize || 140;
+    const fontSize = Math.max(12, Math.min(16, Math.round(size * 0.11)));
+
+    button.style.setProperty('width', `${size}px`, 'important');
+    button.style.setProperty('height', `${size}px`, 'important');
+    button.style.setProperty('min-width', `${size}px`, 'important');
+    button.style.setProperty('min-height', `${size}px`, 'important');
+    button.style.setProperty('max-width', `${size}px`, 'important');
+    button.style.setProperty('max-height', `${size}px`, 'important');
     button.style.display = 'flex';
     button.style.flexDirection = 'column';
     button.style.alignItems = 'center';
@@ -176,7 +271,7 @@ function applyButtonStyles(button) {
     button.style.position = 'relative';
     button.style.overflow = 'hidden';
     button.style.fontFamily = 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif';
-    button.style.fontSize = '13px';
+    button.style.fontSize = `${fontSize}px`;
     button.style.fontWeight = '600';
     button.style.textAlign = 'center';
     button.style.lineHeight = '1.3';
@@ -579,10 +674,10 @@ function handleCapturaFinal() {
     }
     
     setTimeout(() => {
-        const allStations = [
-            "magna-visio", "grieta", "peso", "cint-corr-ind", 
-            "e01", "e02", "e03", "e04", "e05", "e06"
-        ];
+        const allStations = ["magna-visio", "grieta", "peso", "cint-corr-ind"];
+        for (let i = 1; i <= 24; i++) {
+            allStations.push(`e${i.toString().padStart(2, '0')}`);
+        }
         
         allStations.forEach(station => {
             if (!captureState.completedStations.has(station)) {

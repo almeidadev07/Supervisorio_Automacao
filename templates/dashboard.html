@@ -82,6 +82,11 @@
                 <div id="panels-container" class="container" style="display: none;">
                     {% include 'partials/panels.html' %}
                 </div>
+
+                <!-- Plates container -->
+                <div id="plates-container" class="container" style="display: none;">
+                    {% include 'partials/plates.html' %}
+                </div>
                 
                 <!-- Solenoids container -->
                 <div id="solenoids-container" class="container" style="display: none;">
@@ -163,14 +168,15 @@
     <!-- scripts do app -->
     <script src="{{ url_for('static', filename='scripts/machine_select.js') }}" defer></script>
     <script src="{{ url_for('static', filename='scripts/recipe_loader.js') }}" defer></script>
-    <script src="{{ url_for('static', filename='scripts/main.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='scripts/main.js') }}?v=20260202_panels_fix" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/dryer.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/graphics.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/viewer3d.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/panels.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/plates.css') }}?v=20260202_plates">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/solenoids.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/synchronism.css') }}?v=20260130_sync_btn3">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/information.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/synchronism.css') }}?v=20260202_sync_colors">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/information.css') }}?v=20260202_info_stack">
     <script src="{{ url_for('static', filename='scripts/translations.js') }}" defer></script>
 </body>
 </html>
