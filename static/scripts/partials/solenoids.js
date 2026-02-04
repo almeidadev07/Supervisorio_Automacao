@@ -119,6 +119,7 @@
                 const id = item.dataset.solenoid;
                 const state = solenoidStates[id] || 'off';
                 btn.dataset.state = state;
+                item.classList.toggle('solenoid-active', state === 'on');
             }
         });
     }
@@ -164,6 +165,7 @@
 
         // Atualiza estado
         btn.dataset.state = newState;
+        item.classList.toggle('solenoid-active', newState === 'on');
         solenoidStates[id] = newState;
 
         // Salva estados
@@ -319,6 +321,7 @@
             if (item) {
                 const id = item.dataset.solenoid;
                 btn.dataset.state = 'on';
+                item.classList.add('solenoid-active');
                 solenoidStates[id] = 'on';
             }
         });
@@ -336,6 +339,7 @@
             if (item) {
                 const id = item.dataset.solenoid;
                 btn.dataset.state = 'off';
+                item.classList.remove('solenoid-active');
                 solenoidStates[id] = 'off';
             }
         });

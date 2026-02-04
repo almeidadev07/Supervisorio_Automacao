@@ -4,6 +4,112 @@
 const panelStates = {};
 let panelsEventListeners = [];
 
+// ============================================
+// FILTRO DINÂMICO DE EMBALADORAS (Emb 01-24)
+// ============================================
+const PANELS_EMBALADORA_QUANTITY_KEY = 'supervisor_embaladora_quantity';
+
+// Painéis que sempre ficam visíveis (não são embaladoras)
+const FIXED_PANELS = [
+    'lavadora',
+    'esteiras',
+    'ovoscopia',
+    'pre-selecionador'
+];
+
+/**
+ * Filtra os painéis de embaladoras baseado na quantidade definida nos parâmetros
+ */
+function filterEmbaladoraPanels() {
+    const savedQuantity = localStorage.getItem(PANELS_EMBALADORA_QUANTITY_KEY);
+    const quantity = parseInt(savedQuantity) || 24; // Padrão: 24
+    
+    console.log(`[PANELS] Filtrando embaladoras - Quantidade: ${quantity}`);
+    
+    const allPanels = document.querySelectorAll('.panel-item');
+    
+    allPanels.forEach(panel => {
+        const panelId = panel.dataset.panel;
+        
+        // Se for painel fixo, sempre mostra
+        if (FIXED_PANELS.includes(panelId)) {
+            panel.style.display = '';
+            return;
+        }
+        
+        // Se for painel de embaladora (emb-01 a emb-24), verifica a quantidade
+        const embaladoraMatch = panelId && panelId.match(/^emb-(\d{2})$/);
+        if (embaladoraMatch) {
+            const embaladoraNumber = parseInt(embaladoraMatch[1]);
+            if (embaladoraNumber <= quantity) {
+                panel.style.display = '';
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+    });
+    
+    // Reorganiza as linhas do grid após filtrar
+    reorganizePanelRows();
+}
+
+/**
+ * Verifica e esconde linhas que ficarem vazias (sem painéis visíveis)
+ */
+function reorganizePanelRows() {
+    const panelRows = document.querySelectorAll('.panel-row');
+    
+    panelRows.forEach(row => {
+        // Conta painéis visíveis nesta linha
+        const visiblePanels = Array.from(row.querySelectorAll('.panel-item'))
+            .filter(panel => panel.style.display !== 'none');
+        
+        // Esconde a linha se não tiver painéis visíveis
+        if (visiblePanels.length === 0) {
+            row.style.display = 'none';
+        } else {
+            row.style.display = '';
+        }
+    });
+    
+    // Conta total de painéis visíveis
+    const totalVisible = document.querySelectorAll('.panel-item:not([style*="display: none"])').length;
+    console.log(`[PANELS] Grid atualizado - ${totalVisible} painéis visíveis`);
+}
+
+/**
+ * Listener para mudanças na quantidade de embaladoras
+ */
+function setupPanelsEmbaladoraQuantityListener() {
+    // Escuta evento customizado de mudança de quantidade
+    const quantityChangeHandler = (event) => {
+        console.log('[PANELS] Evento embaladoraQuantityChanged recebido:', event.detail);
+        filterEmbaladoraPanels();
+    };
+    
+    document.addEventListener('embaladoraQuantityChanged', quantityChangeHandler);
+    panelsEventListeners.push({ 
+        element: document, 
+        event: 'embaladoraQuantityChanged', 
+        handler: quantityChangeHandler 
+    });
+    
+    // Também escuta mudanças no localStorage (para sincronização entre abas)
+    const storageHandler = (event) => {
+        if (event.key === PANELS_EMBALADORA_QUANTITY_KEY) {
+            console.log('[PANELS] localStorage embaladora quantity changed:', event.newValue);
+            filterEmbaladoraPanels();
+        }
+    };
+    
+    window.addEventListener('storage', storageHandler);
+    panelsEventListeners.push({ 
+        element: window, 
+        event: 'storage', 
+        handler: storageHandler 
+    });
+}
+
 function registerPanelsEventListener(element, event, handler) {
     if (element) {
         element.addEventListener(event, handler);
@@ -32,6 +138,12 @@ function inicializarPanels() {
     
     // Evita duplicação de listeners
     cleanupPanels();
+    
+    // Filtra embaladoras baseado na quantidade configurada
+    filterEmbaladoraPanels();
+    
+    // Configura listener para mudanças na quantidade de embaladoras
+    setupPanelsEmbaladoraQuantityListener();
     
     // Carrega estados salvos
     loadPanelStates();
@@ -282,6 +394,7 @@ window.connectAllPanels = connectAllPanels;
 window.disconnectAllPanels = disconnectAllPanels;
 window.updatePanelsFromPLC = updatePanelsFromPLC;
 window.setPanelAlert = setPanelAlert;
+window.filterEmbaladoraPanels = filterEmbaladoraPanels;
 
 // Inicializa quando o DOM estiver pronto
 if (document.readyState === 'loading') {

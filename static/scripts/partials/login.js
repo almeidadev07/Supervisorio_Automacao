@@ -36,6 +36,15 @@ function handleLogin(event) {
         hideLoginModal();
         updateUIByRole();
         updateUserDisplay();
+
+        // Se for Técnico, abre a tela de sincronismo
+        if (currentUser.role === 'Tec') {
+            if (typeof window.showSynchronism === 'function') {
+                window.showSynchronism();
+            } else {
+                console.warn('Função showSynchronism não disponível.');
+            }
+        }
     } else {
         alert('Usuário ou senha inválidos!');
     }

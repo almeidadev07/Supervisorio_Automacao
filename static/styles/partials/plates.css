@@ -42,7 +42,7 @@
 }
 
 .plates-title {
-    font-size: 2.0rem;
+    font-size: 2.2rem;
     font-weight: 700;
     color: #4a5568;
     margin: 0;
@@ -66,36 +66,49 @@
 .plates-tabs {
     display: flex;
     justify-content: flex-end;
-    gap: 22px;
+    gap: 18px;
+    flex-wrap: wrap;
 }
 
 .plates-tab {
-    background: transparent;
-    border: none;
+    background: #e2e8f0;
+    border: 1px solid #cbd5e0;
+    border-radius: 10px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: 1.2rem;
+    font-weight: 700;
     color: #2d3748;
-    padding: 4px 6px;
+    padding: 6px 14px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .plates-tab::before {
     content: '';
-    width: 24px;
-    height: 24px;
-    border: 2px solid #c0c0c0;
-    border-radius: 4px;
-    background: #fff;
+    width: 26px;
+    height: 26px;
+    border: 2px solid #cbd5e0;
+    border-radius: 5px;
+    background: #f8f9fa;
     display: inline-block;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04);
 }
 
 .plates-tab.active::before {
-    border-color: #9aa0a6;
-    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2339ff14' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/18px 18px no-repeat;
+    border-color: #28a745;
+    background: #28a745 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E") center/18px 18px no-repeat;
+}
+
+.plates-tab:hover {
+    transform: translateY(-1px);
+    background: #edf2f7;
+}
+
+.plates-tab.active {
+    background: #dbe2ea;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
 }
 
 .plates-panel {
@@ -110,14 +123,16 @@
 }
 
 .plates-panel-title {
-    background: #9c9c9c;
-    color: #111;
+    background: #4a5568;
+    color: #fff;
     font-weight: 700;
     text-align: center;
-    padding: 10px 12px;
-    border-radius: 6px;
+    padding: 12px 14px;
+    border-radius: 8px;
     margin-bottom: 18px;
+    font-size: 1.25rem;
     letter-spacing: 0.3px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
 }
 
 .plates-board-grid {
@@ -131,11 +146,11 @@
 }
 
 .plates-board {
-    background: #f5f6f8;
-    border: 1px solid #d2d6dc;
-    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
     padding: 18px 20px 22px;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
 }
 
 .plates-board-wide {
@@ -143,7 +158,7 @@
 }
 
 .plates-board-title {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: 700;
     color: #2d3748;
     text-align: center;
@@ -170,27 +185,50 @@
     align-items: center;
     gap: 12px;
     color: #1f2937;
-    font-size: 0.98rem;
+    font-size: 1.08rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 10px;
 }
 
 .plates-status-indicator {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    background: #b5b5b5;
-    border: 1px solid #a0a0a0;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4);
+    width: 26px;
+    height: 26px;
+    border-radius: 5px;
+    background: #f8f9fa;
+    border: 2px solid #cbd5e0;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
     flex: 0 0 auto;
+    position: relative;
 }
 
 .plates-status-indicator.active {
-    background: #39ff14;
-    border-color: #19b300;
-    box-shadow: 0 0 10px rgba(57, 255, 20, 0.45);
+    background: #28a745;
+    border-color: #28a745;
+    box-shadow: 0 0 12px rgba(40, 167, 69, 0.4);
 }
 
 .plates-status-indicator.inactive {
-    background: #b5b5b5;
+    background: #f1f5f9;
+    border-color: #cbd5e0;
+}
+
+.plates-status-indicator::after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 8px;
+    top: 4px;
+    width: 7px;
+    height: 13px;
+    border: solid #ffffff;
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
+}
+
+.plates-status-indicator.active::after {
+    display: block;
 }
 
 @media (max-width: 1100px) {
@@ -214,7 +252,7 @@
         min-height: 80px;
     }
     .plates-title {
-        font-size: 1.6rem;
+        font-size: 1.8rem;
     }
     .plates-content-box {
         padding: 18px;

@@ -65,7 +65,7 @@
     box-sizing: border-box !important;
 }
 
-/* Grid principal: coluna esquerda (3 boxes) + coluna direita (Linguagem), mesma altura */
+/* Grid principal: 4 boxes lado a lado (Software | Sistema | Máquina | Linguagem) */
 .information-grid {
     display: flex;
     flex-direction: row;
@@ -74,32 +74,18 @@
     align-items: stretch;
 }
 
-/* Coluna esquerda: Software, Sistema, Máquina - 3 boxes com mesma altura */
-.info-left-column {
-    display: grid !important;
-    grid-template-columns: 1fr;
-    gap: 28px;
+/* Cada card ocupa 1 coluna, todos com mesma altura */
+.information-grid > .info-card {
     flex: 1;
     min-width: 0;
-    align-items: stretch;
-}
-
-.info-left-column .info-card {
-    flex: 0 0 auto; /* mantém os três boxes empilhados na vertical com altura natural */
-    width: 100%;
-}
-
-/* Coluna direita: Linguagem (canto direito) - mesma altura total da coluna esquerda */
-.info-right-column {
     display: flex;
     flex-direction: column;
-    flex: 0 0 300px;
-    max-width: 300px;
 }
 
-.info-right-column .info-card {
-    flex: 1;
-    min-height: 0;
+/* Box Linguagem fica no canto direito (último) */
+.information-grid > .info-card.info-language {
+    flex: 0 0 280px;
+    max-width: 280px;
 }
 
 /* Cards de informação - todos mesma altura (stretch no eixo) */
@@ -261,8 +247,13 @@
         flex-wrap: wrap;
     }
     
-    .info-right-column {
-        flex: 1 1 100%;
+    .information-grid > .info-card {
+        flex: 1 1 calc(50% - 14px);
+        min-width: 250px;
+    }
+    
+    .information-grid > .info-card.info-language {
+        flex: 1 1 calc(50% - 14px);
         max-width: none;
     }
 }
@@ -277,19 +268,13 @@
         gap: 24px;
     }
     
-    .info-left-column {
-        gap: 24px;
-    align-items: stretch;
-    }
-    
-    .info-right-column {
+    .information-grid > .info-card {
         flex: 1 1 auto;
-        max-width: none;
+        width: 100%;
     }
     
-    .info-left-column .info-card {
-        flex: 0 0 auto;
-    width: 100%;
+    .information-grid > .info-card.info-language {
+        max-width: none;
     }
 }
 

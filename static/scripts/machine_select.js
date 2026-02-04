@@ -138,18 +138,41 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     localStorage.setItem(GRID_VISIBILITY_KEY, JSON.stringify(settings));
     
-    // Salva quantidade de embaladora
-    if (embaladoraQuantityEl) {
-      localStorage.setItem(EMBALADORA_QUANTITY_KEY, embaladoraQuantityEl.value);
+      // Salva quantidade de embaladora e dispara evento
+      if (embaladoraQuantityEl) {
+        const oldQuantity = localStorage.getItem(EMBALADORA_QUANTITY_KEY);
+        const newQuantity = embaladoraQuantityEl.value;
+        localStorage.setItem(EMBALADORA_QUANTITY_KEY, newQuantity);
+        
+        // Dispara evento customizado para atualizar telas de Janelas e Painéis
+        if (oldQuantity !== newQuantity) {
+          console.log(`[MACHINE_SELECT] Quantidade de embaladoras alterada: ${oldQuantity} -> ${newQuantity}`);
+          const event = new CustomEvent('embaladoraQuantityChanged', {
+            detail: {
+              oldQuantity: parseInt(oldQuantity) || 24,
+              newQuantity: parseInt(newQuantity) || 24,
+              timestamp: Date.now()
+            }
+          });
+          document.dispatchEvent(event);
+          
+          // Também atualiza diretamente as telas se as funções estiverem disponíveis
+          if (window.filterEmbaladoraButtons) {
+            window.filterEmbaladoraButtons();
+          }
+          if (window.filterEmbaladoraPanels) {
+            window.filterEmbaladoraPanels();
+          }
+        }
+      }
+      
+      // Aplica as configurações no grid
+      if (window.applyGridVisibility) {
+        window.applyGridVisibility(settings);
+      }
+      
+      console.log('[MACHINE_SELECT] Configurações de visibilidade salvas:', settings);
     }
-    
-    // Aplica as configurações no grid
-    if (window.applyGridVisibility) {
-      window.applyGridVisibility(settings);
-    }
-    
-    console.log('[MACHINE_SELECT] Configurações de visibilidade salvas:', settings);
-  }
   
   // Função para restaurar valores iniciais (usado no cancelar)
   function restoreInitialSettings() {

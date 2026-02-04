@@ -10,6 +10,114 @@ let windowsGridGap = 24;
 let windowsGridPadding = 30;
 let windowsGridResizeTimer = null;
 
+// ============================================
+// FILTRO DINÂMICO DE EMBALADORAS (E01-E24)
+// ============================================
+const EMBALADORA_QUANTITY_KEY = 'supervisor_embaladora_quantity';
+
+// Botões que sempre ficam visíveis (não são embaladoras)
+const FIXED_WINDOWS_STATIONS = [
+    'magna-visio',
+    'grieta',
+    'peso',
+    'cint-corr-ind',
+    'captura-final'
+];
+
+/**
+ * Filtra os botões de embaladoras baseado na quantidade definida nos parâmetros
+ */
+function filterEmbaladoraButtons() {
+    const savedQuantity = localStorage.getItem(EMBALADORA_QUANTITY_KEY);
+    const quantity = parseInt(savedQuantity) || 24; // Padrão: 24
+    
+    console.log(`[WINDOWS] Filtrando embaladoras - Quantidade: ${quantity}`);
+    
+    const allButtons = document.querySelectorAll('#windows-container .capture-btn, .capture-btn');
+    const visibleStations = [];
+    
+    allButtons.forEach(button => {
+        const station = button.dataset.station;
+        
+        // Se for botão fixo, sempre mostra
+        if (FIXED_WINDOWS_STATIONS.includes(station)) {
+            button.style.removeProperty('display');
+            if (station) {
+                visibleStations.push(station);
+            }
+            return;
+        }
+        
+        // Se for botão de embaladora (e01-e24), verifica a quantidade
+        const embaladoraMatch = station && station.match(/^e(\d{2})$/);
+        if (embaladoraMatch) {
+            const embaladoraNumber = parseInt(embaladoraMatch[1]);
+            if (embaladoraNumber <= quantity) {
+                button.style.removeProperty('display');
+                if (station) {
+                    visibleStations.push(station);
+                }
+            } else {
+                button.style.setProperty('display', 'none', 'important');
+            }
+        }
+    });
+
+    // Atualiza total de estações e remove conclusões de botões ocultos
+    if (typeof captureState !== 'undefined' && captureState) {
+        captureState.totalStations = visibleStations.length;
+        if (captureState.completedStations && captureState.completedStations.size) {
+            const allowed = new Set(visibleStations);
+            captureState.completedStations.forEach((station) => {
+                if (!allowed.has(station)) {
+                    captureState.completedStations.delete(station);
+                }
+            });
+        }
+        if (typeof updateProgressBar === 'function') {
+            updateProgressBar();
+        }
+    }
+    
+    // Recalcula o layout do grid após filtrar
+    setTimeout(() => {
+        forceGridLayout();
+    }, 50);
+}
+
+/**
+ * Listener para mudanças na quantidade de embaladoras
+ */
+function setupEmbaladoraQuantityListener() {
+    // Escuta evento customizado de mudança de quantidade
+    const quantityChangeHandler = (event) => {
+        console.log('[WINDOWS] Evento embaladoraQuantityChanged recebido:', event.detail);
+        filterEmbaladoraButtons();
+    };
+    
+    document.addEventListener('embaladoraQuantityChanged', quantityChangeHandler);
+    windowsEventListeners.push({ 
+        element: document, 
+        event: 'embaladoraQuantityChanged', 
+        handler: quantityChangeHandler 
+    });
+    
+    // Também escuta mudanças no localStorage (para sincronização entre abas)
+    const storageHandler = (event) => {
+        if (event.key === EMBALADORA_QUANTITY_KEY) {
+            console.log('[WINDOWS] localStorage embaladora quantity changed:', event.newValue);
+            filterEmbaladoraButtons();
+        }
+    };
+    
+    window.addEventListener('storage', storageHandler);
+    windowsEventListeners.push({ 
+        element: window, 
+        event: 'storage', 
+        handler: storageHandler 
+    });
+}
+
 function registerWindowsEventListener(element, event, handler) {
     if (element) {
         element.addEventListener(event, handler);
@@ -80,6 +188,12 @@ function inicializarWindows() {
     
     // Aguarda um pouco para garantir que o DOM está pronto
     setTimeout(() => {
+        // Filtra embaladoras baseado na quantidade configurada
+        filterEmbaladoraButtons();
+        
+        // Configura listener para mudanças na quantidade de embaladoras
+        setupEmbaladoraQuantityListener();
+        
         // Força aplicação do layout de grid
         forceGridLayout();
         setupGridResizeHandler();
@@ -205,7 +319,9 @@ function forceGridLayout() {
     // Forca o grid no container principal
     const captureGrid = document.querySelector('#windows-container .capture-grid') || 
                        document.querySelector('.capture-grid');
-    const buttons = document.querySelectorAll('#windows-container .capture-btn, .capture-btn');
+    // Conta apenas os botões visíveis para calcular o layout
+    const allButtons = document.querySelectorAll('#windows-container .capture-btn, .capture-btn');
+    const buttons = Array.from(allButtons).filter(btn => btn.style.display !== 'none');
     
     if (captureGrid) {
         const layout = calculateGridLayout(captureGrid, buttons.length);
@@ -258,7 +374,10 @@ function applyButtonStyles(button, sizeOverride) {
     button.style.setProperty('min-height', `${size}px`, 'important');
     button.style.setProperty('max-width', `${size}px`, 'important');
     button.style.setProperty('max-height', `${size}px`, 'important');
-    button.style.display = 'flex';
+    // Só aplica display flex se o botão não estiver oculto
+    if (button.style.display !== 'none') {
+        button.style.display = 'flex';
+    }
     button.style.flexDirection = 'column';
     button.style.alignItems = 'center';
     button.style.justifyContent = 'center';
@@ -780,4 +899,5 @@ window.inicializarWindows = inicializarWindows;
 window.resetCaptureSystem = resetCaptureSystem;
 window.forceGridLayout = forceGridLayout;
 window.forceStatusBarVisibility = forceStatusBarVisibility;
+window.filterEmbaladoraButtons = filterEmbaladoraButtons;
 
