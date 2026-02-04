@@ -113,6 +113,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Chave para localStorage
   const GRID_VISIBILITY_KEY = 'supervisor_grid_visibility';
   const EMBALADORA_QUANTITY_KEY = 'supervisor_embaladora_quantity';
+  
+  function dispatchMachineTypeChanged(oldType, newType, source) {
+    if (!newType || oldType === newType) return;
+    const event = new CustomEvent('machineTypeChanged', {
+      detail: {
+        oldType: oldType || null,
+        newType,
+        source: source || 'unknown',
+        timestamp: Date.now()
+      }
+    });
+    document.dispatchEvent(event);
+  }
 
   function setActionButtonsDisabled(disabled) {
     [btnConfirm, btnTest].forEach((btn) => {
@@ -444,6 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (currentSaved !== newType) {
             localStorage.setItem('supervisor_machine_type', newType);
             console.log('[MACHINE_SELECT] Tipo de máquina atualizado:', newType);
+            dispatchMachineTypeChanged(currentSaved, newType, 'loadCurrentMachine');
           }
         }
         
@@ -534,8 +548,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Extrai o tipo da máquina (200CX, 400CX, 700CX)
         const machineTypeMatch = machineName.match(/(200CX|400CX|700CX)/i);
         if (machineTypeMatch) {
-          localStorage.setItem('supervisor_machine_type', machineTypeMatch[1].toUpperCase());
-          console.log('[MACHINE_SELECT] Tipo de máquina salvo:', machineTypeMatch[1].toUpperCase());
+          const prevType = localStorage.getItem('supervisor_machine_type');
+          const newType = machineTypeMatch[1].toUpperCase();
+          if (prevType !== newType) {
+            localStorage.setItem('supervisor_machine_type', newType);
+            console.log('[MACHINE_SELECT] Tipo de máquina salvo:', newType);
+            dispatchMachineTypeChanged(prevType, newType, 'setMachine');
+          }
         }
         
         // Fecha o modal imediatamente após sucesso

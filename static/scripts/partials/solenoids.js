@@ -13,6 +13,59 @@
         'amaciar': false
     };
     let solenoidsEventListeners = [];
+    const MACHINE_TYPE_KEY = 'supervisor_machine_type';
+    const EMBALADORA_QUANTITY_KEY = 'supervisor_embaladora_quantity';
+
+    function getMachineType() {
+        const type = (localStorage.getItem(MACHINE_TYPE_KEY) || '700CX').toUpperCase();
+        if (type === '200CX' || type === '400CX' || type === '700CX') return type;
+        return '700CX';
+    }
+
+    function getSolenoidCount() {
+        const type = getMachineType();
+        if (type === '200CX') return 6;
+        if (type === '400CX') return 12;
+        return 18;
+    }
+
+    function getEmbaladoraQuantity() {
+        const raw = parseInt(localStorage.getItem(EMBALADORA_QUANTITY_KEY) || '24', 10);
+        if (Number.isNaN(raw)) return 24;
+        return Math.min(24, Math.max(1, raw));
+    }
+
+    function updateSolenoidVisibility() {
+        const count = getSolenoidCount();
+        const items = document.querySelectorAll('.solenoid-item');
+        items.forEach(item => {
+            const id = parseInt(item.dataset.solenoid, 10);
+            const visible = Number.isFinite(id) && id <= count;
+            item.style.display = visible ? '' : 'none';
+        });
+
+        const rows = document.querySelectorAll('.solenoid-row');
+        rows.forEach(row => {
+            const hasVisible = Array.from(row.querySelectorAll('.solenoid-item'))
+                .some(item => item.style.display !== 'none');
+            row.style.display = hasVisible ? 'flex' : 'none';
+        });
+
+        // Reaplica estado para solenoides visíveis
+        applySolenoidStates();
+    }
+
+    function updatePositionCheckboxes(quantityOverride) {
+        const quantity = typeof quantityOverride === 'number' ? quantityOverride : getEmbaladoraQuantity();
+        for (let i = 1; i <= 24; i++) {
+            const id = `pos-emb-${String(i).padStart(2, '0')}`;
+            const checkbox = document.getElementById(id);
+            if (!checkbox) continue;
+            const item = checkbox.closest('.position-item');
+            if (!item) continue;
+            item.style.display = i <= quantity ? '' : 'none';
+        }
+    }
 
     function registerSolenoidsEventListener(element, event, handler) {
         if (element) {
@@ -34,6 +87,10 @@
         loadSolenoidStates();
         loadControlStates();
 
+        // Atualiza quantidade de solenoides e posições conforme parâmetros
+        updateSolenoidVisibility();
+        updatePositionCheckboxes();
+
         // Configura os botões de solenoides
         setupSolenoidButtons();
 
@@ -42,6 +99,16 @@
 
         // Configura os checkboxes de posição
         setupPositionCheckboxes();
+
+        // Escuta mudanças de parâmetros (quantidade e tipo de máquina)
+        registerSolenoidsEventListener(document, 'embaladoraQuantityChanged', (e) => {
+            const qty = e?.detail?.newQuantity;
+            updatePositionCheckboxes(typeof qty === 'number' ? qty : undefined);
+            loadPositionStates();
+        });
+        registerSolenoidsEventListener(document, 'machineTypeChanged', () => {
+            updateSolenoidVisibility();
+        });
 
         console.log('✅ Sistema de Solenoides inicializado!');
     }
