@@ -64,6 +64,14 @@
     transform: scale(0) translateY(30px);
     opacity: 0;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    cursor: default;
+}
+
+#menu.closed .menu-left,
+#menu.closed .menu-right {
+    pointer-events: none;
+    cursor: default;
 }
 
 #menu.closed .logo-btn {

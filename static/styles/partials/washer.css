@@ -4,12 +4,12 @@
 .washer-screen-layout {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 28px;
     width: 100%;
     max-width: 100%;
     height: 100%;
     margin: 0 auto;
-    padding: 20px;
+    padding: 24px;
     box-sizing: border-box;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: #f8f9fa;
@@ -24,13 +24,13 @@
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 25px;
+    padding: 28px;
     box-sizing: border-box;
 }
 
 /* Título da tela */
 .washer-title {
-    font-size: 2.2rem;
+    font-size: 2.3rem;
     font-weight: 700;
     color: #4a5568;
     margin: 0;
@@ -47,7 +47,7 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
     overflow: hidden;
     box-sizing: border-box;
-    padding: 20px;
+    padding: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -184,42 +184,51 @@
 /* Estilos para a parte dos motores (mantidos do original) */
 .units-grid {
   display: grid;
-  grid-template-columns: repeat(4, max-content);
-  gap: 32px;
+  grid-template-columns: repeat(4, minmax(190px, 1fr));
+  gap: clamp(24px, 2vw, 40px);
   align-items: stretch;
   justify-items: center;
   justify-content: center; /* centraliza o conjunto no eixo horizontal */
+  width: 100%;
+  max-width: 1200px;
 }
 
+
 .motor-unit {
-  background: rgba(255, 255, 255, 0.95) !important; /* box branco igual à tela de balança */
-  border-radius: 16px;
-  padding: 20px 18px 26px; /* mais respiro interno */
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08) !important; /* mesmo shadow da balança */
+  background: #4a5568 !important; /* mesmo tom da tela de sincronismo */
+  border-radius: 12px;
+  padding: 22px 20px 28px; /* mais respiro interno */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important; /* mesmo shadow do sincronismo */
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important; /* mesmo border da balança */
-  width: 180px; /* mantém largura compacta */
-  max-width: 380px;
-  min-height: 320px; /* aumenta altura do box */
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  width: clamp(190px, 18vw, 230px);
+  max-width: 260px;
+  min-height: clamp(320px, 32vh, 400px);
   display: flex;              /* layout interno em coluna */
   flex-direction: column;
   justify-content: flex-start; /* fluxo natural; uso de auto margins para posicionar */
   align-items: center;        /* centraliza horizontalmente */
 }
 
+
 .motor-unit h3 {
   font-family: inherit;
-  font-size: 1.25rem;
-  margin-bottom: 56px; /* mais espaço abaixo do título */
-  color: #4a5568 !important; /* mesma cor do texto da tela de balança */
+  font-size: clamp(1.15rem, 1.5vw, 1.4rem);
+  margin: 0 0 14px 0;
+  padding-bottom: 6px;
+  color: #ffffff !important;
   font-weight: 700 !important;
+  border-bottom: 2px solid rgba(255,255,255,0.3);
+  width: 100%;
+  text-align: center;
 }
+
 
 /* Espaços verticais e tamanhos maiores para ícones e botões do Sugador */
 #sugador-gotas .motor-visual {
-  margin: 0 auto !important;           /* centraliza horizontalmente */
+  margin: 20px auto 0 auto !important; /* alinha com auto limpeza */
   width: 120px !important;             /* sobrepõe inline style do HTML */
-  height: 120px !important;            /* dá mais área para centralização visual */
+  height: 100px !important;            /* mesma altura do auto limpeza */
   display: block !important;
   align-self: center !important;       /* garante centralização no container */
 }
@@ -245,7 +254,7 @@
   position: relative !important;
   width: 120px !important;
   height: 100px !important;
-  margin: -27px auto 0 auto !important; /* sobe o motor, reduz espaço do texto */
+  margin: -7px auto 0 auto !important; /* sobe o motor, reduz espaço do texto */
   display: block !important;
   align-self: center !important;       /* garante centralização no container */
 }
@@ -316,9 +325,9 @@
 
 /* ========== Aquecedor 1: mesmos tamanhos e anti-flash ========== */
 #aquecedor-1 .motor-visual {
-  margin: 0 auto !important;
+  margin: 20px auto 0 auto !important;
   width: 120px !important;
-  height: 120px !important;
+  height: 100px !important;
   display: block !important;
   align-self: center !important;
 }
@@ -346,9 +355,9 @@
 
 /* ========== Aquecedor 2: espelha Aquecedor 1 ========== */
 #aquecedor-2 .motor-visual {
-  margin: 0 auto !important;
+  margin: 20px auto 0 auto !important;
   width: 120px !important;
-  height: 120px !important;
+  height: 100px !important;
   display: block !important;
   align-self: center !important;
 }

@@ -723,6 +723,7 @@ body {
     display: flex !important;
     gap: 12px !important;
     justify-content: flex-end !important;
+    flex-wrap: wrap !important;
     margin-top: 18px !important;
     padding-top: 16px !important;
     border-top: 2px solid rgba(74, 85, 104, 0.12) !important;
@@ -749,6 +750,18 @@ body {
     background: #16a34a !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 12px 22px rgba(34, 197, 94, 0.4) !important;
+}
+
+#btn-test-machine {
+    background: #f59e0b !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 18px rgba(245, 158, 11, 0.35) !important;
+}
+
+#btn-test-machine:hover {
+    background: #d97706 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 12px 22px rgba(217, 119, 6, 0.4) !important;
 }
 
 #btn-cancel-machine {

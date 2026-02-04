@@ -10,6 +10,7 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-weight: 700;
     color: #4a5568;
+    --emb-col-width: clamp(48px, 3.0vw, 84px);
 }
 
 /* Layout principal com título e conteúdo */
@@ -152,14 +153,16 @@
 /* Padrão: 1 IND + E01..E24 (24) + SPJ = 26 colunas */
 #embaladora-grid {
     display: grid;
-    grid-template-columns: repeat(var(--num-colunas, 26), 1fr); /* colunas flexíveis */
+    grid-template-columns: repeat(var(--num-colunas, 26), var(--emb-col-width)); /* colunas com largura fixa */
     gap: clamp(6px, 0.8vw, 12px); /* espaçamento entre colunas */
     margin: 0 auto; /* centralizado */
-    padding: 0 15px; /* padding igual dos lados */
+    padding: 0; /* sem padding para manter proporção fixa */
     background-color: #f8fafc;
     position: relative;
     z-index: 3;
-    width: 100%; /* ocupa toda a largura */
+    width: fit-content; /* largura apenas do conteúdo */
+    max-width: 100%;
+    justify-content: center;
     box-sizing: border-box;
 }
 .embaladora-column:hover {
@@ -168,13 +171,15 @@
 }
 .grid-row {
     display: grid;
-    grid-template-columns: repeat(var(--num-colunas, 26), 1fr); /* colunas flexíveis */
+    grid-template-columns: repeat(var(--num-colunas, 26), var(--emb-col-width)); /* colunas com largura fixa */
     gap: clamp(6px, 0.8vw, 12px); /* DEVE SER O MESMO GAP DO #embaladora-grid */
-    width: 100%; /* ocupa toda a largura */
+    width: fit-content;
+    max-width: 100%;
     align-items: center; /* centraliza verticalmente cada célula */
     margin: 0 auto; /* centralizado */
-    padding: 0 15px; /* padding igual dos lados */
+    padding: 0;
     box-sizing: border-box;
+    justify-content: center;
 }
 .grid-content {
     position: relative;

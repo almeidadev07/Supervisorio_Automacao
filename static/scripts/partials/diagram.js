@@ -131,9 +131,10 @@ async function loadPDF(pdfFile, buttonText) {
     // Adiciona o iframe ao container
     pdfContainer.appendChild(pdfIframe);
 
-    // Define o src para iniciar o carregamento
-    pdfIframe.src = fullPath;
-    console.log(`🔄 Iframe criado e src definido: ${fullPath}`);
+    // Define o src para iniciar o carregamento (sem toolbar/menus e com ajuste de visualização)
+    const viewerParams = '#toolbar=0&navpanes=0&scrollbar=0&view=FitH';
+    pdfIframe.src = `${fullPath}${viewerParams}`;
+    console.log(`🔄 Iframe criado e src definido: ${pdfIframe.src}`);
 
     // Timeout para detectar se o PDF não carrega
     const loadTimeout = setTimeout(() => {

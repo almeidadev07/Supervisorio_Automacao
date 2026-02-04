@@ -2,12 +2,12 @@
 .dryer-screen-layout {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 28px;
     width: 100%;
     max-width: 100%;
     height: 100%;
     margin: 0 auto;
-    padding: 20px;
+    padding: 24px;
     box-sizing: border-box;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: #f8f9fa;
@@ -22,13 +22,13 @@
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 25px;
+    padding: 28px;
     box-sizing: border-box;
 }
 
 /* Título da tela */
 .dryer-title {
-    font-size: 2.2rem;
+    font-size: 2.3rem;
     font-weight: 700;
     color: #4a5568;
     margin: 0;
@@ -45,7 +45,7 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
     overflow: hidden;
     box-sizing: border-box;
-    padding: 20px;
+    padding: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -55,6 +55,8 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
+    max-width: 100%;
+    margin: 0 auto;
     color: #4a5568;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-weight: 700;
@@ -62,10 +64,13 @@
 
 .dryer-layout .units-grid {
   display: grid;
-  grid-template-columns: repeat(6, max-content);
-  gap: 32px;
+  grid-template-columns: repeat(6, minmax(190px, 1fr));
+  gap: clamp(24px, 2vw, 40px);
+  align-items: stretch;
+  justify-items: center;
   justify-content: center;
-  max-width: 100%;
+  width: 100%;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -122,40 +127,46 @@
 }
 
 .dryer-layout .motor-unit {
-  background: rgba(255, 255, 255, 0.95) !important; /* box branco igual à tela de balança */
-  padding: 14px 16px 10px 16px;
-  border-radius: 16px; /* mesmo da tela de lavadora */
-  border: 1px solid rgba(255, 255, 255, 0.2) !important; /* mesmo border da balança */
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08) !important; /* mesmo shadow da balança */
-  width: 170px;
-  max-width: 350px;
-  min-height: 280px;
+  background: #4a5568 !important; /* mesmo tom da tela de sincronismo */
+  border-radius: 12px;
+  padding: 22px 20px 28px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important; /* mesmo shadow do sincronismo */
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  width: clamp(190px, 18vw, 230px);
+  max-width: 260px;
+  min-height: clamp(320px, 32vh, 400px);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
 }
 
+
 .dryer-layout .motor-unit h3 {
   font-family: inherit;
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-bottom: 20px;
+  font-size: clamp(1.15rem, 1.5vw, 1.4rem);
+  margin: 0 0 14px 0;
+  padding-bottom: 6px;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-bottom: 2px solid rgba(255,255,255,0.3);
+  width: 100%;
   text-align: center;
-  color: #4a5568 !important; /* mesma cor do texto da tela de balança */
 }
+
 
 .dryer-layout .motor-visual {
   position: relative;
-  width: 110px;
-  height: 90px;
-  margin: 0 auto;
+  width: 120px;
+  height: 100px;
+  margin: 20px auto 0 auto; /* alinha com auto limpeza */
 }
 .dryer-layout .motor-visual img {
   position: absolute;
   inset: 0;
-  width: 110px;
-  height: 90px;
+  width: 120px;
+  height: 100px;
   display: none;
 }
 .dryer-layout .motor-visual .motor-gray { display: block; }
@@ -209,25 +220,27 @@
 /* Estilos específicos para Auto Limp. Secadora - igual à lavadora */
 #auto-limp-secadora .motor-visual {
   position: relative !important;
-  width: 110px !important;
-  height: 90px !important;
+  width: 120px !important;
+  height: 100px !important;
   margin: -10px auto 0 auto !important; /* alinha com os outros motores */
   display: block !important;
-  align-self: center !important;       /* garante centralização no container */
+  align-self: center !important;       /* garante centraliza????o no container */
 }
+
 
 #auto-limp-secadora .motor-visual img {
   position: absolute !important;
   top: 0 !important;
   left: 0 !important;
-  width: 110px !important;
-  height: 110px !important; /* mesmo tamanho dos outros boxes */
+  width: 120px !important;
+  height: 100px !important; /* mesmo tamanho dos outros boxes */
   object-fit: contain !important;
 }
 
+
 #auto-limp-secadora .controls-row {
   gap: 1px !important;
-  margin-top: 5px !important;        /* espaço reduzido entre motor e botões */
+  margin-top: auto !important;        /* espaço reduzido entre motor e botões */
   display: flex !important;
   align-items: center !important;
   justify-content: center !important; /* centraliza os botões na base */
@@ -295,31 +308,34 @@
 
 /* Estilos específicos para Ventiladores - sem motor, apenas botão */
 #ventiladores {
-  width: 170px !important; /* Largura aumentada */
-  height: 140px;
-  max-width: 170px !important;
-  min-height: 50px !important; /* Altura aumentada */
-  padding: 12px 14px 8px 14px !important; /* Padding aumentado */
+  width: clamp(190px, 18vw, 230px) !important;
+  height: auto;
+  max-width: 260px !important;
+  min-height: clamp(320px, 32vh, 400px) !important;
+  padding: 22px 20px 28px !important;
 }
 
+
 #ventiladores h3 {
-  font-size: 20px !important; /* Fonte menor */
-  margin-bottom: 8px !important; /* Espaço muito reduzido entre texto e botão */
+  font-size: clamp(1.15rem, 1.5vw, 1.4rem) !important;
+  margin-bottom: 14px !important;
 }
+
 
 #ventiladores .motor-visual {
   display: none !important; /* Remove o motor */
 }
 
 #ventiladores .controls-row {
-  margin-top: 5px !important; /* Espaço reduzido entre texto e botão */
-  visibility: hidden; /* evita flash fora de posição */
-  min-height: 70px !important; /* Altura reduzida para botão */
+  margin-top: auto !important;
+  visibility: hidden; /* evita flash fora de posi????o */
+  min-height: 90px !important;
   display: flex !important;
-  justify-content: center !important; /* Centraliza o botão no eixo X */
+  justify-content: center !important; /* Centraliza o bot??o no eixo X */
   align-items: center !important;
   width: 100% !important;
 }
+
 
 #ventiladores .power-toggle {
   width: 80px !important; /* Mesmo tamanho dos outros botões */

@@ -4,12 +4,12 @@
 .diagram-screen-layout {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 28px;
     width: 100%;
     max-width: 100%;
     height: 100%;
     margin: 0 auto;
-    padding: 20px;
+    padding: 24px;
     box-sizing: border-box;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: #f8f9fa;
@@ -24,13 +24,13 @@
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 25px;
+    padding: 28px;
     box-sizing: border-box;
 }
 
 /* Título da tela */
 .diagram-title {
-    font-size: 2.2rem;
+    font-size: 2.3rem;
     font-weight: 700;
     color: #4a5568;
     margin: 0;
@@ -47,7 +47,7 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
     overflow: hidden;
     box-sizing: border-box;
-    padding: 20px;
+    padding: 24px;
 }
 
 .diagram-wrapper {
@@ -64,7 +64,7 @@
 
 .diagram-container {
     display: flex;
-    gap: 24px;
+    gap: 28px;
     height: 100%;
     width: 100%;
     max-width: 100%;
@@ -75,64 +75,67 @@
 }
 
 .diagram-sidebar {
-    width: 300px;
-    background: rgba(245, 247, 250, 0.8);
+    width: clamp(300px, 30vw, 420px);
+    background: #4a5568;
     border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     overflow: hidden;
     box-sizing: border-box;
-    padding: 20px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
 }
 
 .sidebar-header h3 {
-    color: #4a5568;
-    font-size: 18px;
+    color: #ffffff;
+    font-size: 1.15rem;
     font-weight: 700;
-    margin: 0 0 20px 0;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #dc2626;
+    margin: 0 0 12px 0;
+    padding-bottom: 6px;
+    border-bottom: 2px solid rgba(255,255,255,0.3);
 }
 
 .diagram-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
     flex: 1;
-    overflow-y: auto;
+    overflow: visible;
+    align-content: start;
 }
 
 .diagram-btn {
-    padding: 15px;
-    background: linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%);
-    border: 2px solid #c9d3e6;
+    padding: 8px 10px;
+    background: #e2e8f0;
+    border: 1px solid rgba(74, 85, 104, 0.25);
     border-radius: 12px;
     text-align: left;
-    font-size: 14px;
+    font-size: clamp(0.92rem, 1.1vw, 1.02rem);
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
-    color: #4a5568;
+    color: #2d3748;
     display: flex;
     align-items: center;
-    gap: 10px;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    gap: 6px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    line-height: 1.2;
 }
 
 .diagram-btn:hover {
     transform: translateY(-2px);
-    background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
-    border-color: #a0aec0;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    background: #cbd5e0;
+    border-color: rgba(74, 85, 104, 0.35);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.18);
 }
 
 .diagram-btn.active {
-    background: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
-    color: white;
-    border-color: #b91c1c;
+    background: #a0aec0;
+    color: #1a202c;
+    border-color: rgba(74, 85, 104, 0.45);
     font-weight: 700;
-    box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.22);
 }
 
 .diagram-viewer {
@@ -154,9 +157,12 @@
 }
 
 .viewer-title {
-    font-size: 20px;
+    font-size: 1.25rem;
     font-weight: 700;
     color: #4a5568;
+    border-bottom: 2px solid rgba(74, 85, 104, 0.35);
+    padding-bottom: 6px;
+    display: inline-block;
 }
 
 #pdf-container {

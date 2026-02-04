@@ -3083,8 +3083,8 @@ function configurarBotaoReset() {
     // Tenta diferentes seletores para encontrar o botão
     const selectors = [
         '#btn-reset-grid',
-        '[id*="reset"]',
-        'button[onclick*="reset"]'
+        '.reset-btn',
+        'button[onclick*="handleResetClick"]'
     ];
     
     let resetButton = null;
@@ -3104,19 +3104,7 @@ function configurarBotaoReset() {
         }
     }
     
-    // Se não encontrou com seletores, procura por texto
-    if (!resetButton) {
-        const allButtons = document.querySelectorAll('button');
-        for (const btn of allButtons) {
-            const text = btn.textContent.toLowerCase().trim();
-            if (text.includes('reset') || text.includes('padrão') || text.includes('default')) {
-                resetButton = btn;
-                usedSelector = 'texto';
-                console.log(`✅ Botão encontrado por texto: "${btn.textContent.trim()}"`);
-                break;
-            }
-        }
-    }
+    // Se não encontrou com seletores, não tenta por texto para evitar falsos positivos
     
     if (resetButton) {
         console.log(`✅ Botão de reset encontrado (${usedSelector}):`, resetButton);
@@ -3208,13 +3196,13 @@ window.addEventListener('load', () => {
 // Adiciona event delegation como fallback
 console.log('🔧 Configurando event delegation para botão reset...');
 document.addEventListener('click', (e) => {
-    const target = e.target;
-    const isResetButton = target.id === 'btn-reset-grid' || 
-                        target.id.includes('reset') ||
-                        target.textContent.toLowerCase().includes('reset') ||
-                        target.textContent.toLowerCase().includes('padrão');
+    const rawTarget = e.target;
+    const target = rawTarget && rawTarget.nodeType === 3 ? rawTarget.parentElement : rawTarget;
+    const resetButton = target && target.closest 
+        ? target.closest('#btn-reset-grid, .reset-btn, button[onclick*="handleResetClick"]')
+        : null;
     
-    if (isResetButton) {
+    if (resetButton) {
         // Só intercepta se a tela do grid estiver ativa
         try {
             const grid = document.getElementById('grid-container');
@@ -3224,7 +3212,14 @@ document.addEventListener('click', (e) => {
                 return;
             }
         } catch(_) {}
-        console.log('🎯 Event delegation capturou clique no botão reset:', target);
+        // Evita disparo se o botão estiver oculto
+        try {
+            const style = window.getComputedStyle(resetButton);
+            if (style.display === 'none' || style.visibility === 'hidden' || resetButton.disabled) {
+                return;
+            }
+        } catch(_) {}
+        console.log('🎯 Event delegation capturou clique no botão reset:', resetButton);
         e.preventDefault();
         e.stopPropagation();
         handleResetClick(e);

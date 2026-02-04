@@ -33,8 +33,9 @@ window.addEventListener('error', function(event) {
     }
 
     window.fetch = function(input, init = {}) {
-        const timeoutMs = (typeof init.timeoutMs === 'number') ? init.timeoutMs : DEFAULT_TIMEOUT_MS;
         const urlKey = getUrlKey(input);
+        const isLargeAsset = /\/static\/3D\/|\.glb(\?|$)|\.gltf(\?|$)/i.test(urlKey) || /^blob:/i.test(urlKey) || /^data:/i.test(urlKey);
+        const timeoutMs = (typeof init.timeoutMs === 'number') ? init.timeoutMs : (isLargeAsset ? 0 : DEFAULT_TIMEOUT_MS);
 
         // Monitor: registra início
         if (window.__monitor && typeof window.__monitor.onFetchStart === 'function') {
@@ -271,6 +272,7 @@ function applyTranslationsIfAvailable() {
 // Função para carregar scripts dinamicamente (com dedupe robusto)
 const __scriptLoadPromises = new Map();
 const SYNC_SCRIPT_SRC = '/static/scripts/partials/synchronism.js?v=20260202_sync_initfix';
+const VIEWER3D_SCRIPT_SRC = '/static/scripts/partials/viewer3d.js';
 const PLATES_SCRIPT_SRC = '/static/scripts/partials/plates.js?v=20260202_plates';
 const SOLENOIDS_SCRIPT_SRC = '/static/scripts/partials/solenoids.js?v=20260202_solenoids';
 const PANELS_SCRIPT_SRC = '/static/scripts/partials/panels.js?v=20260202_panels';
@@ -1266,13 +1268,22 @@ function showViewer3D(event) {
     
     // Inicializa o visualizador 3D quando a tela for exibida
     // Usa um pequeno delay para garantir que o DOM está pronto
-    setTimeout(() => {
-        if (typeof window.initViewer3D === 'function') {
-            console.log('🎯 Inicializando visualizador 3D...');
-            window.initViewer3D();
-            window.viewer3dInitialized = true;
-        }
-    }, 100);
+    loadScript(VIEWER3D_SCRIPT_SRC)
+        .then(() => {
+            // Usa um pequeno delay para garantir que o DOM está pronto
+            setTimeout(() => {
+                if (typeof window.initViewer3D === 'function') {
+                    console.log('🎯 Inicializando visualizador 3D...');
+                    window.initViewer3D();
+                    window.viewer3dInitialized = true;
+                } else {
+                    console.warn('[VIEWER3D] initViewer3D não disponível após carregar script');
+                }
+            }, 100);
+        })
+        .catch((err) => {
+            console.error('[VIEWER3D] Erro ao carregar script do visualizador 3D:', err);
+        });
 }
 
 // Função para exibir a tela de amostras
@@ -1325,7 +1336,7 @@ Promise.all([
     loadScript('/static/scripts/partials/diagram.js'), 
     loadScript(WINDOWS_SCRIPT_SRC),
     loadScript('/static/scripts/partials/graphics.js'),
-    loadScript('/static/scripts/partials/viewer3d.js'),
+    loadScript(VIEWER3D_SCRIPT_SRC),
     loadScript('/static/scripts/partials/samples.js'), // ✅ Script de amostras
     loadScript(PANELS_SCRIPT_SRC),
     loadScript(PLATES_SCRIPT_SRC),
@@ -1369,6 +1380,55 @@ Promise.all([
     // REMOVIDO: inicializarClassification() - será chamado apenas quando showClassification() for executado
     // REMOVIDO: inicializarInput() - será chamado apenas quando showInput() for executado
     
+    // ✅ Se a tela atual for lavadora/secadora (ex: F5), inicializa após scripts carregarem
+    try {
+        let lastScreen = null;
+        try {
+            lastScreen = localStorage.getItem(LAST_SCREEN_KEY);
+        } catch (_) {}
+
+        const washerVisible = document.getElementById('washer-container')?.style.display !== 'none';
+        if ((lastScreen === 'washer' || washerVisible) && typeof window.inicializarWasher === 'function' && !window.washerInitialized) {
+            console.log('[MAIN] 🔧 Inicializando lavadora pós-carregamento...');
+            window.inicializarWasher();
+            window.washerInitialized = true;
+        }
+
+        const dryerVisible = document.getElementById('dryer-container')?.style.display !== 'none';
+        if ((lastScreen === 'dryer' || dryerVisible) && typeof window.inicializarDryer === 'function' && !window.dryerInitialized) {
+            console.log('[MAIN] 🔧 Inicializando secadora pós-carregamento...');
+            window.inicializarDryer();
+            window.dryerInitialized = true;
+        }
+
+        const diagramVisible = document.getElementById('diagram-container')?.style.display !== 'none';
+        if ((lastScreen === 'diagram' || diagramVisible) && typeof window.inicializarDiagrama === 'function' && !window.diagramInitialized) {
+            console.log('[MAIN] 🔧 Inicializando diagramas pós-carregamento...');
+            window.inicializarDiagrama();
+            window.diagramInitialized = true;
+        }
+
+        const balanceVisible = document.getElementById('balance-container')?.style.display !== 'none';
+        if ((lastScreen === 'balance' || balanceVisible) && typeof window.inicializarBalance === 'function') {
+            console.log('[MAIN] 🔧 Inicializando balan�a pós-carregamento...');
+            window.inicializarBalance();
+        }
+
+        const classificationVisible = document.getElementById('classification-container')?.style.display !== 'none';
+        if ((lastScreen === 'classification' || classificationVisible) && typeof window.inicializarClassification === 'function') {
+            console.log('[MAIN] 🔧 Inicializando classificação pós-carregamento...');
+            try {
+                if (typeof window.cleanupClassification === 'function') {
+                    window.cleanupClassification();
+                }
+            } catch (_) {}
+            window.inicializarClassification();
+            window._classificationInitialized = true;
+        }
+    } catch (e) {
+        console.warn('[MAIN] ⚠️ Falha ao inicializar lavadora/secadora/diagramas/balança/classificação pós-carregamento:', e);
+    }
+
     console.log('[MAIN] ✅ Scripts carregados - telas serão inicializadas sob demanda');
 
 })

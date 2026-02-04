@@ -204,8 +204,8 @@
     <button class="draggable-btn" draggable="true" data-station="botao-11" onclick="showViewer3D(event)">
         <div class="unit">
             <h2>Visualizador 3D</h2>
-            <div style="display: flex; align-items: center; justify-content: center; width: 90%; height: 85%; padding: 15px; margin-top: -12px;">
-                <img src="{{ url_for('static', filename='images/grid/status/embaladora.png') }}" alt="Visualizador 3D" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+            <div class="viewer3d-grid-preview">
+                <img src="{{ url_for('static', filename='images/grid/status/embaladora.png') }}" alt="Visualizador 3D" class="viewer3d-grid-preview-img">
             </div>
         </div>
     </button>

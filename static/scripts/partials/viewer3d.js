@@ -5,8 +5,33 @@
 
 let scene, camera, renderer, controls, model = null;
 let isInitialized = false;
-let animationFrameId = null; // Para controlar o loop de animação
+let animationFrameId = null; // Para controlar o loop de anima??o
 let resizeHandler = null; // Para remover o listener de resize
+
+function setViewer3DStatus(message, type = 'info') {
+    const el = document.getElementById('viewer3d-status');
+    if (!el) return;
+    if (!message) {
+        el.textContent = '';
+        el.classList.add('hidden');
+        el.classList.remove('error');
+        return;
+    }
+    el.textContent = message;
+    el.classList.remove('hidden');
+    if (type == 'error') {
+        el.classList.add('error');
+    } else {
+        el.classList.remove('error');
+    }
+}
+
+function checkModelUrl(url) {
+    return fetch(url, { method: 'HEAD', cache: 'no-store' })
+        .then((res) => ({ ok: res.ok, status: res.status, statusText: res.statusText }))
+        .catch((err) => ({ ok: true, skipped: true, error: err }));
+}
+
 
 // Função para carregar Three.js e dependências
 function loadThreeJS() {
@@ -102,9 +127,11 @@ function initViewer3D() {
         return;
     }
 
+    setViewer3DStatus('Carregando visualizador 3D...');
     // Carrega Three.js primeiro
     loadThreeJS()
         .then(() => {
+            setViewer3DStatus('Carregando modelo 3D...');
             // Cria a cena
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xffffff); // Fundo branco
@@ -234,11 +261,57 @@ function loadDefaultModel() {
         return;
     }
 
-    // Usa o modelo menor para reduzir tempo de carregamento e evitar avisos de arquivo grande
-    // Certifique-se de que "embaladora2.glb" esteja em "static/3D"
-    const modelPath = '/static/3D/embadora2.glb';
+    // Usa o modelo padrÃ£o disponível em "static/3D"
+    // Arquivo atual: "embadora.glb"
+    const modelPath = '/static/3D/embadora_tampa_fechada.glb';
     console.log('[VIEWER3D] Carregando modelo padrão:', modelPath);
     loadGLBModelFromURL(modelPath);
+}
+
+
+// Ajusta camera/controles para enquadrar o modelo
+function frameModelToView(target) {
+    if (!camera || !renderer || !scene || !target) return;
+
+    const box = new THREE.Box3().setFromObject(target);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+
+    if (!isFinite(maxDim) || maxDim <= 0) {
+        camera.position.set(0, 0, 5);
+        camera.lookAt(0, 0, 0);
+        if (controls) {
+            controls.target.set(0, 0, 0);
+            controls.update();
+        }
+        renderer.render(scene, camera);
+        return;
+    }
+
+    const fov = camera.fov * (Math.PI / 180);
+    let distance = (maxDim / 2) / Math.tan(fov / 2);
+    distance *= 1.25; // margem
+
+    // Posiciona a câmera em ângulo para dar perspectiva (diagonal suave)
+    camera.position.set(
+        center.x + distance * 0.65,
+        center.y + distance * 0.35,
+        center.z + distance * 0.85
+    );
+    camera.near = Math.max(0.1, distance / 100);
+    camera.far = Math.max(1000, distance * 100);
+    camera.updateProjectionMatrix();
+    camera.lookAt(center);
+
+    if (controls) {
+        controls.target.copy(center);
+        controls.minDistance = maxDim * 0.3;
+        controls.maxDistance = maxDim * 6;
+        controls.update();
+    }
+
+    renderer.render(scene, camera);
 }
 
 // Carrega um modelo GLB/GLTF a partir de um arquivo selecionado
@@ -291,81 +364,87 @@ function loadGLBModelFromURL(url, isBlobURL = false) {
 
     console.log('[VIEWER3D] Carregando modelo da URL:', url);
 
-    loader.load(
-        url,
-        (gltf) => {
-            model = gltf.scene;
-            
-            // Calcula o centro e ajusta a posição
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
-            
-            // Move o modelo para o centro
-            model.position.sub(center);
-            
-            // Ajusta a escala se necessário (para caber na cena)
-            const maxDim = Math.max(size.x, size.y, size.z);
-            if (maxDim > 5) {
-                const scale = 5 / maxDim;
-                model.scale.multiplyScalar(scale);
-            }
-
-            // Adiciona à cena
-            scene.add(model);
-
-            // Ajusta a câmera para visualizar o modelo com zoom mais próximo e centralizado
-            // Usa o tamanho final do modelo (após escala)
-            const finalMaxDim = Math.max(size.x * model.scale.x, size.y * model.scale.y, size.z * model.scale.z);
-            
-            // Calcula a distância ideal para preencher ~80% da tela
-            // Usa FOV da câmera para calcular a distância necessária
-            const fov = camera.fov * (Math.PI / 180); // Converte para radianos
-            const distance = (finalMaxDim / 2) / Math.tan(fov / 2) * 1.2; // 1.2 = preenche ~80% da altura
-            
-            // Posiciona a câmera em um ângulo simétrico para centralizar o objeto
-            // Usa valores iguais em X e Y para garantir centralização
-            const cameraDistance = distance;
-            camera.position.set(cameraDistance, cameraDistance * 0.8, cameraDistance); // Y ligeiramente menor para melhor visualização
-            // Garante que a câmera olha para o centro (0, 0, 0)
-            camera.lookAt(0, 0, 0);
-            
-            if (controls) {
-                // Define o alvo no centro do objeto
-                controls.target.set(0, 0, 0);
-                // Ajusta os limites de zoom para permitir aproximar mais
-                controls.minDistance = finalMaxDim * 0.3;
-                controls.maxDistance = finalMaxDim * 3;
-                // Força atualização dos controles para centralizar
-                controls.update();
-            }
-            
-            // Renderiza imediatamente para garantir que o modelo apareça
-            renderer.render(scene, camera);
-
-            console.log('[VIEWER3D] Modelo carregado com sucesso');
-            
-            // Libera a URL do objeto se for um blob URL
-            if (isBlobURL) {
-                URL.revokeObjectURL(url);
-            }
-        },
-        (progress) => {
-            if (progress && progress.total) {
-                const percent = (progress.loaded / progress.total) * 100;
-                console.log(`[VIEWER3D] Carregando: ${percent.toFixed(2)}%`);
-            }
-        },
-        (error) => {
-            console.error('[VIEWER3D] Erro ao carregar modelo:', error);
-            console.error('[VIEWER3D] URL tentada:', url);
-            // Não exibe alerta, apenas loga o erro para não interromper a experiência
-            // O modelo pode não estar disponível ainda
-            if (isBlobURL) {
-                URL.revokeObjectURL(url);
-            }
+    checkModelUrl(url).then((info) => {
+        if (info && info.ok === false && info.status && info.status !== 405) {
+            const msg = `Erro ao carregar modelo 3D (HTTP ${info.status})`;
+            console.error('[VIEWER3D] ' + msg, info.statusText || '');
+            setViewer3DStatus(msg, 'error');
+            return;
         }
-    );
+
+        // Carrega via fetch + parse para evitar problemas com XHR
+        let origCreateImageBitmap = null;
+        const resourcePath = (typeof url === 'string' && url.includes('/')) ? url.slice(0, url.lastIndexOf('/') + 1) : '';
+        fetch(url, { cache: 'no-store', timeoutMs: 0 })
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+                return res.arrayBuffer();
+            })
+            .then((data) => {
+                origCreateImageBitmap = window.createImageBitmap;
+                try { window.createImageBitmap = undefined; } catch (_) {}
+                loader.parse(
+                    data,
+                    resourcePath,
+                    (gltf) => {
+                        model = gltf.scene;
+                        
+                        // Calcula o centro e ajusta a posicao
+                        const box = new THREE.Box3().setFromObject(model);
+                        const center = box.getCenter(new THREE.Vector3());
+                        const size = box.getSize(new THREE.Vector3());
+                        
+                        // Move o modelo para o centro
+                        model.position.sub(center);
+                        
+                        // Ajusta a escala se necessario (para caber na cena)
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        if (maxDim > 5) {
+                            const scale = 5 / maxDim;
+                            model.scale.multiplyScalar(scale);
+                        }
+
+                        // Adiciona a cena
+                        scene.add(model);
+
+                        // Enquadra o modelo na camera
+                        frameModelToView(model);
+                        setViewer3DStatus('');
+
+                        if (origCreateImageBitmap) window.createImageBitmap = origCreateImageBitmap;
+
+                        console.log('[VIEWER3D] Modelo carregado com sucesso');
+                        
+                        // Libera a URL do objeto se for um blob URL
+                        if (isBlobURL) {
+                            URL.revokeObjectURL(url);
+                        }
+                    },
+                    (error) => {
+                        console.error('[VIEWER3D] Erro ao parsear modelo:', error);
+                        setViewer3DStatus('Erro ao parsear modelo 3D', 'error');
+                        if (origCreateImageBitmap) window.createImageBitmap = origCreateImageBitmap;
+                        if (isBlobURL) {
+                            URL.revokeObjectURL(url);
+                        }
+                    }
+                );
+            })
+            .catch((err) => {
+                const msg = err?.message ? `Erro ao carregar modelo 3D (${err.message})` : 'Erro ao carregar modelo 3D';
+                console.error('[VIEWER3D] Erro ao carregar modelo:', err);
+                console.error('[VIEWER3D] URL tentada:', url);
+                setViewer3DStatus(msg, 'error');
+                if (origCreateImageBitmap) window.createImageBitmap = origCreateImageBitmap;
+                if (isBlobURL) {
+                    URL.revokeObjectURL(url);
+                }
+            });
+    });
+
+
 }
 
 // Função de cleanup para limpar recursos quando sair da tela

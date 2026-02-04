@@ -1232,44 +1232,44 @@ function inicializarClassification() {
         
         // Atualiza o grid de embaladoras - colunas flexíveis
         if (grid) {
-            grid.style.gridTemplateColumns = `repeat(${totalColumns}, 1fr)`;
+            grid.style.gridTemplateColumns = `repeat(${totalColumns}, var(--emb-col-width))`;
             grid.style.gap = GAP;
-            grid.style.width = '100%';
-            grid.style.margin = '0 auto';
-            grid.style.padding = '0 15px';
-            grid.style.boxSizing = 'border-box';
+            grid.style.width = 'fit-content';
             grid.style.maxWidth = '100%';
-            grid.style.margin = '0';
+            grid.style.margin = '0 auto';
+            grid.style.padding = '0';
+            grid.style.boxSizing = 'border-box';
+            grid.style.justifyContent = 'center';
         }
         
         // Atualiza a linha de status (deve ter o mesmo número de colunas e gap)
         if (statusRow) {
-            statusRow.style.gridTemplateColumns = `repeat(${totalColumns}, 1fr)`;
+            statusRow.style.gridTemplateColumns = `repeat(${totalColumns}, var(--emb-col-width))`;
             statusRow.style.gap = GAP;
-            statusRow.style.width = '100%';
-            statusRow.style.margin = '0 auto';
-            statusRow.style.padding = '0 15px';
-            statusRow.style.boxSizing = 'border-box';
+            statusRow.style.width = 'fit-content';
             statusRow.style.maxWidth = '100%';
-            statusRow.style.margin = '0';
+            statusRow.style.margin = '0 auto';
+            statusRow.style.padding = '0';
+            statusRow.style.boxSizing = 'border-box';
+            statusRow.style.justifyContent = 'center';
         }
         
         // Atualiza a linha de headers (deve ter o mesmo número de colunas e gap)
         if (headerRow) {
-            headerRow.style.gridTemplateColumns = `repeat(${totalColumns}, 1fr)`;
+            headerRow.style.gridTemplateColumns = `repeat(${totalColumns}, var(--emb-col-width))`;
             headerRow.style.gap = GAP;
-            headerRow.style.width = '100%';
-            headerRow.style.margin = '0 auto';
-            headerRow.style.padding = '0 15px';
-            headerRow.style.boxSizing = 'border-box';
+            headerRow.style.width = 'fit-content';
             headerRow.style.maxWidth = '100%';
-            headerRow.style.margin = '0';
+            headerRow.style.margin = '0 auto';
+            headerRow.style.padding = '0';
+            headerRow.style.boxSizing = 'border-box';
+            headerRow.style.justifyContent = 'center';
         }
         
         // Container principal - estica para ocupar toda a largura
         const embaladoraGrid = document.querySelector('.embaladora-grid');
         if (embaladoraGrid) {
-            embaladoraGrid.style.justifyContent = 'stretch';
+            embaladoraGrid.style.justifyContent = 'center';
             embaladoraGrid.style.alignItems = 'stretch';
         }
     }
@@ -3519,4 +3519,3 @@ if (document.readyState === 'loading') {
 // ✅ IMPORTANTE (SPA): a inicialização da tela de classificação é controlada pelo menu em `static/scripts/main.js`
 // (função `showClassification`). Não inicialize aqui no DOMContentLoaded, senão cria múltiplas instâncias/timers
 // e a RAM dispara ao abrir a tela.
-
