@@ -97,9 +97,8 @@ function updateUserDisplay() {
     if (userDisplay) {
         userDisplay.textContent = currentUser.displayName;
         userDisplay.style.color = currentUser.role === 'Tec' ? '#22c55e' : '#111';
-        // Garantir que o font-size seja aplicado igual ao texto "Desligar" (14px)
-        // NÃO remove o font-size, apenas garante que seja 14px
-        userDisplay.style.setProperty('font-size', '18px', 'important');
+        // Garantir que o font-size acompanhe o padrão do "Desligar" (responsivo)
+        userDisplay.style.setProperty('font-size', 'var(--login-label-size)', 'important');
         userDisplay.style.setProperty('font-weight', '700', 'important');
         userDisplay.style.setProperty('display', 'inline-block', 'important');
         userDisplay.style.setProperty('min-width', '60px', 'important');
@@ -114,6 +113,23 @@ function updateUserDisplay() {
             logoutBtnModal.style.display = 'none';
         }
     }
+}
+
+function openAlarmAll() {
+    try {
+        window.__desiredAlarmTab = 'todas';
+    } catch (_) {}
+    if (typeof window.showAlarm === 'function') {
+        window.showAlarm();
+    }
+}
+
+function setAlarmBellActive(active) {
+    const btn = document.getElementById('alarm-btn');
+    if (!btn) return;
+    const isActive = !!active;
+    btn.classList.toggle('alarm-active', isActive);
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
 }
 
 function updateUIByRole() {
@@ -247,6 +263,8 @@ window.hideLoginModal = hideLoginModal;
 window.isAdmin = isAdmin;
 window.handleLogout = handleLogout;
 window.showMachineModal = showMachineModal;
+window.openAlarmAll = openAlarmAll;
+window.setAlarmBellActive = setAlarmBellActive;
 
 // Fechar modal ao clicar fora
 document.addEventListener('click', function(event) {
@@ -260,8 +278,8 @@ document.addEventListener('click', function(event) {
 function applyUserDisplayStyle() {
     const userDisplay = document.getElementById('user-display');
     if (userDisplay) {
-        // Aplica o estilo de 14px (mesmo tamanho do texto Desligar)
-        userDisplay.style.setProperty('font-size', '18px', 'important');
+        // Aplica o estilo responsivo (mesmo tamanho do texto Desligar)
+        userDisplay.style.setProperty('font-size', 'var(--login-label-size)', 'important');
         userDisplay.style.setProperty('font-weight', '700', 'important');
         userDisplay.style.setProperty('display', 'inline-block', 'important');
         userDisplay.style.setProperty('min-width', '60px', 'important');

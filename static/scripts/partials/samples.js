@@ -2,16 +2,42 @@
 function inicializarSamples() {
     console.log('Inicializando Samples...');
     
-    // Estado da aplicação
-    const state = {
-        lines: Array.from({ length: 18 }, (_, i) => ({
+    const MACHINE_TYPE_KEY = 'supervisor_machine_type';
+
+    // ✅ Função para obter quantidade de linhas baseado no tipo de máquina
+    // 200CX = 6 linhas, 400CX = 12 linhas, 700CX = 18 linhas
+    function getLineQuantity(typeOverride) {
+        const machineType = (typeOverride || localStorage.getItem(MACHINE_TYPE_KEY) || '700CX').toUpperCase();
+        switch (machineType) {
+            case '200CX':
+                return 6;
+            case '400CX':
+                return 12;
+            case '700CX':
+            default:
+                return 18;
+        }
+    }
+
+    function createLines(lineCount) {
+        return Array.from({ length: lineCount }, (_, i) => ({
             lineNum: i + 1,
             cells: Array.from({ length: 10 }, () => ({ value: null, color: 'empty' }))
-        })),
+        }));
+    }
+
+    const initialLineCount = getLineQuantity();
+
+    // Estado da aplicação
+    const state = {
+        lineCount: initialLineCount,
+        lines: createLines(initialLineCount),
         pollingInterval: null,
         pollingInFlight: false,
         socket: null,
         telemetryHandler: null, // Handler do Socket.IO para cleanup
+        machineTypeHandler: null,
+        storageHandler: null,
         isActive: true,
         firstUpdate: true // Flag para primeira atualização
     };
@@ -40,6 +66,17 @@ function inicializarSamples() {
         }
     }
     
+    function applyLineCount(newCount) {
+        if (!newCount || newCount === state.lineCount) {
+            return;
+        }
+        state.lineCount = newCount;
+        state.lines = createLines(newCount);
+        state.firstUpdate = true;
+        renderGrid();
+        refreshFromPLC();
+    }
+
     // Função para renderizar a grade
     function renderGrid() {
         const grid = document.getElementById('samples-grid');
@@ -130,9 +167,12 @@ function inicializarSamples() {
         // Atualiza os valores nas células
         let hasChanges = false;
         
-        for (let lineNum = 1; lineNum <= 18; lineNum++) {
+        for (let lineNum = 1; lineNum <= state.lineCount; lineNum++) {
             const lineIdx = lineNum - 1;
             const line = state.lines[lineIdx];
+            if (!line) {
+                continue;
+            }
             
             for (let idx = 0; idx < 10; idx++) {
                 const tag = `XLCLASS_DB209_VISIB_PESO_OVO_L${String(lineNum).padStart(2, '0')}[${idx}]`;
@@ -194,7 +234,7 @@ function inicializarSamples() {
         try {
             // Gera lista de todas as tags (18 linhas x 10 índices = 180 tags)
             const tags = [];
-            for (let lineNum = 1; lineNum <= 18; lineNum++) {
+            for (let lineNum = 1; lineNum <= state.lineCount; lineNum++) {
                 for (let idx = 0; idx < 10; idx++) {
                     tags.push(`XLCLASS_DB209_VISIB_PESO_OVO_L${String(lineNum).padStart(2, '0')}[${idx}]`);
                 }
@@ -318,6 +358,25 @@ function inicializarSamples() {
     renderGrid();
     console.log('[SAMPLES] Grade renderizada, inicializando Socket.IO...');
     initSocketIO();
+
+    // ✅ Atualiza quantidade de linhas ao mudar tipo de máquina (evento interno)
+    state.machineTypeHandler = (e) => {
+        const nextType = e?.detail?.newType;
+        const nextCount = getLineQuantity(nextType);
+        console.log(`[SAMPLES] Tipo de máquina atualizado: ${nextType || 'desconhecido'} -> ${nextCount} linhas`);
+        applyLineCount(nextCount);
+    };
+    document.addEventListener('machineTypeChanged', state.machineTypeHandler);
+
+    // ✅ Atualiza quantidade de linhas ao mudar localStorage (outros tabs)
+    state.storageHandler = (e) => {
+        if (e.key === MACHINE_TYPE_KEY) {
+            const nextCount = getLineQuantity(e.newValue);
+            console.log(`[SAMPLES] Tipo de máquina mudou no storage -> ${nextCount} linhas`);
+            applyLineCount(nextCount);
+        }
+    };
+    window.addEventListener('storage', state.storageHandler);
     
     // Cleanup function
     window.cleanupSamples = function() {
@@ -325,6 +384,14 @@ function inicializarSamples() {
         state.isActive = false;
         stopPolling();
         disconnectSocket();
+        if (state.machineTypeHandler) {
+            document.removeEventListener('machineTypeChanged', state.machineTypeHandler);
+            state.machineTypeHandler = null;
+        }
+        if (state.storageHandler) {
+            window.removeEventListener('storage', state.storageHandler);
+            state.storageHandler = null;
+        }
         // Limpa referência do intervalo
         if (state.pollingInterval) {
             clearInterval(state.pollingInterval);

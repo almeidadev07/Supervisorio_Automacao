@@ -424,13 +424,25 @@
 }
 
 /* Botão de desligar */
-.shutdown-btn {
+.shutdown-container {
     position: fixed;
-    bottom: calc(var(--menu-height, 100px) / 2 + 15px);
+    bottom: calc(var(--menu-height, 100px) / 2);
     left: clamp(10px, 2vw, 19px);
     transform: translateY(50%);
-    width: clamp(38px, 5vw, 50px);
-    height: clamp(38px, 5vw, 50px);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    --shutdown-btn-size: clamp(45px, 6vw, 60px);
+    --shutdown-icon-size: clamp(24px, 3.5vw, 36px);
+    --shutdown-label-size: clamp(9px, 1.2vw, 12px);
+    --shutdown-label-margin: 4px;
+}
+
+.shutdown-btn {
+    position: relative;
+    width: var(--shutdown-btn-size);
+    height: var(--shutdown-btn-size);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -442,45 +454,46 @@
     box-shadow: 
         0 4px 8px rgba(127, 29, 29, 0.3),
         0 2px 4px rgba(0, 0, 0, 0.2);
-    z-index: 1001;
 }
 
 .shutdown-btn::after {
-    content: 'Desligar';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: clamp(9px, 1.2vw, 12px);
+    content: none;
+    display: none;
+}
+
+.shutdown-label {
+    font-size: var(--shutdown-label-size);
     color: #000;
     font-weight: 700;
-    margin-top: 6px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin-top: var(--shutdown-label-margin);
     white-space: nowrap;
     text-shadow: 0 1px 3px rgba(255,255,255,0.9);
     transition: transform 0.3s ease;
+    text-align: center;
 }
 
 .shutdown-btn:hover {
-    transform: translateY(calc(50% - 2px));
+    transform: translateY(-2px);
     box-shadow: 
         0 6px 12px rgba(220, 38, 38, 0.4),
         0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-.shutdown-btn:hover::after {
-    transform: translateX(-50%) translateY(-2px);
+.shutdown-btn:hover + .shutdown-label {
+    transform: translateY(-2px);
 }
 
 .shutdown-btn:active {
-    transform: translateY(50%);
+    transform: translateY(0);
     box-shadow: 
         0 2px 4px rgba(127, 29, 29, 0.3),
         0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .shutdown-icon {
-    width: clamp(18px, 2.5vw, 26px) !important;
-    height: clamp(18px, 2.5vw, 26px) !important;
+    width: var(--shutdown-icon-size) !important;
+    height: var(--shutdown-icon-size) !important;
     object-fit: contain;
     filter: brightness(0) invert(1);
 }
@@ -725,18 +738,10 @@
     }
     
     /* Botões laterais maiores */
-    .shutdown-btn {
-        width: clamp(38px, 3.5vw, 50px);
-        height: clamp(38px, 3.5vw, 50px);
-    }
-    
-    .shutdown-icon {
-        width: clamp(18px, 2.2vw, 24px) !important;
-        height: clamp(18px, 2.2vw, 24px) !important;
-    }
-    
-    .shutdown-btn::after {
-        font-size: clamp(11px, 1vw, 14px);
+    .shutdown-container {
+        --shutdown-btn-size: clamp(45px, 4vw, 60px);
+        --shutdown-icon-size: clamp(20px, 2vw, 28px);
+        --shutdown-label-size: clamp(11px, 1vw, 14px);
     }
     
     .login-btn {
@@ -792,18 +797,10 @@
     }
     
     /* Botões laterais maiores */
-    .shutdown-btn {
-        width: clamp(45px, 4vw, 60px);
-        height: clamp(45px, 4vw, 60px);
-    }
-    
-    .shutdown-icon {
-        width: clamp(20px, 2.3vw, 28px) !important;
-        height: clamp(20px, 2.3vw, 28px) !important;
-    }
-    
-    .shutdown-btn::after {
-        font-size: clamp(13px, 1.2vw, 17px);
+    .shutdown-container {
+        --shutdown-btn-size: clamp(55px, 4.5vw, 75px);
+        --shutdown-icon-size: clamp(26px, 2.4vw, 36px);
+        --shutdown-label-size: clamp(13px, 1.2vw, 17px);
     }
     
     .login-btn {
@@ -859,18 +856,10 @@
     }
     
     /* Botões laterais maiores */
-    .shutdown-btn {
-        width: clamp(55px, 4.5vw, 75px);
-        height: clamp(55px, 4.5vw, 75px);
-    }
-    
-    .shutdown-icon {
-        width: clamp(22px, 2.5vw, 32px) !important;
-        height: clamp(22px, 2.5vw, 32px) !important;
-    }
-    
-    .shutdown-btn::after {
-        font-size: clamp(16px, 1.4vw, 22px);
+    .shutdown-container {
+        --shutdown-btn-size: clamp(68px, 5vw, 95px);
+        --shutdown-icon-size: clamp(32px, 2.8vw, 46px);
+        --shutdown-label-size: clamp(16px, 1.4vw, 22px);
     }
     
     .login-btn {
@@ -1144,7 +1133,7 @@
         right: clamp(48px, 12vw, 68px);
     }
 
-    .shutdown-btn {
+    .shutdown-container {
         bottom: calc(var(--menu-height) + 10px);
     }
 }
@@ -1192,15 +1181,13 @@
         right: 3px;
     }
     
-    .shutdown-btn {
-        width: 32px;
-        height: 32px;
+    .shutdown-container {
         bottom: calc(var(--menu-height) + 8px);
     }
-    
-    .shutdown-icon {
-        width: 14px !important;
-        height: 14px !important;
+
+    .shutdown-container {
+        --shutdown-btn-size: 32px;
+        --shutdown-icon-size: 14px;
     }
 }
 
@@ -1221,15 +1208,13 @@
         font-size: 11px;
     }
     
-    .shutdown-btn {
-        width: 28px;
-        height: 28px;
+    .shutdown-container {
         bottom: calc(var(--menu-height) + 5px);
     }
-    
-    .shutdown-icon {
-        width: 12px !important;
-        height: 12px !important;
+
+    .shutdown-container {
+        --shutdown-btn-size: 28px;
+        --shutdown-icon-size: 12px;
     }
 }
 
@@ -1253,15 +1238,13 @@
         font-size: 10px;
     }
     
-    .shutdown-btn {
-        width: 28px;
-        height: 28px;
+    .shutdown-container {
         bottom: 8px;
     }
-    
-    .shutdown-icon {
-        width: 12px !important;
-        height: 12px !important;
+
+    .shutdown-container {
+        --shutdown-btn-size: 28px;
+        --shutdown-icon-size: 12px;
     }
 }
 
@@ -1344,20 +1327,18 @@
 /* Ajustes para mobile nos botões laterais */
 @media screen and (max-width: 768px) {
     .login-container,
-    .shutdown-btn,
+    .shutdown-container,
     .config-btn,
     .reset-btn {
         bottom: calc(var(--menu-height) / 2 + 15px);
         transform: translateY(50%);
     }
     
-    .shutdown-btn:hover,
     .config-btn:hover,
     .reset-btn:hover {
         transform: translateY(calc(50% - 2px));
     }
     
-    .shutdown-btn:active,
     .config-btn:active,
     .reset-btn:active {
         transform: translateY(50%);
@@ -1374,7 +1355,7 @@
 
 @media screen and (max-width: 480px) {
     .login-container,
-    .shutdown-btn {
+    .shutdown-container {
         bottom: calc(var(--menu-height) + 10px);
     }
 }

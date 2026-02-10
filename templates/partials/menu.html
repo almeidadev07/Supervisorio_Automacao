@@ -4,9 +4,12 @@
 </button>
 
 <!-- Botão de desligar no canto esquerdo -->
-<button class="shutdown-btn" onclick="confirmShutdown()" title="Desligar Sistema">
-    <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Desliga.png') }}"  class="shutdown-icon">
-</button>
+<div class="shutdown-container">
+    <button class="shutdown-btn" onclick="confirmShutdown()" title="Desligar Sistema" aria-label="Desligar">
+        <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Desliga.png') }}" class="shutdown-icon" alt="Desligar">
+    </button>
+    <span class="shutdown-label">Desligar</span>
+</div>
 
 <!-- Botões de configuração e reset (apenas para Técnico) -->
 <button class="config-btn tecnico-only" onclick="(function(){if(typeof window.showMachineModal === 'function'){window.showMachineModal();}else{const m=document.getElementById('machine-modal');if(m){m.classList.remove('hidden');m.classList.add('show');m.style.display='flex';}}})();" title="Configuração" style="display:none;">

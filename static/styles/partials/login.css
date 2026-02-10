@@ -8,7 +8,33 @@
     flex-direction: column;
     align-items: center;
     z-index: 3000;
+    --login-btn-size: clamp(45px, 6vw, 60px);
+    --login-icon-size: clamp(24px, 3.5vw, 36px);
+    --login-label-size: clamp(9px, 1.2vw, 12px);
+    --login-label-margin: 4px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     /* Permite posicionamento absoluto dos filhos */
+}
+
+/* MantÃ©m o botÃ£o Desligar alinhado com Alarmes/Operador */
+.shutdown-container {
+    bottom: calc(var(--menu-height, 100px) / 2);
+    transform: translateY(50%);
+}
+
+/* Agrupa bot??es de login e alarme lado a lado */
+.login-actions {
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(16px, 2vw, 24px);
+}
+
+.login-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: clamp(64px, 7vw, 80px);
 }
 
 /* Wrapper para botão e texto ficarem alinhados */
@@ -28,8 +54,8 @@
 }
 
 #login-btn {
-    width: clamp(45px, 6vw, 60px);
-    height: clamp(45px, 6vw, 60px);
+    width: var(--login-btn-size);
+    height: var(--login-btn-size);
     background: linear-gradient(145deg, #ffffff, #f0f0f0);
     border: none;
     border-radius: 50%;
@@ -62,11 +88,115 @@
 }
 
 #login-btn img {
-    width: clamp(24px, 3.5vw, 36px);
-    height: clamp(24px, 3.5vw, 36px);
+    width: var(--login-icon-size);
+    height: var(--login-icon-size);
     object-fit: contain;
     z-index: 1;
 }
+
+#login-btn .login-btn-icon {
+    filter: none !important;
+}
+/* Bot??o de alarme (sinaleira) */
+.alarm-btn {
+    width: var(--login-btn-size);
+    height: var(--login-btn-size);
+    background: linear-gradient(145deg, #f3f4f6, #a2a5aa);
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin: 0;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.alarm-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 6px 12px rgba(0, 0, 0, 0.2),
+        0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.alarm-btn:active {
+    transform: translateY(0);
+    box-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.1),
+        0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.alarm-btn-icon {
+    width: var(--login-icon-size);
+    height: var(--login-icon-size);
+    object-fit: contain;
+    z-index: 1;
+    filter: brightness(0) invert(1);
+}
+
+.login-container .alarm-label {
+    font-size: var(--login-label-size) !important;
+    font-weight: 700 !important;
+    color: #000 !important;
+    margin-top: var(--login-label-margin);
+    min-width: 60px;
+    text-align: center;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+    line-height: 1.2;
+    text-transform: none !important;
+    text-shadow: 0 1px 3px rgba(255,255,255,0.9) !important;
+    display: inline-block;
+}
+
+.login-container .alarm-btn:hover + .alarm-label {
+    transform: translateY(-2px);
+}
+
+@keyframes alarm-blink {
+    0%, 100% {
+        background: linear-gradient(145deg, #f3f4f6, #d1d5db);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    50% {
+        background: linear-gradient(145deg, #ff5a5a, #d93434);
+        box-shadow: 
+            0 0 14px rgba(255, 68, 68, 0.9),
+            0 4px 8px rgba(0,0,0,0.2);
+    }
+}
+
+.alarm-btn.alarm-active {
+    animation: alarm-blink 1s infinite;
+}
+
+/* Ajustes responsivos do texto (igual ao Desligar) */
+@media screen and (min-width: 1920px) {
+    .login-container {
+        --login-btn-size: clamp(45px, 4vw, 60px);
+        --login-icon-size: clamp(20px, 2vw, 28px);
+        --login-label-size: clamp(11px, 1vw, 14px);
+    }
+}
+
+@media screen and (min-width: 2560px) {
+    .login-container {
+        --login-btn-size: clamp(55px, 4.5vw, 75px);
+        --login-icon-size: clamp(26px, 2.4vw, 36px);
+        --login-label-size: clamp(13px, 1.2vw, 17px);
+    }
+}
+
+@media screen and (min-width: 3840px) {
+    .login-container {
+        --login-btn-size: clamp(68px, 5vw, 95px);
+        --login-icon-size: clamp(32px, 2.8vw, 46px);
+        --login-label-size: clamp(16px, 1.4vw, 22px);
+    }
+}
+
 
 #login-user-block {
     display: flex;
@@ -82,14 +212,15 @@
 .login-container #user-display,
 span#user-display,
 span.user-name {
-    font-size: 14px !important;
+    font-size: var(--login-label-size) !important;
     font-weight: 700 !important;
     color: #000 !important;
-    margin-top: 8px;
+    margin-top: var(--login-label-margin);
     min-width: 60px !important;
     text-align: center !important;
     transition: transform 0.3s ease;
     white-space: nowrap;
+    line-height: 1.2;
     text-shadow: 0 1px 3px rgba(255,255,255,0.9) !important;
     display: inline-block !important;
 }
@@ -267,10 +398,20 @@ span.user-name {
         bottom: calc(var(--menu-height, 90px) / 2);
         transform: translateY(50%);
     }
+    .shutdown-container {
+        bottom: calc(var(--menu-height, 90px) / 2);
+        transform: translateY(50%);
+    }
 }
 
 @media screen and (max-width: 480px) {
     .login-container {
+        bottom: calc(var(--menu-height, 80px) / 2);
+        transform: translateY(50%);
+        --login-btn-size: 32px;
+        --login-icon-size: 14px;
+    }
+    .shutdown-container {
         bottom: calc(var(--menu-height, 80px) / 2);
         transform: translateY(50%);
     }
@@ -284,6 +425,23 @@ span.user-name {
     .login-container {
         bottom: calc(var(--menu-height, 70px) / 2);
         transform: translateY(50%);
+        --login-btn-size: 28px;
+        --login-icon-size: 12px;
+    }
+    .shutdown-container {
+        bottom: calc(var(--menu-height, 70px) / 2);
+        transform: translateY(50%);
+    }
+}
+
+@media screen and (max-height: 480px) and (orientation: landscape) {
+    .login-container {
+        --login-btn-size: 28px;
+        --login-icon-size: 12px;
+    }
+    .shutdown-container {
+        bottom: calc(var(--menu-height, 70px) / 2);
+        transform: translateY(50%);
     }
 }
 
@@ -293,6 +451,6 @@ span.user-name {
 span#user-display.user-name,
 .login-container span#user-display,
 .login-container .user-name {
-    font-size: 14px !important;
+    font-size: var(--login-label-size) !important;
     font-weight: 700 !important;
 }

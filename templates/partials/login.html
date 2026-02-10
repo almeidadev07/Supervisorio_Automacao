@@ -1,9 +1,19 @@
 <!-- Bloco de Login -->
 <div class="login-container">
-    <button id="login-btn" onclick="showLoginModal()" aria-label="Login">
-        <img src="{{ url_for('static', filename='images/pages/icons/comandos/00_Icone_User.png') }}" alt="Login">
-    </button>
-    <span id="user-display" class="user-name" style="font-size: 14px !important; font-weight: 700 !important; display: inline-block; min-width: 60px; text-align: center;">Operador</span>
+    <div class="login-actions">
+        <div class="login-action">
+            <button id="alarm-btn" class="alarm-btn" type="button" onclick="openAlarmAll()" aria-label="Alarmes">
+                <img class="alarm-btn-icon" src="{{ url_for('static', filename='images/menu/icons/00_Icone_Alarme.png') }}" alt="Alarme">
+            </button>
+            <span class="alarm-label">Alarme</span>
+        </div>
+        <div class="login-action">
+            <button id="login-btn" onclick="showLoginModal()" aria-label="Login">
+                <img class="login-btn-icon" src="{{ url_for('static', filename='images/pages/icons/comandos/00_Icone_User.png') }}" alt="Login">
+            </button>
+            <span id="user-display" class="user-name" style="font-size: 14px !important; font-weight: 700 !important; display: inline-block; min-width: 60px; text-align: center;">Operador</span>
+        </div>
+    </div>
     <div id="user-info">
         <button id="logout-btn" onclick="handleLogout()" class="logout-btn" style="display:none;">Sair</button>
     </div>

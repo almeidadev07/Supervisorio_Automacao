@@ -39,6 +39,7 @@ function inicializarAlarmes() {
             };
             registerAlarmEventListener(btn, 'click', filterHandler);
         });
+        registerAlarmEventListener(window, 'resize', syncAlarmHeaderWidth);
     }
 
     // Inicializa SocketIO e carrega alarmes apenas na primeira vez
@@ -76,6 +77,7 @@ function inicializarAlarmes() {
     } catch(err) {
         console.error('[INICIALIZAR_ALARMES] Erro ao selecionar aba:', err);
     }
+    syncAlarmHeaderWidth();
 }
 
 function toggleAlarmView(button) {
@@ -121,6 +123,22 @@ function aplicarFiltro(prioridade) {
             alarme.style.display = alarme.classList.contains(prioridade) ? 'grid' : 'none';
         }
     });
+}
+
+function syncAlarmHeaderWidth() {
+    const alarmList = document.getElementById('alarmList');
+    if (!alarmList) return;
+
+    const update = () => {
+        const scrollbarWidth = Math.max(0, alarmList.offsetWidth - alarmList.clientWidth);
+        alarmList.style.setProperty('--alarm-scrollbar-w', `${scrollbarWidth}px`);
+    };
+
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(update);
+    } else {
+        setTimeout(update, 0);
+    }
 }
 
 // Variáveis globais para armazenar alarmes
@@ -331,7 +349,7 @@ function atualizarInterfaceAlarmes() {
     
     if (!currentAlarms || currentAlarms.length === 0) {
         alarmList.innerHTML = `
-            <div class="alarm-header">
+            <div class="alarm-table-header">
                 <span></span>
                 <span>Data</span>
                 <span>Hora</span>
@@ -360,7 +378,7 @@ function atualizarInterfaceAlarmes() {
 
         // Atualiza a lista mantendo o cabeçalho
         alarmList.innerHTML = `
-            <div class="alarm-header">
+            <div class="alarm-table-header">
                 <span></span>
                 <span>Data</span>
                 <span>Hora</span>
@@ -380,6 +398,8 @@ function atualizarInterfaceAlarmes() {
     if (currentViewMode === 'instantaneos') {
         atualizarIndicadoresAbas();
     }
+
+    syncAlarmHeaderWidth();
     
     // Removido ajuste tardio de aba para evitar troca após abrir
 }
@@ -427,10 +447,38 @@ function atualizarContadoresAlarmes(summary) {
                 }
             }
         });
+
+        try {
+            const total = Number(summary.total || 0);
+            if (window.setAlarmBellActive) {
+                window.setAlarmBellActive(total > 0);
+            }
+        } catch (_) {}
     } else {
         console.log('[ALARM] Nenhum resumo de alarmes fornecido');
     }
 }
+
+// ✅ Força modo instantâneo (usado ao abrir a tela por botões de menu/login/grid)
+function forceInstantAlarmView() {
+    const toggleBtn = document.querySelector('.toggle-view-btn');
+    if (!toggleBtn) return false;
+
+    const currentState = toggleBtn.getAttribute('data-state') || 'instantaneos';
+    const toggleText = toggleBtn.querySelector('.toggle-text');
+
+    if (currentState !== 'instantaneos') {
+        toggleBtn.setAttribute('data-state', 'instantaneos');
+        if (toggleText) toggleText.textContent = 'Instantâneo';
+    }
+
+    currentViewMode = 'instantaneos';
+    startAlarmAutoRefresh();
+    carregarAlarmes('instantaneos');
+    return true;
+}
+
+window.forceInstantAlarmView = forceInstantAlarmView;
 
 function mostrarMensagemErroAlarmes() {
     const alarmList = document.getElementById('alarmList');
@@ -441,7 +489,7 @@ function mostrarMensagemErroAlarmes() {
         : 'Erro ao carregar alarmes do PLC';
     
     alarmList.innerHTML = `
-        <div class="alarm-header">
+        <div class="alarm-table-header">
             <span></span>
             <span>Data</span>
             <span>Hora</span>
@@ -451,6 +499,7 @@ function mostrarMensagemErroAlarmes() {
             <span>${mensagemErro}</span>
         </div>
     `;
+    syncAlarmHeaderWidth();
 }
 
 // ✅ NOVA FUNÇÃO: Mostra mensagem de desconexão no grid de alarmes
@@ -459,7 +508,7 @@ function mostrarMensagemDesconexaoAlarmes() {
     if (!alarmList) return;
     
     alarmList.innerHTML = `
-        <div class="alarm-header">
+        <div class="alarm-table-header">
             <span></span>
             <span>Data</span>
             <span>Hora</span>
@@ -469,6 +518,7 @@ function mostrarMensagemDesconexaoAlarmes() {
             <span style="color: #ff6b6b; font-weight: bold;">### PLC Desconectado ###</span>
         </div>
     `;
+    syncAlarmHeaderWidth();
 }
 
 // Inicializa SocketIO para receber alarmes em tempo real

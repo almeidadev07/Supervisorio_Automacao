@@ -74,8 +74,9 @@
 }
 
 .samples-grid {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-auto-flow: row;
+    grid-auto-rows: minmax(40px, 1fr);
     gap: 2px;
     width: 100%;
     flex: 1;
@@ -87,8 +88,8 @@
     display: flex;
     gap: 4px;
     align-items: center;
-    height: calc((100% - 17 * 2px) / 18);
-    min-height: 40px;
+    height: 100%;
+    min-height: 0;
     flex-shrink: 0;
 }
 

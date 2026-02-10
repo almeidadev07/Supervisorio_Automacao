@@ -1159,6 +1159,7 @@ function bindTelemetryVelocidadeReal(){
                                     });
                                     
                                     ALARM_LAST_OK_TS = Date.now();
+                                    try { if (window.setAlarmBellActive) window.setAlarmBellActive((contadores.total || 0) > 0); } catch(_) {}
                                     console.log('[GRID] ✅ Alarmes atualizados imediatamente após reconexão');
                                 } catch (e) {
                                     console.error('[GRID] ❌ Erro ao atualizar alarmes na reconexão:', e);
@@ -1419,6 +1420,7 @@ function bindTelemetryVelocidadeReal(){
                     });
                     
                     ALARM_LAST_OK_TS = Date.now();
+                    try { if (window.setAlarmBellActive) window.setAlarmBellActive((contadores.total || 0) > 0); } catch(_) {}
                     
                     // Log apenas se houver alarmes ativos (reduz poluição)
                     const totalAlarmes = contadores.total || 0;
@@ -1821,7 +1823,7 @@ async function atualizarContadoresAlarme() {
 
         // Marca momento de atualização bem-sucedida e conexão ativa
         PLC_CONNECTED = true;
-        ALARM_LAST_OK_TS = Date.now();
+        
 
         // Clique no botão Alarmes abre a tela de alarmes
         // Remove a abertura pelo card principal e delega aos círculos por tipo
@@ -2119,6 +2121,7 @@ function setAlarmCountsOffline(){
         const circle = document.querySelector(`.alarm-count-circle.${tipo}`);
         if (circle) circle.classList.remove('has-alarms');
     });
+    try { if (window.setAlarmBellActive) window.setAlarmBellActive(false); } catch(_) {}
 }
 
 // Flag global para evitar múltiplas inicializações

@@ -847,10 +847,24 @@ function showAlarm(event) {
         }
         return false;
     };
+
+    // ✅ Sempre força modo "Instantâneo" ao abrir a tela de alarmes via botões
+    const forceInstantIfNeeded = () => {
+        try {
+            if (typeof window.forceInstantAlarmView === 'function') {
+                window.forceInstantAlarmView();
+                return true;
+            }
+        } catch (e) {
+            console.warn('[SHOW_ALARM] Falha ao forçar modo instantâneo:', e);
+        }
+        return false;
+    };
     
     // Tenta selecionar após um pequeno delay para garantir que os botões estão prontos
     requestAnimationFrame(() => {
         setTimeout(() => {
+            forceInstantIfNeeded();
             if (!selectDesiredTab()) {
                 // Retry rápido se os botões ainda não estiverem prontos
                 let attempts = 0;
@@ -1425,8 +1439,26 @@ Promise.all([
             window.inicializarClassification();
             window._classificationInitialized = true;
         }
+
+        const samplesVisible = document.getElementById('samples-container')?.style.display !== 'none';
+        if ((lastScreen === 'samples' || samplesVisible) && typeof window.inicializarSamples === 'function') {
+            console.log('[MAIN] 🔧 Inicializando amostras pós-carregamento...');
+            try {
+                if (typeof window.cleanupSamples === 'function') {
+                    window.cleanupSamples();
+                }
+            } catch (_) {}
+            window.inicializarSamples();
+            window._samplesInitialized = true;
+        }
+
+        const alarmVisible = document.getElementById('alarm-container')?.style.display !== 'none';
+        if ((lastScreen === 'alarm' || alarmVisible) && typeof window.showAlarm === 'function') {
+            console.log('[MAIN] 🔧 Inicializando alarmes pós-carregamento...');
+            window.showAlarm();
+        }
     } catch (e) {
-        console.warn('[MAIN] ⚠️ Falha ao inicializar lavadora/secadora/diagramas/balança/classificação pós-carregamento:', e);
+        console.warn('[MAIN] ⚠️ Falha ao inicializar lavadora/secadora/diagramas/balança/classificação/amostras/alarmes pós-carregamento:', e);
     }
 
     console.log('[MAIN] ✅ Scripts carregados - telas serão inicializadas sob demanda');

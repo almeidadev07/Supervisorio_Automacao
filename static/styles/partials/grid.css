@@ -85,7 +85,7 @@
     width: 100%;
     height: 100%;
     min-height: 0;
-    background-color: rgb(182, 182, 182);
+    background-color: #4a5568;
     color: white;
     border: none;
     cursor: grab;
@@ -375,6 +375,14 @@
     pointer-events: auto;
 }
 
+/* Aumenta o círculo de % apenas nos grids específicos sem alterar o layout */
+.draggable-btn[data-station="acumuladora"] .pie-gauge,
+.draggable-btn[data-station="dosificadora"] .pie-gauge,
+.draggable-btn[data-station="escova"] .pie-gauge {
+    transform: scale(1.35);
+    transform-origin: center;
+}
+
 .slider-wrapper { 
     display: flex; 
     align-items: center; 
@@ -643,12 +651,12 @@
 
 .count-value {
     font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-    color: var(--alarm-fg, #2d3748);
+    color: #ffffff;
     font-size: clamp(0.65em, 1.2vw, 1.1em);
     font-weight: 900;
     line-height: 1;
     margin-bottom: clamp(1px, 0.2vh, 3px);
-    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.75);
     position: relative;
     z-index: 2;
 }
@@ -656,12 +664,12 @@
 .alarm-label {
     font-size: clamp(0.32rem, 0.65vw, 0.52rem);
     font-weight: 600;
-    color: var(--alarm-label-color, rgba(0,0,0,0.7));
+    color: #ffffff;
     text-transform: uppercase;
     letter-spacing: 0.3px;
     position: relative;
     z-index: 2;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.75);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
