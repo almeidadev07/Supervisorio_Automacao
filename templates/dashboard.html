@@ -7,6 +7,14 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Sistema Supervisório</title>
+    <script>
+      (function() {
+        try {
+          var theme = localStorage.getItem('supervisor_theme') || 'dark';
+          document.documentElement.dataset.theme = theme;
+        } catch (e) {}
+      })();
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}?v=20260105_responsive_v2">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/logos/00_Logo.png') }}">
     <!-- Socket.IO client (CDN). Deve ficar antes dos nossos scripts que usam `io()` -->
@@ -16,6 +24,7 @@
     <main>
         <div class="main-container">
             <div class="content-wrapper">
+                <img class="logo-display" src="{{ url_for('static', filename='images/logos/00_Logo_Completo.png') }}" alt="Logo">
                 <div class="version-display">v1.0.0</div>
 
                 <!-- Grid de componentes arrastáveis (controle de visibilidade via JS) -->
@@ -136,6 +145,18 @@
               <option value="16">16</option>
               <option value="24">24</option>
             </select>
+          </div>
+          
+          <div class="machine-field theme-field">
+            <label for="theme-toggle">Tema visual:</label>
+            <div class="theme-toggle">
+              <span class="theme-label">Light</span>
+              <label class="switch" aria-label="Alternar tema">
+                <input type="checkbox" id="theme-toggle">
+                <span class="slider"></span>
+              </label>
+              <span class="theme-label">Dark</span>
+            </div>
           </div>
 
           <div class="machine-visibility">

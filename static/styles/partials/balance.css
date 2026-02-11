@@ -3,7 +3,7 @@
     height: 100%;
     padding: 24px;
     margin: 0;
-    background: #f8f9fa;
+    background: var(--app-bg);
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
@@ -40,7 +40,7 @@
 .balance-title {
     font-size: 2.3rem;
     font-weight: 700;
-    color: #4a5568;
+    color: var(--text-primary);
     margin: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -419,7 +419,7 @@
 .modal-content p {
     font-size: 25px !important;
     margin-bottom: 8px !important;
-    color: #4a5568 !important;
+    color: var(--text-primary) !important;
     line-height: 1.4 !important;
     text-align: center !important;
 }
@@ -428,7 +428,7 @@
 .modal-content span {
     font-size: 25px !important;
     font-weight: normal !important;
-    color: #4a5568 !important;
+    color: var(--text-primary) !important;
     text-shadow: none !important;
     display: inline !important;
     margin: 0 !important;
@@ -548,7 +548,7 @@
 .progress-bar {
     width: 100% !important;
     height: 40px !important;
-    background-color: #2d3748 !important;
+    background-color: var(--text-strong) !important;
     border-radius: 20px !important;
     overflow: hidden !important;
     margin-bottom: 15px !important;

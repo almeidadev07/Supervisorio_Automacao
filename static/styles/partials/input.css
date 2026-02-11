@@ -5,7 +5,7 @@
     height: calc(100vh - var(--menu-height, 100px) - 20px);
     padding: 20px;
     margin: 0;
-    background: #f8f9fa;
+    background: var(--app-bg);
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
@@ -52,7 +52,7 @@
 .input-title {
     font-size: 2.2rem;
     font-weight: 700;
-    color: #4a5568;
+    color: var(--text-primary);
     margin: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -96,7 +96,7 @@
     margin-bottom: 20px;
     font-size: 1.6rem;
     font-weight: 700;
-    color: #4a5568;
+    color: var(--text-primary);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -107,7 +107,7 @@
     margin-bottom: 20px;
     font-size: 1.1rem;
     font-weight: 600;
-    color: #4a5568;
+    color: var(--text-primary);
 }
 
 .input-container .toggle {
@@ -204,7 +204,7 @@
 .input-container .limite {
     text-align: right;
     font-size: 1rem;
-    color: #4a5568;
+    color: var(--text-primary);
     margin-top: 8px;
     font-weight: 600;
 }

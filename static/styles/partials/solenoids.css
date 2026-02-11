@@ -9,7 +9,7 @@
     height: calc(100vh - var(--menu-height, 100px) - 20px) !important;
     padding: 20px !important;
     margin: 0 !important;
-    background: #f8f9fa !important;
+    background: var(--app-bg) !important;
     position: relative !important;
     overflow: hidden !important;
     box-sizing: border-box !important;
@@ -52,7 +52,7 @@
 .solenoids-title {
     font-size: 2.2rem;
     font-weight: 700;
-    color: #4a5568;
+    color: var(--text-primary);
     margin: 0;
 }
 

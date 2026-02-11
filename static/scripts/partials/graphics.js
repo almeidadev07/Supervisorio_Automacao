@@ -10,6 +10,38 @@ let chartData = {
     programmedFlow: [0, 0, 0, 0, 0, 0, 0] // Fluxo programado para C1-C7
 };
 
+function getCssVar(name, fallback) {
+    try {
+        const value = getComputedStyle(document.documentElement).getPropertyValue(name);
+        return value ? value.trim() : (fallback || '');
+    } catch (_) {
+        return fallback || '';
+    }
+}
+
+function applyChartTheme() {
+    if (!classesChart || !classesChart.options) return;
+    const textColor = getCssVar('--text-primary', '#2c3e50');
+    const gridColor = getCssVar('--chart-grid', 'rgba(0, 0, 0, 0.1)');
+    const opts = classesChart.options;
+
+    if (opts.plugins && opts.plugins.title) {
+        opts.plugins.title.color = textColor;
+    }
+    if (opts.scales && opts.scales.x) {
+        if (opts.scales.x.title) opts.scales.x.title.color = textColor;
+        if (opts.scales.x.ticks) opts.scales.x.ticks.color = textColor;
+        if (opts.scales.x.grid) opts.scales.x.grid.color = gridColor;
+    }
+    if (opts.scales && opts.scales.y) {
+        if (opts.scales.y.title) opts.scales.y.title.color = textColor;
+        if (opts.scales.y.ticks) opts.scales.y.ticks.color = textColor;
+        if (opts.scales.y.grid) opts.scales.y.grid.color = gridColor;
+    }
+
+    classesChart.update('none');
+}
+
 // Estados dos símbolos + e - para cada classe
 let classSymbols = {
     plus: [false, false, false, false, false, false, false],  // Símbolo + para C1-C7
@@ -273,6 +305,9 @@ function createChart() {
         classesChart.destroy();
     }
 
+    const textColor = getCssVar('--text-primary', '#2c3e50');
+    const gridColor = getCssVar('--chart-grid', 'rgba(0, 0, 0, 0.1)');
+
     // Os nomes das classes já devem ter sido carregados do PLC via refreshClassLabelsFromPLC()
     // Fallback para window.classificationLabels se disponível
     try {
@@ -350,17 +385,21 @@ function createChart() {
                         size: 20,
                         weight: 'bold'
                     },
-                    color: '#2c3e50'
+                    color: textColor
                 },
                 legend: {
                     display: false // Usamos nossa própria legenda
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.88)',
                     titleColor: '#fff',
+                    titleFont: { size: 24, weight: 'bold' },
                     bodyColor: '#fff',
+                    bodyFont: { size: 22, weight: 'bold' },
                     borderColor: '#fff',
                     borderWidth: 1,
+                    padding: 22,
+                    cornerRadius: 10,
                     callbacks: {
                         title: function(context) {
                             return `Classe ${context[0].label}`;
@@ -382,14 +421,14 @@ function createChart() {
                             size: 14,
                             weight: 'bold'
                         },
-                        color: '#2c3e50'
+                        color: textColor
                     },
                     grid: {
                         display: true,
-                        color: 'rgba(0, 0, 0, 0.1)'
+                        color: gridColor
                     },
                     ticks: {
-                        color: '#2c3e50',
+                        color: textColor,
                         font: {
                             size: 12,
                             weight: 'bold'
@@ -408,13 +447,13 @@ function createChart() {
                             size: 14,
                             weight: 'bold'
                         },
-                        color: '#2c3e50'
+                        color: textColor
                     },
                     min: 0,
                     max: 700,
                     ticks: {
                         stepSize: 100,
-                        color: '#2c3e50',
+                        color: textColor,
                         font: {
                             size: 12
                         },
@@ -424,7 +463,7 @@ function createChart() {
                     },
                     grid: {
                         display: true,
-                        color: 'rgba(0, 0, 0, 0.1)'
+                        color: gridColor
                     }
                 }
             },
@@ -442,6 +481,7 @@ function createChart() {
     if (typeof window !== 'undefined') {
         window.classesChart = classesChart;
     }
+    applyChartTheme();
     console.log('[graphics] createChart: gráfico criado');
     try { 
         renderClassesLegend(); 
@@ -529,7 +569,7 @@ function renderSymbolsLegend() {
     
     const plusColor = '#39FF14'; // Verde neon
     const minusColor = '#FF0000'; // Vermelho
-    const symbolFontSize = 20;
+    const symbolFontSize = 56;
     
     const items = `
         <span class="symbol-legend-item">
@@ -1065,6 +1105,10 @@ function cleanupGraphics() {
 
 // Exporta funções para uso global
 window.initGraphics = initGraphics;
+
+document.addEventListener('themeChanged', () => {
+    applyChartTheme();
+});
 window.updateChartData = updateChartData;
 window.checkGraphicsSubscription = checkGraphicsSubscription;
 window.cleanupGraphics = cleanupGraphics; // ✅ CRÍTICO: Exporta cleanup
@@ -1227,3 +1271,36 @@ function stopGraphicsBackgroundFeed() {
 // Exporta funções de controle do background feed
 window.startGraphicsBackgroundFeed = startGraphicsBackgroundFeed;
 window.stopGraphicsBackgroundFeed = stopGraphicsBackgroundFeed;
+
+
+
+
+// ? Bootstrap: se a tela de gr�ficos j� estiver vis�vel (ex: F5), inicializa ap�s o script carregar
+(function bootstrapGraphicsOnLoad() {
+    try {
+        const container = document.getElementById('graphics-container');
+        if (!container || container.style.display === 'none') return;
+
+        try { if (typeof startGraphicsBackgroundFeed === 'function') startGraphicsBackgroundFeed(); } catch (_) {}
+
+        try {
+            const chart = classesChart;
+            if (!chart || chart._destroyed) {
+                initGraphics();
+            } else if (chart && typeof chart.update === 'function') {
+                chart.update('none');
+            }
+        } catch (_) {}
+
+        try { if (typeof checkGraphicsSubscription === 'function') checkGraphicsSubscription(); } catch (_) {}
+    } catch (e) {
+        console.warn('[GRAPHICS] Falha ao inicializar gr�ficos p�s-carregamento:', e);
+    }
+})();
+
+
+
+
+
+
+

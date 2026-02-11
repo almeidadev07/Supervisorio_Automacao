@@ -80,8 +80,10 @@
          <div class="unit">
              <h2>Plasson Farm</h2>
              <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
-                <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Relatorio.png') }}" 
-                     alt="Ícone Relatório" 
+                <img src="{{ url_for('static', filename='images/menu/icons/00_Icone_Relatorio.png') }}"
+                     data-dark-src="{{ url_for('static', filename='images/menu/icons/00_Icone_Relatorio.png') }}"
+                     data-light-src="{{ url_for('static', filename='images/menu/icons/00_Icone_Relatorio_cinza.png') }}"
+                     alt="Ícone Relatório"
                      class="menu-icon_farm">
             </div>
         </div>

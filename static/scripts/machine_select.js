@@ -102,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnTest = document.getElementById('btn-test-machine');
   const statusDiv = document.getElementById('machine-modal-status');
   const embaladoraQuantity = document.getElementById('embaladora-quantity');
+  const themeToggle = document.getElementById('theme-toggle');
   
   // Checkboxes de visibilidade
   const checkboxMagnaOvoscopia = document.getElementById('checkbox-magna-ovoscopia');
@@ -113,6 +114,33 @@ document.addEventListener('DOMContentLoaded', () => {
   // Chave para localStorage
   const GRID_VISIBILITY_KEY = 'supervisor_grid_visibility';
   const EMBALADORA_QUANTITY_KEY = 'supervisor_embaladora_quantity';
+  const THEME_KEY = 'supervisor_theme';
+
+  function getCurrentTheme() {
+    return localStorage.getItem(THEME_KEY) || 'dark';
+  }
+
+  function applyTheme(theme) {
+    const safeTheme = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = safeTheme;
+    if (document.body) {
+      document.body.dataset.theme = safeTheme;
+    }
+    localStorage.setItem(THEME_KEY, safeTheme);
+    try {
+      document.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: safeTheme } }));
+    } catch (_) {}
+  }
+
+  // Aplica tema ao carregar
+  applyTheme(getCurrentTheme());
+  if (themeToggle) {
+    themeToggle.checked = getCurrentTheme() === 'dark';
+    themeToggle.addEventListener('change', () => {
+      const nextTheme = themeToggle.checked ? 'dark' : 'light';
+      applyTheme(nextTheme);
+    });
+  }
   
   function dispatchMachineTypeChanged(oldType, newType, source) {
     if (!newType || oldType === newType) return;
@@ -140,6 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let initialSettings = null;
   let initialQuantity = null;
   let initialMachine = null;
+  let initialTheme = null;
 
   // Função para salvar configurações de visibilidade
   function saveVisibilitySettings() {
@@ -223,6 +252,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (initialMachine && selectEl) {
       selectEl.value = initialMachine;
     }
+
+    if (initialTheme) {
+      applyTheme(initialTheme);
+      if (themeToggle) {
+        themeToggle.checked = initialTheme === 'dark';
+      }
+    }
     
     console.log('[MACHINE_SELECT] Valores iniciais restaurados');
   }
@@ -248,11 +284,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     initialQuantity = embaladoraQuantityEl?.value || '24';
     initialMachine = selectEl?.value || null;
+    initialTheme = getCurrentTheme();
     
     console.log('[MACHINE_SELECT] Valores iniciais capturados:', {
       settings: initialSettings,
       quantity: initialQuantity,
-      machine: initialMachine
+      machine: initialMachine,
+      theme: initialTheme
     });
   }
   
@@ -355,6 +393,9 @@ document.addEventListener('DOMContentLoaded', () => {
       modalEl.classList.remove('hidden');
       modalEl.classList.add('show');
       modalEl.style.display = 'flex';
+      if (themeToggle) {
+        themeToggle.checked = getCurrentTheme() === 'dark';
+      }
       
       // Garante que o botão de confirmar está habilitado quando o modal abre
       setActionButtonsDisabled(false);

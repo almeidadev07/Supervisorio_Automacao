@@ -5,11 +5,11 @@
     overflow: visible;
     position: relative;
     box-sizing: border-box;
-    background: #f8f9fa;
+    background: var(--app-bg);
     padding: 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-weight: 700;
-    color: #4a5568;
+    color: var(--text-primary);
     --emb-col-width: clamp(48px, 3.0vw, 84px);
 }
 
@@ -31,11 +31,11 @@
 .classification-header-box {
     text-align: center;
     flex: 0 0 auto;
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--surface);
     border-radius: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--border-subtle);
     padding: 25px;
     box-sizing: border-box;
 }
@@ -44,7 +44,7 @@
 .classification-title {
     font-size: 2.2rem;
     font-weight: 700;
-    color: #4a5568;
+    color: var(--text-primary);
     margin: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -52,11 +52,11 @@
 /* Content box branco */
 .classification-content-box {
     flex: 1;
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--surface);
     border-radius: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--border-subtle);
     overflow: hidden;
     box-sizing: border-box;
     padding: 20px;
@@ -157,7 +157,7 @@
     gap: clamp(6px, 0.8vw, 12px); /* espaçamento entre colunas */
     margin: 0 auto; /* centralizado */
     padding: 0; /* sem padding para manter proporção fixa */
-    background-color: #f8fafc;
+    background-color: var(--surface-alt);
     position: relative;
     z-index: 3;
     width: fit-content; /* largura apenas do conteúdo */
@@ -226,12 +226,12 @@
     width: 100%;
     height: clamp(390px, 57vh, 550px);
     margin: 0;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--surface-strong);
+    border: 1px solid var(--border-subtle);
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+    box-shadow: var(--shadow-lg);
     position: relative;
     z-index: 4;
     overflow: hidden; /* garante que os círculos não saiam do card */
@@ -247,7 +247,7 @@
     background-repeat: no-repeat;
     background-position: 25% 45%; /* desloca ligeiramente para a direita (x%) */
     background-size: auto 100%; /* controla pela altura (~95% do card) */
-    opacity: 0.56;
+    opacity: 0.25;
     pointer-events: none;
     z-index: 0;
 }
@@ -323,15 +323,29 @@
     z-index: 1;
 }
 
+.classification-controls-box {
+    margin: 8px auto 0 auto;
+    max-width: 1850px;
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-radius: 15px;
+    box-shadow: var(--shadow-md);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-subtle);
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
 .control-row {
     display: grid;
     grid-template-columns: auto 1fr auto; /* botão esquerdo | legenda (centro) | botão direito */
     align-items: center;
     gap: 24px;
-    margin: 8px auto 0 auto;
-    max-width: 1850px;
+    margin: 0;
+    max-width: 100%;
     width: 100%;
-    padding: 0 10px;
+    padding: 0;
     flex-shrink: 0; /* não encolhe - garante que os botões não sejam cortados */
 }
 
@@ -370,8 +384,9 @@
 .edit-labels-btn {
     padding: 0;
     border-radius: 8px;
-    border: 1px solid #ddd;
-    background: #ffffff;
+    border: 1px solid var(--chip-border);
+    background: var(--chip-bg);
+    color: var(--text-primary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -395,7 +410,9 @@
 }
 .label-row input {
     padding: 8px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--input-text);
     border-radius: 6px;
 }
 .labels-actions {
@@ -405,10 +422,11 @@
     margin-top: 8px;
 }
 .egg-class {
-    background: #f8fafc;
+    background: var(--chip-bg);
     padding: 6px 10px;
     border-radius: 20px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--chip-border);
+    color: var(--text-primary);
     white-space: nowrap;
     flex-shrink: 0;
     display: inline-flex;
@@ -436,15 +454,15 @@
     align-items: center;
 }
 .modal-content {
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--modal-bg);
     padding: 12px;
     border-radius: 12px;
     width: 92%;
     max-width: 560px;
     position: relative;
     z-index: 10000;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-subtle);
     box-sizing: border-box;
     overflow: hidden;
 }
@@ -458,9 +476,9 @@
     max-width: 660px !important;
     padding: 10px !important;
     border-radius: 12px !important;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+    box-shadow: var(--shadow-lg) !important;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-    color: #4a5568 !important;
+    color: var(--modal-text) !important;
     font-weight: 700 !important;
 }
 
@@ -502,8 +520,8 @@
     left: 50%;
     bottom: 20px;
     transform: translateX(-50%);
-    background: #ffffff;
-    border: 2px solid #e5e7eb;
+    background: var(--modal-bg);
+    border: 2px solid var(--border-strong);
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.2);
@@ -518,7 +536,7 @@
 .keyboard-header input {
     width: 100%;
     padding: 12px 10px;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--input-border);
     border-radius: 8px;
     font-size: 18px;
     text-align: center;
@@ -542,9 +560,10 @@
 
 .key-btn {
     padding: 12px 16px;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--input-border);
     border-radius: 8px;
-    background: #f8fafc;
+    background: var(--surface-alt);
+    color: var(--text-primary);
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
@@ -553,13 +572,13 @@
 }
 
 .key-btn:hover {
-    background: #e2e8f0;
-    border-color: #cbd5e1;
+    background: var(--surface-strong);
+    border-color: var(--border-strong);
 }
 
 .key-btn:active {
     transform: translateY(1px);
-    background: #cbd5e1;
+    background: var(--border-strong);
 }
 
 .key-ok {
@@ -584,7 +603,7 @@
     align-items: center;
     gap: 6px;
     padding: 6px 8px;
-    background: #f8fafc;
+    background: var(--surface-alt);
     border-radius: 8px;
     width: 100%;
     box-sizing: border-box;
@@ -597,7 +616,7 @@
     gap: 4px;
     padding: 2px;
     border-radius: 8px;
-    background: #fff;
+    background: var(--surface-strong);
     z-index: 1;
     flex-wrap: nowrap;
     white-space: nowrap;
@@ -605,7 +624,7 @@
 .type-btn {
     padding: 6px 12px 6px 38px;
     border-radius: 6px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-strong);
     cursor: pointer;
     font-weight: 600;
     transition: all 0.2s ease;
@@ -626,9 +645,9 @@
     transform: translateY(-50%);
     width: 18px;
     height: 18px;
-    border: 2px solid #999;
+    border: 2px solid var(--border-strong);
     border-radius: 4px;
-    background: white;
+    background: var(--surface-strong);
     transition: all 0.2s ease;
     z-index: 2;
     display: flex;
@@ -658,7 +677,7 @@
     color: white;
 }
 .type-misto.selected {
-    background: #f8fafc;
+    background: var(--surface-alt);
 }
 .close-btn {
     cursor: pointer;
@@ -673,13 +692,15 @@
     gap: 10px;
     margin-bottom: 20px;
     padding: 15px;
-    background: #f8fafc;
+    background: var(--surface-alt);
     border-radius: 6px;
 }
 .recipe-form input {
     flex: 1;
     padding: 8px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--input-text);
     border-radius: 4px;
 }
 .save-btn {
@@ -699,7 +720,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 10px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border-strong);
 }
 .recipe-actions {
     display: flex;
@@ -772,6 +793,10 @@
     }
     
     .control-row {
+        max-width: 100%;
+    }
+
+    .classification-controls-box {
         max-width: 100%;
     }
     
@@ -859,3 +884,5 @@
     
     /* .egg-class-item tamanhos controlados pelo JavaScript */
 }
+    background: var(--input-bg);
+    color: var(--input-text);

@@ -75,7 +75,7 @@
 }
 
 #menu.closed .logo-btn {
-    transform: scale(1);
+    transform: scale(2);
     opacity: 1;
     animation: logoPulse 2s ease-in-out infinite;
 }

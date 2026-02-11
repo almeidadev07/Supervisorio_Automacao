@@ -5,7 +5,7 @@
     height: 100%;
     padding: 20px;
     margin: 0;
-    background: #f8f9fa;
+    background: var(--app-bg);
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
@@ -42,7 +42,7 @@
 .weight-title {
     font-size: 2.2rem;
     font-weight: 700;
-    color: #4a5568;
+    color: var(--text-primary);
     margin: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -81,7 +81,7 @@
     background: transparent;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-weight: 700;
-    color: #4a5568;
+    color: var(--text-primary);
     overflow: hidden;
     box-sizing: border-box;
     padding: 0;
@@ -446,12 +446,41 @@
 .setup-selection {
     margin: 30px 0;
     text-align: center;
+    display: flex;
+    justify-content: center;
+}
+
+.preset-box {
+    background: #4a5568;
+    border-radius: 12px;
+    padding: 18px 22px 20px;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.212);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: center;
+    width: min(520px, 100%);
+}
+
+.preset-box h3 {
+    color: #ffffff;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0;
+    text-align: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding-bottom: 6px;
+    border-bottom: 2px solid rgba(255,255,255,0.3);
+    width: 100%;
 }
 
 .setup-buttons {
     display: flex;
     justify-content: center;
     gap: 24px;
+    flex-wrap: wrap;
 }
 
 .setup-label {
@@ -535,4 +564,3 @@
         transform: translate(-50%, -60%);
     }
 }
-

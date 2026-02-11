@@ -10,7 +10,7 @@
     padding: 20px;
     box-sizing: border-box;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #f8f9fa;
+    background: var(--app-bg);
 }
 
 /* Header box branco com título */
@@ -30,7 +30,7 @@
 .samples-title {
     font-size: 2.2rem;
     font-weight: 700;
-    color: #4a5568;
+    color: var(--text-primary);
     margin: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -57,7 +57,7 @@
     box-sizing: border-box;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-weight: 700;
-    color: #4a5568;
+    color: var(--text-primary);
 }
 
 .samples-container {
@@ -98,7 +98,7 @@
     width: 45px;
     font-size: 14px;
     font-weight: bold;
-    color: #2d3748;
+    color: var(--text-strong);
     text-align: center;
     padding: 4px;
     background: #e2e8f0;

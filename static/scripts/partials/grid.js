@@ -6166,3 +6166,28 @@ window.startPeripheralsSync = startPeripheralsSync;
 window.stopPeripheralsSync = stopPeripheralsSync;
 window.ensurePowerButtonInCorrectPlace = ensurePowerButtonInCorrectPlace;
 window.configurarDragAndDrop = configurarDragAndDrop;
+
+// Theme-aware icon swap for Plasson Farm tile
+function updateGridThemeIcons() {
+    try {
+        const theme = (document.documentElement && document.documentElement.dataset && document.documentElement.dataset.theme) || 'dark';
+        const isLight = theme === 'light';
+        const icons = document.querySelectorAll('.menu-icon_farm[data-light-src][data-dark-src]');
+        icons.forEach((img) => {
+            const target = isLight ? img.getAttribute('data-light-src') : img.getAttribute('data-dark-src');
+            if (target && img.getAttribute('src') !== target) {
+                img.setAttribute('src', target);
+            }
+        });
+    } catch (_) {}
+}
+
+try {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', updateGridThemeIcons);
+    } else {
+        updateGridThemeIcons();
+    }
+    document.addEventListener('themeChanged', updateGridThemeIcons);
+    window.updateGridThemeIcons = updateGridThemeIcons;
+} catch (_) {}
