@@ -233,14 +233,14 @@
 }
 
 .menu-btn-tecnico:active::before {
-    background: #111827 !important;
+    background: #0f172a !important;
     box-shadow: none !important;
     border: none !important;
     outline: none !important;
 }
 
 .menu-btn-tecnico.selected::before {
-    background: #1f2937 !important;
+    background: #0f172a !important;
     box-shadow: none !important;
     border: none !important;
     outline: none !important;
@@ -251,6 +251,7 @@
     box-shadow: none !important;
     border: none !important;
     outline: none !important;
+    background-image: none !important;
 }
 
 .menu-btn-tecnico:hover {

@@ -746,6 +746,8 @@ function atualizarVelocidadeRealUI(valor){
     const text = String(Math.round(valorNum));
     if (valorEl) valorEl.textContent = text;
     if (root) root.textContent = text;
+    const offlineContainer = document.querySelector('.draggable-btn[data-station="velocidade-real"] .velocimetro-value-container');
+    if (offlineContainer) offlineContainer.classList.remove('speed-offline');
     const ponteiro = document.getElementById('ponteiroReal');
     if (ponteiro) atualizarPonteiro(ponteiro, valorNum);
     // Se AUTO estiver ativo, garante que o texto exibido é "Auto" em vez do valor numérico
@@ -764,6 +766,8 @@ function mostrarVelocidadeIndisponivel(){
     if (root) {
         root.textContent = '###';
     }
+    const offlineContainer = document.querySelector('.draggable-btn[data-station="velocidade-real"] .velocimetro-value-container');
+    if (offlineContainer) offlineContainer.classList.add('speed-offline');
     const ponteiro = document.getElementById('ponteiroReal');
     if (ponteiro) atualizarPonteiro(ponteiro, 0);
     
@@ -2600,6 +2604,8 @@ window.restoreVelocities = function() {
         const root = document.getElementById('valorReal');
         if (root) root.textContent = '0';
     }
+    const offlineContainer = document.querySelector('.draggable-btn[data-station="velocidade-real"] .velocimetro-value-container');
+    if (offlineContainer) offlineContainer.classList.remove('speed-offline');
     const ponteiro = document.getElementById('ponteiroReal');
     if (ponteiro) atualizarPonteiro(ponteiro, 0);
     

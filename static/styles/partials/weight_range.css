@@ -296,6 +296,11 @@
     font-size: 14px;
 }
 
+:root[data-theme="dark"] .weight-input,
+body[data-theme="dark"] .weight-input {
+    color: #000000;
+}
+
 
 /* botões removidos; auto-save sem botões */
 

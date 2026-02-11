@@ -638,3 +638,8 @@
 :root[data-theme="dark"] .control-label {
     color: #ffffff !important;
 }
+
+:root[data-theme="dark"] .position-item .checkmark {
+    background-color: var(--app-bg);
+    border-color: #cbd5e0;
+}

@@ -254,6 +254,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (checkboxNebulizadorEl) checkboxNebulizadorEl.checked = initialSettings.nebulizador;
       if (checkboxLampadaUVEl) checkboxLampadaUVEl.checked = initialSettings.lampadaUV;
       if (checkboxEscovaEl) checkboxEscovaEl.checked = initialSettings.escova;
+    } else {
+      // Fallback: recarrega valores salvos do localStorage
+      loadVisibilitySettings();
     }
     
     if (initialQuantity && embaladoraQuantityEl) {
@@ -262,6 +265,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (initialMachine && selectEl) {
       selectEl.value = initialMachine;
+    } else {
+      // Fallback: recarrega máquina atual do backend
+      try { loadCurrentMachine(); } catch (_) {}
     }
 
     if (initialTheme) {
@@ -651,15 +657,15 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('[MACHINE_SELECT] Carregando configurações salvas no modal...');
     loadVisibilitySettings();
     
-    // Aguarda mais um pouco para garantir que os valores foram aplicados
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
-    // Captura os valores iniciais DEPOIS de carregar (para restaurar no cancelar)
-    captureInitialSettings();
-    
     // Carrega as máquinas e a máquina atual
     await loadMachines();
     await loadCurrentMachine();
+    
+    // Aguarda mais um pouco para garantir que os valores foram aplicados
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    // Captura os valores iniciais DEPOIS de carregar tudo (para restaurar no cancelar)
+    captureInitialSettings();
     
     // Destaque visual na opção conectada e evita reconfirmação desnecessária
     try {
@@ -729,6 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   };
+  window.showMachineModalCore = openModalWithData;
 
   if (btnCancel) {
     btnCancel.addEventListener('click', () => {

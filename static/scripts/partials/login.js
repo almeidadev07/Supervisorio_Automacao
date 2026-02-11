@@ -225,21 +225,24 @@ function loadUserFromStorage() {
 
 // Função para mostrar modal de configuração (máquina)
 function showMachineModal() {
-    // Tenta usar a função showMachineModal do machine_select.js se disponível
-    if (typeof window.showMachineModal === 'function') {
+    // Preferir a versão completa do machine_select.js quando disponível
+    if (typeof window.showMachineModalCore === 'function') {
+        try {
+            window.showMachineModalCore();
+            return;
+        } catch (error) {
+            console.error('Erro ao chamar showMachineModalCore:', error);
+        }
+    }
+
+    // Se houver outra função registrada e não for esta, usa-a
+    if (typeof window.showMachineModal === 'function' && window.showMachineModal !== showMachineModal) {
         try {
             window.showMachineModal();
+            return;
         } catch (error) {
-            console.error('Erro ao chamar showMachineModal:', error);
-            // Fallback: abre o modal diretamente
-            const modal = document.getElementById('machine-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                modal.classList.add('show');
-                modal.style.display = 'flex';
-            }
+            console.error('Erro ao chamar showMachineModal existente:', error);
         }
-        return;
     }
     
     // Fallback: abre o modal diretamente e tenta carregar máquinas
@@ -262,7 +265,11 @@ window.showLoginModal = showLoginModal;
 window.hideLoginModal = hideLoginModal;
 window.isAdmin = isAdmin;
 window.handleLogout = handleLogout;
-window.showMachineModal = showMachineModal;
+if (typeof window.showMachineModal !== 'function') {
+    window.showMachineModal = showMachineModal;
+} else {
+    window.showMachineModalFallback = showMachineModal;
+}
 window.openAlarmAll = openAlarmAll;
 window.setAlarmBellActive = setAlarmBellActive;
 

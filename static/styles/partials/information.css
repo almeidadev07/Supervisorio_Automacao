@@ -333,3 +333,10 @@
     border: 1px solid var(--border-strong);
     color: var(--text-strong);
 }
+
+:root[data-theme="dark"] .info-value-highlight {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.35) !important;
+}

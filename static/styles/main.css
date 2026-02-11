@@ -274,6 +274,10 @@ body {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6) !important;
 }
 
+:root[data-theme="dark"] .alarm-btn-icon {
+    filter: brightness(0);
+}
+
 :root[data-theme="dark"] .user-name,
 :root[data-theme="dark"] #user-display,
 :root[data-theme="dark"] #user-display.user-name,
@@ -287,7 +291,22 @@ body {
 
 :root[data-theme="dark"] .diagram-btn,
 :root[data-theme="dark"] .diagram-btn.active {
+    color: #000000;
+}
+
+:root[data-theme="dark"] .diagram-viewer,
+:root[data-theme="dark"] #pdf-container {
+    background: #4a5568;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+:root[data-theme="dark"] .diagram-title,
+:root[data-theme="dark"] .viewer-title {
     color: #ffffff;
+}
+
+:root[data-theme="dark"] .viewer-title {
+    border-bottom-color: rgba(255, 255, 255, 0.3);
 }
 
 :root[data-theme="dark"] .samples-row-label {
@@ -915,6 +934,7 @@ body {
     transform: scale(0.9) !important;
     transition: transform 0.3s ease !important;
     border: 1px solid var(--border-subtle) !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
 }
 
 #machine-modal.show .modal-content {

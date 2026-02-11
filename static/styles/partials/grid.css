@@ -260,19 +260,30 @@
 }
 
 .velocimetro-value-container {
-    display: flex;
+    --speed-value-width: clamp(60px, 15vw, 120px);
+    display: grid;
+    grid-template-columns: var(--speed-value-width) auto;
     align-items: baseline;
     justify-content: center;
-    gap: 4px;
+    column-gap: 4px;
     margin-top: 5px;
     height: 35%;
     width: 100%;
 }
 
+.velocimetro-value-container.speed-offline {
+    align-items: center;
+}
+
+.velocimetro-value-container.speed-offline .unidade-real {
+    top: 0;
+}
+
 .velocimetro-valor, .velocimetro-input {
     display: inline-block;
-    width: clamp(60px, 15vw, 120px);
+    width: 100%;
     text-align: right;
+    justify-self: end;
 }
 
 .velocimetro-texto {
@@ -490,9 +501,44 @@
     box-shadow: 0 16px 32px rgba(0,0,0,0.15);
     z-index: 99999;
     width: min(320px, 96vw);
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(4, 52px);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(4, minmax(44px, 1fr));
+    align-items: stretch;
+    justify-items: stretch;
     gap: 6px;
+}
+
+#teclado-virtual .tecla {
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    line-height: 1 !important;
+    color: #334155;
+}
+
+#teclado-virtual .tecla.ok {
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] #teclado-virtual,
+body[data-theme="dark"] #teclado-virtual {
+    background: #111827;
+    border-color: #334155;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.45);
+}
+
+:root[data-theme="dark"] #teclado-virtual .tecla,
+body[data-theme="dark"] #teclado-virtual .tecla {
+    background: #1f2937;
+    border-color: #334155;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+}
+
+:root[data-theme="dark"] #teclado-virtual .tecla.ok,
+body[data-theme="dark"] #teclado-virtual .tecla.ok {
+    background: #16a34a;
+    color: #ffffff;
 }
 
 #botoes-ajuste {
@@ -1083,6 +1129,15 @@
     .unidade-real, .unidade-programada {
         font-size: clamp(14px, 1.8vw, 26px);
     }
+
+    .velocimetro-value-container {
+        --speed-value-width: clamp(80px, 12vw, 140px);
+    }
+
+    .velocimetro-valor,
+    .velocimetro-input {
+        width: 100%;
+    }
     
     /* Ícones de periféricos maiores */
     .btn-icon {
@@ -1217,6 +1272,15 @@
     .unidade-real, .unidade-programada {
         font-size: clamp(18px, 2.2vw, 32px);
     }
+
+    .velocimetro-value-container {
+        --speed-value-width: clamp(100px, 14vw, 175px);
+    }
+
+    .velocimetro-valor,
+    .velocimetro-input {
+        width: 100%;
+    }
     
     /* Ícones de periféricos gigantes */
     .btn-icon {
@@ -1350,6 +1414,15 @@
     
     .unidade-real, .unidade-programada {
         font-size: clamp(22px, 2.5vw, 42px);
+    }
+
+    .velocimetro-value-container {
+        --speed-value-width: clamp(120px, 16vw, 220px);
+    }
+
+    .velocimetro-valor,
+    .velocimetro-input {
+        width: 100%;
     }
     
     /* Ícones de periféricos ultra */

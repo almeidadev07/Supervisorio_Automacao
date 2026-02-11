@@ -1250,12 +1250,18 @@ function showInformation(event) {
         event.currentTarget.classList.add('active');
     }
     
-    // Inicializa as informações se ainda não foi inicializado
-    if (typeof window.inicializarInformation === 'function' && !window.informationInitialized) {
-        console.log('ℹ️ Inicializando sistema de Informações...');
-        window.inicializarInformation();
-        window.informationInitialized = true; // Evita reinicializar
-    }
+    // Garante que o script esteja carregado antes de inicializar
+    loadScript('/static/scripts/partials/information.js')
+        .then(() => {
+            if (typeof window.inicializarInformation === 'function' && !window.informationInitialized) {
+                console.log('ℹ️ Inicializando sistema de Informações...');
+                window.inicializarInformation();
+                window.informationInitialized = true; // Evita reinicializar
+            }
+        })
+        .catch((err) => {
+            console.error('[INFORMATION] Erro ao carregar script de informações:', err);
+        });
     
     // ✅ Aplica traduções após mostrar a tela
     applyTranslationsIfAvailable();

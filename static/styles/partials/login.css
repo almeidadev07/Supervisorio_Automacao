@@ -133,7 +133,7 @@
     height: var(--login-icon-size);
     object-fit: contain;
     z-index: 1;
-    filter: brightness(0) invert(1);
+    filter: brightness(0);
 }
 
 .login-container .alarm-label {
@@ -276,6 +276,64 @@ span.user-name {
     padding: 24px 26px 22px;
     gap: 14px;
     border: 1px solid rgba(255, 255, 255, 0.4);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+:root[data-theme="dark"] #login-modal,
+body[data-theme="dark"] #login-modal {
+    background: rgba(2, 6, 23, 0.7);
+}
+
+:root[data-theme="dark"] #login-modal .modal-content,
+body[data-theme="dark"] #login-modal .modal-content {
+    background: #111827 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.6) !important;
+    color: #ffffff !important;
+}
+
+:root[data-theme="dark"] #login-modal .modal-header,
+body[data-theme="dark"] #login-modal .modal-header {
+    background: var(--surface) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: 12px !important;
+    padding: 10px 12px !important;
+    margin-bottom: 12px !important;
+    border-bottom: none !important;
+}
+
+:root[data-theme="dark"] #login-modal .modal-header h2,
+:root[data-theme="dark"] #login-modal label,
+body[data-theme="dark"] #login-modal .modal-header h2,
+body[data-theme="dark"] #login-modal label {
+    color: #ffffff !important;
+}
+
+:root[data-theme="dark"] #login-modal .close-btn,
+body[data-theme="dark"] #login-modal .close-btn {
+    color: #e2e8f0 !important;
+}
+
+:root[data-theme="dark"] #login-modal .close-btn:hover,
+body[data-theme="dark"] #login-modal .close-btn:hover {
+    color: #f87171 !important;
+}
+
+:root[data-theme="dark"] #login-modal input[type="text"],
+:root[data-theme="dark"] #login-modal input[type="password"],
+body[data-theme="dark"] #login-modal input[type="text"],
+body[data-theme="dark"] #login-modal input[type="password"] {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+}
+
+:root[data-theme="dark"] #login-modal input[type="text"]:focus,
+:root[data-theme="dark"] #login-modal input[type="password"]:focus,
+body[data-theme="dark"] #login-modal input[type="text"]:focus,
+body[data-theme="dark"] #login-modal input[type="password"]:focus {
+    background: #111827 !important;
+    border-color: #22c55e !important;
 }
 
 #login-modal .modal-header {
