@@ -673,6 +673,12 @@
     margin: 0;
 }
 
+:root[data-theme="dark"] .config-btn::after,
+:root[data-theme="dark"] .reset-btn::after {
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
 /* Estados de transição */
 #menu.transitioning {
     pointer-events: none;

@@ -1,0 +1,16 @@
+function inicializarWindows() {
+    console.log("🚀 Sistema de Windows/Captura Inicializado - Modal Centralizado");
+    
+    // CRÍTICO: Limpa listeners anteriores para evitar duplicação
+    cleanupWindows();
+    
+    // Aguarda um pouco para garantir que o DOM está pronto
+    setTimeout(() => {
+        // Filtra embaladoras baseado na quantidade configurada
+        filterEmbaladoraButtons();
+        
+        // Configura listener para mudanças na quantidade de embaladoras
+        setupEmbaladoraQuantityListener();
+        
+        // Força aplicação do layout de grid
+        forceGridLayout();

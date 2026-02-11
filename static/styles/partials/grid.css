@@ -86,7 +86,7 @@
     height: 100%;
     min-height: 0;
     background-color: var(--app-bg);
-    /*color: white;*/
+    color: white;
     border: none;
     cursor: grab;
     display: flex;
@@ -308,7 +308,7 @@
 }
 
 .unidade-real {
-    font-size: clamp(12px, 2vw, 22px);
+    font-size: clamp(14px, 2vw, 22px);
     font-weight: bold;
     color: #00ff00;
     position: relative;

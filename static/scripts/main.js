@@ -1422,6 +1422,19 @@ Promise.all([
             window.diagramInitialized = true;
         }
 
+        const windowsVisible = document.getElementById('windows-container')?.style.display !== 'none';
+        if ((lastScreen === 'windows' || windowsVisible) && typeof window.inicializarWindows === 'function' && !window.windowsInitialized) {
+            console.log('[MAIN] Inicializando janelas pos-carregamento...');
+            try {
+                if (typeof window.cleanupWindows === 'function') {
+                    window.cleanupWindows();
+                }
+            } catch (_) {}
+            window.inicializarWindows();
+            window.windowsInitialized = true;
+        }
+
+
         const balanceVisible = document.getElementById('balance-container')?.style.display !== 'none';
         if ((lastScreen === 'balance' || balanceVisible) && typeof window.inicializarBalance === 'function') {
             console.log('[MAIN] 🔧 Inicializando balan�a pós-carregamento...');

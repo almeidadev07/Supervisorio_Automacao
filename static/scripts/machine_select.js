@@ -120,6 +120,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return localStorage.getItem(THEME_KEY) || 'dark';
   }
 
+  function updateThemeLogo(theme) {
+    const logo = document.querySelector('.logo-display[data-light-src][data-dark-src]');
+    if (!logo) return;
+    const isLight = theme === 'light';
+    const target = isLight ? logo.getAttribute('data-light-src') : logo.getAttribute('data-dark-src');
+    if (target && logo.getAttribute('src') !== target) {
+      logo.setAttribute('src', target);
+    }
+  }
+
   function applyTheme(theme) {
     const safeTheme = theme === 'light' ? 'light' : 'dark';
     document.documentElement.dataset.theme = safeTheme;
@@ -127,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.dataset.theme = safeTheme;
     }
     localStorage.setItem(THEME_KEY, safeTheme);
+    updateThemeLogo(safeTheme);
     try {
       document.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: safeTheme } }));
     } catch (_) {}

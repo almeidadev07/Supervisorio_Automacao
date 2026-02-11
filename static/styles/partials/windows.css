@@ -46,7 +46,7 @@
 /* BARRA DE STATUS SUPERIOR - SEMPRE VISÍVEL seguindo padrão - AUMENTADA */
 #windows-container .status-bar,
 .status-bar {
-    background: rgba(255, 255, 255, 0.95) !important;
+    background: var(--surface) !important;
     border-radius: 16px !important;
     padding: 25px 40px !important;
     display: flex !important;
@@ -54,7 +54,7 @@
     justify-content: space-between !important;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
     backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border: 1px solid var(--border-subtle) !important;
     position: relative !important;
     overflow: hidden !important;
     margin-bottom: 0 !important;
@@ -163,6 +163,12 @@
 }
 
 /* GRID DE BOTÕES - LAYOUT EM GRID CSS seguindo padrão */
+
+#windows-container .capture-grid.grid-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
 #windows-container .capture-grid,
 .capture-grid {
     display: grid !important;
@@ -173,11 +179,11 @@
     align-items: center !important;
     align-content: start !important;
     padding: 30px !important;
-    background: rgba(255, 255, 255, 0.95) !important;
+    background: var(--surface) !important;
     border-radius: 16px !important;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
     backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border: 1px solid var(--border-subtle) !important;
     flex: 1 !important;
     overflow: auto !important;
     box-sizing: border-box !important;
@@ -595,5 +601,12 @@ button.capture-btn.completed::after {
     .capture-icon {
         font-size: 50px !important;
     }
+}
+
+:root[data-theme="dark"] #windows-container .status-bar,
+:root[data-theme="dark"] #windows-container .capture-grid {
+    background: var(--surface) !important;
+    border: 1px solid var(--border-subtle) !important;
+    box-shadow: var(--shadow-lg) !important;
 }
 

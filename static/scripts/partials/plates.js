@@ -33,6 +33,7 @@ function inicializarPlates() {
     window.platesInitialized = true;
 
     setupPlatesTabs();
+    setupPlatesStatusToggles();
 }
 
 function setupPlatesTabs() {
@@ -60,6 +61,28 @@ function setupPlatesTabs() {
 
     const defaultTab = tabs.find(tab => tab.classList.contains('active')) || tabs[0];
     activateTab(defaultTab);
+}
+
+function setupPlatesStatusToggles() {
+    const container = document.getElementById('plates-container');
+    if (!container) {
+        return;
+    }
+
+    const clickHandler = (event) => {
+        const item = event.target.closest('.plates-status-item');
+        if (!item || !container.contains(item)) {
+            return;
+        }
+        const indicator = item.querySelector('.plates-status-indicator');
+        if (!indicator) {
+            return;
+        }
+        const isActive = indicator.classList.toggle('active');
+        item.classList.toggle('active', isActive);
+    };
+
+    registerPlatesEventListener(container, 'click', clickHandler);
 }
 
 window.inicializarPlates = inicializarPlates;

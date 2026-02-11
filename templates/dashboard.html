@@ -24,7 +24,11 @@
     <main>
         <div class="main-container">
             <div class="content-wrapper">
-                <img class="logo-display" src="{{ url_for('static', filename='images/logos/00_Logo_Completo.png') }}" alt="Logo">
+                <img class="logo-display"
+                     src="{{ url_for('static', filename='images/logos/00_Logo_Completo.png') }}"
+                     data-light-src="{{ url_for('static', filename='images/logos/00_Logo_Completo.png') }}"
+                     data-dark-src="{{ url_for('static', filename='images/logos/00_Logo_Completo_branco.png') }}"
+                     alt="Logo">
                 <div class="version-display">v1.0.0</div>
 
                 <!-- Grid de componentes arrastáveis (controle de visibilidade via JS) -->

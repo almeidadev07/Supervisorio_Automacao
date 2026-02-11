@@ -233,6 +233,10 @@ body {
     color: var(--text-primary);
 }
 
+:root[data-theme="dark"] #grid-container .draggable-btn:not(.inactive):not(.waiting-for-unlock):not(.unlocked-for-drag):not(.dragging):not(.alarmes-alerta) {
+    background: #4a5568;
+}
+
 :root[data-theme="light"] #grid-container .draggable-btn h2,
 :root[data-theme="light"] #grid-container .peripheral-label,
 :root[data-theme="light"] #grid-container .date-display,
@@ -260,10 +264,137 @@ body {
     color: var(--text-muted) !important;
 }
 
+:root[data-theme="dark"] .shutdown-label {
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme="dark"] .login-container .alarm-label {
+    color: #ffffff !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6) !important;
+}
+
+:root[data-theme="dark"] .user-name,
+:root[data-theme="dark"] #user-display,
+:root[data-theme="dark"] #user-display.user-name,
+:root[data-theme="dark"] .login-container .user-name,
+:root[data-theme="dark"] .login-container #user-display,
+:root[data-theme="dark"] span#user-display,
+:root[data-theme="dark"] span.user-name {
+    color: #ffffff !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6) !important;
+}
+
+:root[data-theme="dark"] .diagram-btn,
+:root[data-theme="dark"] .diagram-btn.active {
+    color: #ffffff;
+}
+
+:root[data-theme="dark"] .samples-row-label {
+    color: #000000;
+}
+
 :root[data-theme="dark"] .info-value {
     background: var(--surface) !important;
     border: 1px solid var(--border-strong) !important;
     color: var(--text-strong) !important;
+}
+
+:root[data-theme="dark"] .windows-layout,
+:root[data-theme="dark"] .plates-layout,
+:root[data-theme="dark"] .information-layout,
+:root[data-theme="dark"] .synchronism-screen-layout {
+    background: var(--app-bg) !important;
+}
+
+:root[data-theme="dark"] .status-bar,
+:root[data-theme="dark"] .capture-grid,
+:root[data-theme="dark"] .plates-header-box,
+:root[data-theme="dark"] .plates-content-box,
+:root[data-theme="dark"] .information-header-box,
+:root[data-theme="dark"] .information-content-box,
+:root[data-theme="dark"] .synchronism-header-box,
+:root[data-theme="dark"] .synchronism-content-box {
+    background: var(--surface) !important;
+    border: 1px solid var(--border-subtle) !important;
+    box-shadow: var(--shadow-lg) !important;
+}
+
+:root[data-theme="dark"] .plates-tab {
+    background: var(--surface-alt);
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+}
+
+:root[data-theme="dark"] .plates-tab::before {
+    background: var(--surface-muted);
+    border-color: var(--border-strong);
+    box-shadow: none;
+}
+
+:root[data-theme="dark"] .plates-tab.active {
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+}
+
+:root[data-theme="dark"] .plates-panel-title {
+    background: var(--surface-alt);
+    color: var(--text-strong);
+    border: 1px solid var(--border-strong);
+}
+
+:root[data-theme="dark"] .plates-board {
+    background: var(--surface-alt);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-md);
+}
+
+:root[data-theme="dark"] .plates-board-title {
+    color: var(--text-strong);
+}
+
+:root[data-theme="dark"] .plates-status-item {
+    background: var(--surface-muted);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+}
+
+:root[data-theme="dark"] .plates-status-indicator {
+    background: var(--surface-muted);
+    border-color: var(--border-strong);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="dark"] .plates-status-indicator.inactive {
+    background: var(--surface-muted);
+    border-color: var(--border-strong);
+}
+
+:root[data-theme="dark"] .plates-status-indicator.active {
+    background: #28a745;
+    border-color: #28a745;
+    box-shadow: 0 0 12px rgba(40, 167, 69, 0.45);
+}
+
+:root[data-theme="dark"] .plates-status-indicator.active::after {
+    display: block;
+    border-color: #ffffff;
+}
+
+:root[data-theme="dark"] #windows-container .status-bar,
+:root[data-theme="dark"] #windows-container .capture-grid {
+    background: var(--surface) !important;
+    border: 1px solid var(--border-subtle) !important;
+    box-shadow: var(--shadow-lg) !important;
+}
+
+:root[data-theme="dark"] .panel-label,
+:root[data-theme="dark"] .panels-title {
+    color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .control-label {
+    color: #ffffff !important;
 }
 
 .panels-header,

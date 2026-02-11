@@ -38,6 +38,13 @@ function filterEmbaladoraButtons() {
     
     allButtons.forEach(button => {
         const station = button.dataset.station;
+        const isGridWrapper = button.classList.contains('capture-grid') || station === 'grid';
+
+        // Mantem o container do grid sempre visivel
+        if (isGridWrapper) {
+            button.style.removeProperty('display');
+            return;
+        }
         
         // Se for botão fixo, sempre mostra
         if (FIXED_WINDOWS_STATIONS.includes(station)) {
@@ -82,6 +89,8 @@ function filterEmbaladoraButtons() {
     // Recalcula o layout do grid após filtrar
     setTimeout(() => {
         forceGridLayout();
+        // Mostra o grid após aplicar o filtro/layout para evitar flash
+        setWindowsGridHidden(false);
     }, 50);
 }
 
@@ -180,6 +189,18 @@ const stationToPinMap = {
     'e06': 'cinta'
 };
 
+function setWindowsGridHidden(hidden) {
+    const captureGrid = document.querySelector('#windows-container .capture-grid');
+    if (!captureGrid) {
+        return;
+    }
+    if (hidden) {
+        captureGrid.classList.add('grid-hidden');
+    } else {
+        captureGrid.classList.remove('grid-hidden');
+    }
+}
+
 function inicializarWindows() {
     console.log("🚀 Sistema de Windows/Captura Inicializado - Modal Centralizado");
     
@@ -188,6 +209,7 @@ function inicializarWindows() {
     
     // Aguarda um pouco para garantir que o DOM está pronto
     setTimeout(() => {
+        setWindowsGridHidden(true);
         // Filtra embaladoras baseado na quantidade configurada
         filterEmbaladoraButtons();
         
@@ -341,9 +363,15 @@ function forceGridLayout() {
         captureGrid.style.setProperty('padding', `${layout.padding}px`, 'important');
         captureGrid.style.setProperty('height', '100%', 'important');
         captureGrid.style.setProperty('box-sizing', 'border-box', 'important');
-        captureGrid.style.setProperty('background', 'white', 'important');
+        const rootStyles = getComputedStyle(document.documentElement);
+        const surface = rootStyles.getPropertyValue('--surface').trim() || 'white';
+        const shadowLg = rootStyles.getPropertyValue('--shadow-lg').trim() || '0 6px 20px rgba(0,0,0,0.15)';
+        const borderSubtle = rootStyles.getPropertyValue('--border-subtle').trim() || 'rgba(255,255,255,0.2)';
+
+        captureGrid.style.setProperty('background', surface, 'important');
+        captureGrid.style.setProperty('border', `1px solid ${borderSubtle}`, 'important');
         captureGrid.style.setProperty('border-radius', '16px', 'important');
-        captureGrid.style.setProperty('box-shadow', '0 6px 20px rgba(0,0,0,0.15)', 'important');
+        captureGrid.style.setProperty('box-shadow', shadowLg, 'important');
         
         console.log("[WINDOWS] Grid aplicado ao container principal");
     }
