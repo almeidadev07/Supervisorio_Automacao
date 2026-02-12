@@ -275,7 +275,7 @@ body {
 }
 
 :root[data-theme="dark"] .alarm-btn-icon {
-    filter: brightness(0);
+    filter: var(--alarm-icon-red-filter);
 }
 
 :root[data-theme="dark"] .user-name,

@@ -133,7 +133,8 @@
     height: var(--login-icon-size);
     object-fit: contain;
     z-index: 1;
-    filter: brightness(0);
+    filter: var(--alarm-icon-red-filter);
+    transition: filter 0.2s ease;
 }
 
 .login-container .alarm-label {
@@ -170,6 +171,20 @@
 
 .alarm-btn.alarm-active {
     animation: alarm-blink 1s infinite;
+}
+
+:root {
+    --alarm-icon-red-filter: invert(22%) sepia(86%) saturate(5795%) hue-rotate(354deg) brightness(102%) contrast(108%);
+    --alarm-icon-white-filter: brightness(0) invert(1);
+}
+
+@keyframes alarm-icon-blink {
+    0%, 100% { filter: var(--alarm-icon-red-filter); }
+    50% { filter: var(--alarm-icon-white-filter); }
+}
+
+.alarm-btn.alarm-active .alarm-btn-icon {
+    animation: alarm-icon-blink 1s infinite;
 }
 
 /* Ajustes responsivos do texto (igual ao Desligar) */

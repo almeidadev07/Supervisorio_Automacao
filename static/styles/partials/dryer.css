@@ -2,12 +2,12 @@
 .dryer-screen-layout {
     display: flex;
     flex-direction: column;
-    gap: 28px;
+    gap: 24px;
     width: 100%;
     max-width: 100%;
     height: 100%;
     margin: 0 auto;
-    padding: 24px;
+    padding: 20px;
     box-sizing: border-box;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: var(--app-bg);
@@ -22,13 +22,13 @@
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 28px;
+    padding: 25px;
     box-sizing: border-box;
 }
 
 /* Título da tela */
 .dryer-title {
-    font-size: 2.3rem;
+    font-size: 2.2rem;
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
@@ -45,7 +45,7 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
     overflow: hidden;
     box-sizing: border-box;
-    padding: 24px;
+    padding: 20px;
     display: flex;
     align-items: center;
     justify-content: center;

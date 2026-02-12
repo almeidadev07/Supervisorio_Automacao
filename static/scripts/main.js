@@ -1407,6 +1407,12 @@ Promise.all([
             lastScreen = localStorage.getItem(LAST_SCREEN_KEY);
         } catch (_) {}
 
+        const gridVisible = document.getElementById('grid-container')?.style.display !== 'none';
+        if ((lastScreen === 'grid' || gridVisible) && typeof window.showGrid === 'function') {
+            console.log('[MAIN] Inicializando grid pos-carregamento...');
+            window.showGrid();
+        }
+
         const washerVisible = document.getElementById('washer-container')?.style.display !== 'none';
         if ((lastScreen === 'washer' || washerVisible) && typeof window.inicializarWasher === 'function' && !window.washerInitialized) {
             console.log('[MAIN] 🔧 Inicializando lavadora pós-carregamento...');
@@ -1480,6 +1486,22 @@ Promise.all([
         console.warn('[MAIN] ⚠️ Falha ao inicializar lavadora/secadora/diagramas/balança/classificação/amostras/alarmes pós-carregamento:', e);
     }
 
+    
+
+    // Garantia de re-inicializacao do grid quando F5 abre direto na tela inicial
+    try {
+        if (typeof window.ensureGridReady === 'function') {
+            setTimeout(() => {
+                try {
+                    window.ensureGridReady();
+                } catch (e) {
+                    console.warn('[MAIN] Falha ao garantir grid apos F5:', e);
+                }
+            }, 800);
+        }
+    } catch (e) {
+        console.warn('[MAIN] Falha ao agendar ensureGridReady:', e);
+    }
     console.log('[MAIN] ✅ Scripts carregados - telas serão inicializadas sob demanda');
 
 })

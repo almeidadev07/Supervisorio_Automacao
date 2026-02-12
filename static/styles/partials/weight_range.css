@@ -342,8 +342,9 @@ body[data-theme="dark"] .weight-input {
 #teclado-virtual-texto {
     position: fixed;
     left: 50%;
-    bottom: 10px;
-    transform: translateX(-50%);
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
     background: #ffffff;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
@@ -356,8 +357,9 @@ body[data-theme="dark"] .weight-input {
 #teclado-virtual-num {
     position: fixed;
     left: 50%;
-    bottom: 16px;
-    transform: translateX(-50%);
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
     background: #ffffff;
     border: 1px solid #e5e7eb;
     border-radius: 12px;

@@ -492,8 +492,9 @@
     display: none;
     position: fixed;
     left: 50%;
-    bottom: 10px;
-    transform: translateX(-50%);
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
     background: #ffffff;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
@@ -506,6 +507,27 @@
     align-items: stretch;
     justify-items: stretch;
     gap: 6px;
+}
+
+/* Mascara de foco para velocidade programada */
+.grid-focus-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 90000;
+}
+.grid-focus-mask.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.draggable-btn.focus-velocidade-prog {
+    position: relative;
+    z-index: 90001;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.55), 0 18px 32px rgba(0, 0, 0, 0.35);
 }
 
 #teclado-virtual .tecla {

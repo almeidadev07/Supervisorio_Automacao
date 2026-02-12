@@ -31,6 +31,12 @@ class DataHubController:
         # Cache de dados
         self._cache = {}
         self._cache_lock = threading.Lock()
+
+        # Escritas pendentes (evita flicker: mantém valor escrito até PLC confirmar)
+        self._pending_writes = {}
+        self._pending_writes_lock = threading.Lock()
+        # Tempo padrão para segurar valor escrito enquanto PLC aplica (segundos)
+        self._write_hold_seconds = 6.0
         
         # URL do DataHub
         self._datahub_url = DATAHUB_URL
@@ -526,6 +532,9 @@ class DataHubController:
             if vel_tags:
                 print(f"[DATAHUB_CONTROLLER] Tags de velocidade: {list(vel_tags.keys())[:5]}")
         
+        # Aplica escritas pendentes para evitar reverter UI antes do PLC confirmar
+        self._apply_pending_writes(result)
+
         return result
     
     def _emit_data(self, data):
@@ -629,6 +638,75 @@ class DataHubController:
                 
         except Exception as e:
             print(f"[DATAHUB_CONTROLLER] Erro ao emitir dados: {e}")
+
+    def _set_pending_write(self, tag_name, value, hold_seconds: Optional[float] = None):
+        """Registra uma escrita pendente e atualiza o cache local imediatamente."""
+        try:
+            if tag_name is None:
+                return
+            hold = hold_seconds if hold_seconds is not None else self._write_hold_seconds
+            now = time.time()
+            with self._pending_writes_lock:
+                self._pending_writes[tag_name] = {
+                    'value': value,
+                    'ts': now,
+                    'expires_at': now + hold
+                }
+            # Atualiza cache local para refletir mudança imediatamente
+            with self._cache_lock:
+                self._cache[tag_name] = value
+        except Exception as e:
+            print(f"[DATAHUB_CONTROLLER] Erro ao registrar escrita pendente {tag_name}: {e}")
+
+    def _values_equal(self, a, b) -> bool:
+        """Comparacao tolerante para confirmar escrita."""
+        try:
+            # Trata None
+            if a is None or b is None:
+                return a is b
+            # Bool
+            if isinstance(a, bool) or isinstance(b, bool):
+                return bool(a) == bool(b)
+            # Numericos
+            if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+                if isinstance(a, float) or isinstance(b, float):
+                    return abs(float(a) - float(b)) <= 1e-4
+                return int(a) == int(b)
+            # Strings e outros
+            return a == b
+        except Exception:
+            return a == b
+
+    def _apply_pending_writes(self, result: Dict[str, Any]):
+        """Sobrescreve valores lidos com escritas pendentes (temporário) para evitar flicker."""
+        try:
+            now = time.time()
+            to_delete = []
+            with self._pending_writes_lock:
+                for tag_name, info in self._pending_writes.items():
+                    expires_at = info.get('expires_at', 0)
+                    pending_value = info.get('value')
+
+                    # Expirou: remove
+                    if now >= expires_at:
+                        to_delete.append(tag_name)
+                        continue
+
+                    # Se PLC ja refletiu o valor, remove do pending
+                    if tag_name in result and self._values_equal(result.get(tag_name), pending_value):
+                        to_delete.append(tag_name)
+                        continue
+
+                    # Força valor pendente no resultado (mantém UI estável)
+                    result[tag_name] = pending_value
+
+                for tag_name in to_delete:
+                    try:
+                        del self._pending_writes[tag_name]
+                    except Exception:
+                        pass
+        except Exception as e:
+            print(f"[DATAHUB_CONTROLLER] Erro ao aplicar escritas pendentes: {e}")
     
     def get_cached_data(self, machine_name=None):
         """Retorna dados do cache."""
@@ -741,6 +819,8 @@ class DataHubController:
                 success = result.get('success', False)
                 if success:
                     print(f"[DATAHUB_CONTROLLER] ✅ Escrita OK: {tag_name} = {value}")
+                    # Marca como escrita pendente para evitar flicker na UI
+                    self._set_pending_write(tag_name, value)
                 else:
                     print(f"[DATAHUB_CONTROLLER] ❌ Falha na escrita: {result.get('error')}")
                 return success
@@ -787,6 +867,8 @@ class DataHubController:
                 try:
                     success = future.result(timeout=5)
                     results.append(success)
+                    if success:
+                        self._set_pending_write(tag_name, tag_values.get(tag_name))
                 except Exception as e:
                     print(f"[DATAHUB_CONTROLLER] Erro ao escrever {tag_name}: {e}")
                     results.append(False)

@@ -67,7 +67,7 @@ DBS = [
     {"id": 200, "size": 500},  # DB200: Classificação
     {"id": 201, "size": 500},  # DB201: Classificação
     {"id": 202, "size": 2000}, # DB202: Nome dinâmico
-    {"id": 209, "size": 2000}, # DB209: Visib tipo ovo
+    {"id": 209, "size": 1738}, # DB209: Visib tipo ovo (ajustado ao comm_map para evitar Address out of range)
     
     # DBs Predição Branco (P1-P7, Visio, Crack)
     {"id": 210, "size": 100},  # DB210: Pred Branco P1
@@ -265,84 +265,128 @@ def detect_active_plc(plc_list: List[Dict]) -> Optional[Dict]:
 
 class Snap7Handler:
     """
-    Gerencia a conexão Snap7 com o PLC.
-    Responsável por conectar, ler, escrever e reconectar.
+    Gerencia a conexao Snap7 com o PLC.
+    Responsavel por conectar, ler, escrever e reconectar.
     """
     
     def __init__(self):
-        self.client = snap7.client.Client()
-        self.connected = False
+        # Dois clientes separados para permitir leitura e escrita em paralelo.
+        # read_client: usado pelo loop de leitura ciclica
+        # write_client: usado por escritas via API
+        self.read_client = snap7.client.Client()
+        self.write_client = snap7.client.Client()
+        self.connected = False  # status da conexao de leitura
+        self.write_connected = False  # status da conexao de escrita
         self.current_plc = None
         self.connection_time = None
         self.last_error = None
-        self._io_lock = threading.Lock()  # Lock para operações I/O
-        self.last_successful_read = None  # ✅ Heartbeat: timestamp da última leitura OK
+        self._read_lock = threading.Lock()
+        self._write_lock = threading.Lock()
+        self._connect_lock = threading.Lock()
+        self.last_successful_read = None  # Heartbeat: timestamp da ultima leitura OK
+
+    def _reset_client(self, client):
+        try:
+            if client:
+                try:
+                    if client.get_connected():
+                        client.disconnect()
+                except Exception:
+                    pass
+                try:
+                    client.destroy()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return snap7.client.Client()
+
+    def _connect_client(self, client, plc_config, label):
+        try:
+            client.connect(plc_config['ip'], plc_config['rack'], plc_config['slot'])
+            if client.get_connected():
+                return True
+            return False
+        except Exception as e:
+            self.last_error = str(e)
+            logger.error(f"Erro ao conectar ({label}): {e}")
+            return False
         
     def connect(self, plc_config: Dict) -> bool:
         """
         Conecta ao PLC especificado.
         
         Args:
-            plc_config: Dicionário com ip, rack, slot
+            plc_config: Dicionario com ip, rack, slot
             
         Returns:
             True se conectou com sucesso
         """
         try:
-            # Desconecta e destrói cliente antigo se existir
-            if self.connected:
-                self.disconnect()
-            
-            # IMPORTANTE: Recria o cliente a cada conexão
-            # Isso evita o erro "Cannot change this param now"
-            try:
-                if self.client:
-                    self.client.destroy()
-            except:
-                pass
-            
-            self.client = snap7.client.Client()
-            
-            # Tenta conectar
-            self.client.connect(
-                plc_config['ip'],
-                plc_config['rack'],
-                plc_config['slot']
-            )
-            
-            # Verifica se conectou
-            if self.client.get_connected():
-                self.connected = True
-                self.current_plc = plc_config
-                self.connection_time = time.time()
-                logger.info(f"✅ Conectado à máquina {plc_config['name']} ({plc_config['ip']})")
-                return True
-            else:
-                logger.error(f"❌ Falha ao conectar em {plc_config['ip']}")
-                return False
-                
+            with self._connect_lock:
+                # Bloqueia I/O enquanto reconecta
+                with self._read_lock, self._write_lock:
+                    # Reseta clientes
+                    self.read_client = self._reset_client(self.read_client)
+                    self.write_client = self._reset_client(self.write_client)
+                    self.connected = False
+                    self.write_connected = False
+                    self.current_plc = None
+                    self.connection_time = None
+
+                    # Conecta cliente de leitura (principal)
+                    if not self._connect_client(self.read_client, plc_config, 'read'):
+                        logger.error(f"Falha ao conectar leitura em {plc_config['ip']}")
+                        return False
+
+                    self.connected = True
+                    self.current_plc = plc_config
+                    self.connection_time = time.time()
+                    logger.info(f"Conectado a maquina {plc_config['name']} ({plc_config['ip']}) [read]")
+
+                    # Conecta cliente de escrita (secundario)
+                    if self._connect_client(self.write_client, plc_config, 'write'):
+                        self.write_connected = True
+                        logger.info(f"Conectado a maquina {plc_config['name']} ({plc_config['ip']}) [write]")
+                    else:
+                        self.write_connected = False
+                        logger.warning(f"Conexao de escrita nao disponivel para {plc_config['ip']} (read ok)")
+
+                    return True
         except Exception as e:
             self.last_error = str(e)
-            logger.error(f"❌ Erro ao conectar: {e}")
+            logger.error(f"Erro ao conectar: {e}")
             self.connected = False
+            self.write_connected = False
             return False
     
     def disconnect(self):
         """Desconecta do PLC."""
         try:
-            if self.client.get_connected():
-                self.client.disconnect()
-            self.connected = False
-            logger.info("🔌 Desconectado do PLC")
+            with self._connect_lock:
+                with self._read_lock, self._write_lock:
+                    try:
+                        if self.read_client and self.read_client.get_connected():
+                            self.read_client.disconnect()
+                    except Exception:
+                        pass
+                    try:
+                        if self.write_client and self.write_client.get_connected():
+                            self.write_client.disconnect()
+                    except Exception:
+                        pass
+                    self.connected = False
+                    self.write_connected = False
+                    logger.info("Desconectado do PLC")
         except Exception as e:
             logger.error(f"Erro ao desconectar: {e}")
     
     def read_db(self, db_number: int, start: int, size: int) -> Optional[bytearray]:
         """
-        Lê um bloco de dados da DB.
+        Le um bloco de dados da DB.
         
         Args:
-            db_number: Número da DB
+            db_number: Numero da DB
             start: Offset inicial
             size: Tamanho em bytes
             
@@ -353,10 +397,10 @@ class Snap7Handler:
             if not self.connected:
                 return None
             
-            with self._io_lock:  # Sincroniza com escritas
-                data = self.client.db_read(db_number, start, size)
+            with self._read_lock:  # Sincroniza leituras no cliente de leitura
+                data = self.read_client.db_read(db_number, start, size)
             
-            # ✅ Atualiza heartbeat após leitura bem-sucedida
+            # Atualiza heartbeat apos leitura bem-sucedida
             self.last_successful_read = time.time()
             return data
             
@@ -364,15 +408,20 @@ class Snap7Handler:
             self.last_error = str(e)
             error_msg = str(e)
             
-            # ✅ MELHORIA: Não marca conexão como perdida se a DB simplesmente não existe
-            # Apenas loga o erro e retorna None
-            if "Item not available" in error_msg:
-                # DB não existe no PLC - não é erro de conexão
-                logger.warning(f"⚠️ DB{db_number} não disponível no PLC: {error_msg}")
+            # Nao marca conexao como perdida se a DB nao existe ou se o tamanho
+            # solicitado excede o tamanho real da DB (Address out of range).
+            # Apenas loga o erro e retorna None.
+            if 'Item not available' in error_msg:
+                # DB nao existe no PLC - nao e erro de conexao
+                logger.warning(f"DB{db_number} nao disponivel no PLC: {error_msg}")
+            elif 'Address out of range' in error_msg:
+                # DB existe, mas o tamanho solicitado excede o tamanho real
+                logger.warning(f"DB{db_number} fora do range (start={start}, size={size}): {error_msg}")
             else:
-                # Outros erros podem indicar perda de conexão
-                logger.error(f"❌ Erro ao ler DB{db_number}: {e}")
+                # Outros erros podem indicar perda de conexao
+                logger.error(f"Erro ao ler DB{db_number}: {e}")
                 self.connected = False
+                self.write_connected = False
             
             return None
     
@@ -381,7 +430,7 @@ class Snap7Handler:
         Escreve dados na DB.
         
         Args:
-            db_number: Número da DB
+            db_number: Numero da DB
             start: Offset inicial
             data: Dados a escrever
             
@@ -389,21 +438,44 @@ class Snap7Handler:
             True se escreveu com sucesso
         """
         try:
-            if not self.connected:
-                return False
+            if not self.write_connected:
+                if not self._ensure_write_connected():
+                    return False
             
-            with self._io_lock:  # Sincroniza com leituras
-                self.client.db_write(db_number, start, data)
+            with self._write_lock:  # Sincroniza escritas no cliente de escrita
+                self.write_client.db_write(db_number, start, data)
             return True
             
         except Exception as e:
             self.last_error = str(e)
-            logger.error(f"❌ Erro ao escrever DB{db_number}: {e}")
-            self.connected = False
+            logger.error(f"Erro ao escrever DB{db_number}: {e}")
+            self.write_connected = False
+            return False
+    
+    def _ensure_write_connected(self) -> bool:
+        """Garante que o cliente de escrita esteja conectado."""
+        try:
+            with self._connect_lock:
+                if self.write_connected:
+                    return True
+                if not self.current_plc:
+                    self.last_error = 'No active PLC'
+                    return False
+                with self._write_lock:
+                    # Recria apenas o cliente de escrita
+                    self.write_client = self._reset_client(self.write_client)
+                    if self._connect_client(self.write_client, self.current_plc, 'write'):
+                        self.write_connected = True
+                        return True
+                    self.write_connected = False
+                    return False
+        except Exception as e:
+            self.last_error = str(e)
+            self.write_connected = False
             return False
     
     def get_uptime(self) -> float:
-        """Retorna o tempo de conexão em segundos."""
+        """Retorna o tempo de conexao em segundos."""
         if self.connection_time:
             return time.time() - self.connection_time
         return 0.0
@@ -906,7 +978,8 @@ async def write_data(db_id: int, offset: int, data_type: str = "INT", request: R
         
         # DEBUG: Verificar status de conexão
         logger.info(f"[WRITE] Tentando escrever DB{db_id}.{offset} = {value} ({data_type})")
-        logger.info(f"[WRITE] Handler conectado: {datahub.snap7_handler.connected}")
+        logger.info(f"[WRITE] Handler conectado (leitura): {datahub.snap7_handler.connected}")
+        logger.info(f"[WRITE] Handler conectado (escrita): {datahub.snap7_handler.write_connected}")
         logger.info(f"[WRITE] DataHub ativo: {datahub.active_machine}")
         
         success = datahub.snap7_handler.write_db(db_id, offset, data)
@@ -922,7 +995,7 @@ async def write_data(db_id: int, offset: int, data_type: str = "INT", request: R
             logger.error(f"[WRITE] Último erro: {datahub.snap7_handler.last_error}")
             return {
                 "success": False,
-                "error": f"Falha ao escrever - Handler conectado: {datahub.snap7_handler.connected}, Erro: {datahub.snap7_handler.last_error}"
+                "error": f"Falha ao escrever - Handler leitura: {datahub.snap7_handler.connected}, Handler escrita: {datahub.snap7_handler.write_connected}, Erro: {datahub.snap7_handler.last_error}"
             }
     except Exception as e:
         return {

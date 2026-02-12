@@ -934,7 +934,8 @@ function escreverVelocidadeProgramada(valor) {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        timeoutMs: 20000
     })
     .then(response => response.json())
     .then(data => {
@@ -956,8 +957,14 @@ function escreverVelocidadeProgramada(valor) {
         }
     })
     .catch(error => {
+        const msg = error && error.message ? error.message : String(error);
+        const isAbort = error && (error.name === 'AbortError' || /aborted/i.test(msg));
+        if (isAbort) {
+            console.warn('[GRID] Escrita de velocidade programada abortada/timeout.');
+            return;
+        }
         console.error(`[GRID] ❌ Erro na requisição: ${error}`);
-        alert(`Erro de comunicação: ${error.message}`);
+        alert(`Erro de comunicação: ${msg}`);
     });
 }
 
@@ -1582,6 +1589,24 @@ let intervaloAjuste;
 let gridMouseDownHandler = null;
 let gridKeydownHandler = null;
 let gridResizeHandler = null;
+const gridFocusMask = document.getElementById('grid-focus-mask');
+const velocidadeProgBtn = document.querySelector('.draggable-btn[data-station="velocidade-prog"]');
+
+function showVelocidadeProgFocus() {
+    if (!gridFocusMask || !velocidadeProgBtn) return;
+    gridFocusMask.classList.add('show');
+    velocidadeProgBtn.classList.add('focus-velocidade-prog');
+}
+
+function hideVelocidadeProgFocus(force) {
+    if (!gridFocusMask || !velocidadeProgBtn) return;
+    if (!force) {
+        const targetId = teclado?.dataset?.target;
+        if (targetId && targetId !== 'velocidadeInput') return;
+    }
+    gridFocusMask.classList.remove('show');
+    velocidadeProgBtn.classList.remove('focus-velocidade-prog');
+}
 
 // Rastreamento de handlers do Socket.IO para cleanup
 let gridSocketHandlers = {
@@ -1621,6 +1646,7 @@ function ensureGridGlobalHandlers() {
                     if (input) { input.blur(); }
                 } catch(_) {}
                 teclado.style.display = "none";
+                hideVelocidadeProgFocus();
                 valorDigitado = "";
             }
         };
@@ -1634,6 +1660,7 @@ function ensureGridGlobalHandlers() {
                 // Cancela a digitação sem salvar
                 USER_TYPING_VELOCITY = false;
                 teclado.style.display = "none";
+                hideVelocidadeProgFocus();
                 valorDigitado = "";
                 const input = document.getElementById(teclado.dataset.target);
                 if (input) {
@@ -1678,6 +1705,11 @@ function abrirTeclado(e) {
         teclado.style.display = "grid";
         // Mantém dataset.target para que as funções usem o input correto
         teclado.dataset.target = input.id || (input.id = 'kbd-' + Math.random().toString(36).slice(2,8));
+        if (input.id === 'velocidadeInput') {
+            showVelocidadeProgFocus();
+        } else {
+            hideVelocidadeProgFocus(true);
+        }
         deveSubstituir = true;
         valorDigitado = "";
     }
@@ -1708,6 +1740,7 @@ function fecharTeclado() {
         }
     }
     teclado.style.display = "none";
+    hideVelocidadeProgFocus();
     valorDigitado = "";
 }
 
@@ -3200,6 +3233,7 @@ window.addEventListener('load', () => {
     // Garante teclados fechados também após load completo
     try { const kb = document.getElementById('teclado-virtual'); if (kb) kb.style.display = 'none'; } catch(_) {}
     try { const kbt = document.getElementById('teclado-virtual-texto'); if (kbt) kbt.style.display = 'none'; } catch(_) {}
+    hideVelocidadeProgFocus(true);
 });
 
 // Adiciona event delegation como fallback
@@ -3336,6 +3370,7 @@ document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         try { const kb = document.getElementById('teclado-virtual'); if (kb) kb.style.display = 'none'; } catch(_) {}
         try { const kbt = document.getElementById('teclado-virtual-texto'); if (kbt) kbt.style.display = 'none'; } catch(_) {}
+        hideVelocidadeProgFocus(true);
     }
 });
 
@@ -6172,6 +6207,46 @@ window.startPeripheralsSync = startPeripheralsSync;
 window.stopPeripheralsSync = stopPeripheralsSync;
 window.ensurePowerButtonInCorrectPlace = ensurePowerButtonInCorrectPlace;
 window.configurarDragAndDrop = configurarDragAndDrop;
+
+// ✅ Garantia de re-inicialização após F5 quando o grid já está visível
+window.ensureGridReady = function() {
+    try {
+        if (window.__gridEnsureInFlight) return;
+        window.__gridEnsureInFlight = true;
+
+        const grid = document.getElementById('grid-container');
+        const gridVisible = grid && grid.offsetParent !== null && getComputedStyle(grid).display !== 'none';
+        if (!gridVisible) {
+            window.__gridEnsureInFlight = false;
+            return;
+        }
+
+        const needsReinit = !__velocimetroInicializado || !window.__gridHeartbeat;
+        if (needsReinit) {
+            console.warn('[GRID] ⚠️ Grid não inicializado após load - re-inicializando...');
+            try { if (typeof window.cleanupGrid === 'function') window.cleanupGrid(); } catch (_) {}
+            try { if (typeof window.inicializarVelocimetro === 'function') window.inicializarVelocimetro(); } catch (e) { console.warn('[GRID] Erro ao re-inicializar velocímetro:', e); }
+
+            setTimeout(() => {
+                try { if (typeof window.setupJogAcumuladora === 'function') window.setupJogAcumuladora(); } catch (_) {}
+                try { if (typeof window.bindVelocidadeFixaAcumuladora === 'function') window.bindVelocidadeFixaAcumuladora(); } catch (_) {}
+                try { if (typeof window.setupJogDosificadora === 'function') window.setupJogDosificadora(); } catch (_) {}
+                try { if (typeof window.bindVelocidadeFixaDosificadora === 'function') window.bindVelocidadeFixaDosificadora(); } catch (_) {}
+                try { if (typeof window.setupJogEscova === 'function') window.setupJogEscova(); } catch (_) {}
+                try { if (typeof window.bindVelocidadeFixaEscova === 'function') window.bindVelocidadeFixaEscova(); } catch (_) {}
+                try { if (typeof window.initPeripherals === 'function') window.initPeripherals(); } catch (_) {}
+                try { if (typeof window.startPeripheralsSync === 'function') window.startPeripheralsSync(); } catch (_) {}
+                try { if (typeof window.configurarDragAndDrop === 'function') window.configurarDragAndDrop(); } catch (_) {}
+                window.__gridEnsureInFlight = false;
+            }, 300);
+        } else {
+            window.__gridEnsureInFlight = false;
+        }
+    } catch (e) {
+        console.warn('[GRID] Falha em ensureGridReady:', e);
+        window.__gridEnsureInFlight = false;
+    }
+};
 
 // Theme-aware icon swap for Plasson Farm tile
 function updateGridThemeIcons() {

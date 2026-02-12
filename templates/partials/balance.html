@@ -22,8 +22,10 @@
                     <!-- Modal de Seleção de Peso -->
                     <div id="weight-modal" class="modal" style="display: none;">
                         <div class="modal-content">
-                            <button type="button" class="modal-close" aria-label="Fechar">×</button>
-                            <h2>Calibração de Balança</h2>
+                            <div class="modal-header">
+                                <h2>Calibração de Balança</h2>
+                                <button type="button" class="modal-close close-btn" aria-label="Fechar">×</button>
+                            </div>
                             <p>Linha: <span id="modal-line-number"></span></p>
                             <p><span id="modal-current-value"></span><span id="unit">g</span></p>
                             
@@ -41,8 +43,10 @@
                     <!-- Modal de Confirmação -->
                     <div id="confirmation-modal" class="modal" style="display: none;">
                         <div class="modal-content">
-                            <button type="button" class="modal-close" aria-label="Fechar">×</button>
-                            <h2>Confirmar Calibração</h2>
+                            <div class="modal-header">
+                                <h2>Confirmar Calibração</h2>
+                                <button type="button" class="modal-close close-btn" aria-label="Fechar">×</button>
+                            </div>
                             <p>Linha: <span id="confirm-line-number"></span></p>
                             <p>Deseja calibrar o peso <span id="weight-type"></span> da balança?</p>
                             
