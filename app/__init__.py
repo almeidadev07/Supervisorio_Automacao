@@ -84,21 +84,26 @@ def create_app():
     except Exception as e:
         print(f"[INIT] WARN Falha ao preparar comm_map para API: {e}")
 
-    # Configura automaticamente a máquina 700CX (100.70.0.10) se disponível
+    # Seleção de máquina deve ser manual via UI (Parâmetros).
+    # Para reativar seleção automática na inicialização, defina SUPERVISORIO_AUTO_SELECT_MACHINE=1.
     try:
-        config_700cx = next((m for m in machines_config if m['name'] == '700CX'), None)
-        if config_700cx:
-            print(f"[INIT] Configurando automaticamente máquina 700CX (IP: {config_700cx.get('default_plc_ip')})")
-            # Passa a configuração completa (dict) para o controlador robusto
-            success, msg = robust_plc_controller.set_active_machine(config_700cx)
-            if success:
-                print(f"[INIT] Maquina 700CX configurada com sucesso")
+        auto_select = os.environ.get('SUPERVISORIO_AUTO_SELECT_MACHINE', '0') == '1'
+        if auto_select:
+            config_700cx = next((m for m in machines_config if m['name'] == '700CX'), None)
+            if config_700cx:
+                print(f"[INIT] Configurando automaticamente máquina 700CX (IP: {config_700cx.get('default_plc_ip')})")
+                # Passa a configuração completa (dict) para o controlador robusto
+                success, msg = robust_plc_controller.set_active_machine(config_700cx)
+                if success:
+                    print(f"[INIT] Maquina 700CX configurada com sucesso")
+                else:
+                    print(f"[INIT] WARN Falha ao configurar 700CX: {msg}")
             else:
-                print(f"[INIT] WARN Falha ao configurar 700CX: {msg}")
+                print(f"[INIT] WARN Configuracao 700CX nao encontrada")
         else:
-            print(f"[INIT] WARN Configuracao 700CX nao encontrada")
+            print("[INIT] Auto-seleção de máquina desativada (manual via Parâmetros)")
     except Exception as e:
-        print(f"[INIT] ERRO ao configurar 700CX: {e}")
+        print(f"[INIT] ERRO ao configurar auto-seleção: {e}")
         
     # O controlador robusto já inicia o polling automaticamente
 

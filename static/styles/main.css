@@ -12,6 +12,7 @@
 @import url('partials/diagram.css');
 @import url('partials/windows.css');
 @import url('partials/samples.css'); 
+@import url('partials/initial_wizard.css');
 
 /* ========== Variáveis Globais ========== */
 :root {
@@ -1220,6 +1221,18 @@ body {
     background: #4b5563 !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 12px 22px rgba(107, 114, 128, 0.35) !important;
+}
+
+#btn-reset-factory {
+    background: #ef4444 !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 18px rgba(239, 68, 68, 0.35) !important;
+}
+
+#btn-reset-factory:hover {
+    background: #dc2626 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 12px 22px rgba(220, 38, 38, 0.4) !important;
 }
 
 #machine-modal-status {

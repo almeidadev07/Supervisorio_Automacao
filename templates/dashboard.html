@@ -136,66 +136,103 @@
         </div>
 
         <div class="machine-modal-body">
-          <div class="machine-field">
-            <label for="machine-select">Seleção de máquina:</label>
-            <select id="machine-select"></select>
-          </div>
-
-          <div class="machine-field">
-            <label for="embaladora-quantity">Quantidade de embaladora:</label>
-            <select id="embaladora-quantity">
-              <option value="6">6</option>
-              <option value="14">14</option>
-              <option value="16">16</option>
-              <option value="24">24</option>
-            </select>
-          </div>
-          
-          <div class="machine-field theme-field">
-            <label for="theme-toggle">Tema visual:</label>
-            <div class="theme-toggle">
-              <span class="theme-label">Light</span>
-              <label class="switch" aria-label="Alternar tema">
-                <input type="checkbox" id="theme-toggle">
-                <span class="slider"></span>
-              </label>
-              <span class="theme-label">Dark</span>
+          <div id="settings-shared" class="settings-shared">
+            <div class="settings-section" data-section="machine">
+              <div class="machine-field">
+                <label for="machine-select">Seleção de máquina:</label>
+                <select id="machine-select"></select>
+              </div>
             </div>
-          </div>
 
-          <div class="machine-visibility">
-            <div class="machine-visibility-title">Visibilidade de campos no supervisório:</div>
-            <div class="machine-visibility-list">
-              <label class="machine-check">
-                <input type="checkbox" id="checkbox-magna-ovoscopia">
-                <span class="checkmark"></span>
-                <span class="machine-check-text">Magna Visio/Ovoscopia</span>
-              </label>
-              <label class="machine-check">
-                <input type="checkbox" id="checkbox-crack">
-                <span class="checkmark"></span>
-                <span class="machine-check-text">Crack</span>
-              </label>
-              <label class="machine-check">
-                <input type="checkbox" id="checkbox-nebulizador">
-                <span class="checkmark"></span>
-                <span class="machine-check-text">Nebulizador Óleo</span>
-              </label>
-              <label class="machine-check">
-                <input type="checkbox" id="checkbox-lampada-uv">
-                <span class="checkmark"></span>
-                <span class="machine-check-text">Lâmpada UV</span>
-              </label>
-              <label class="machine-check">
-                <input type="checkbox" id="checkbox-escova">
-                <span class="checkmark"></span>
-                <span class="machine-check-text">Escova Manual/Auto</span>
-              </label>
-              <label class="machine-check">
-                <input type="checkbox" id="checkbox-alimentador">
-                <span class="checkmark"></span>
-                <span class="machine-check-text">Alimentador</span>
-              </label>
+            <div class="settings-section" data-section="embaladoras">
+              <div class="machine-field">
+                <label for="embaladora-quantity">Quantidade de embaladora:</label>
+                <select id="embaladora-quantity">
+                  <option value="6">6</option>
+                  <option value="14">14</option>
+                  <option value="16">16</option>
+                  <option value="24">24</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="settings-section" data-section="theme">
+              <div class="machine-field theme-field">
+                <label for="theme-toggle">Tema visual:</label>
+                <div class="theme-toggle">
+                  <span class="theme-label">Light</span>
+                  <label class="switch" aria-label="Alternar tema">
+                    <input type="checkbox" id="theme-toggle">
+                    <span class="slider"></span>
+                  </label>
+                  <span class="theme-label">Dark</span>
+                </div>
+              </div>
+
+              <div class="wizard-theme-cards wizard-only">
+                <button type="button" class="wizard-theme-card" data-theme="light">
+                  <div class="wizard-theme-preview wizard-theme-preview-light" aria-hidden="true">
+                    <div class="wizard-theme-preview-header"></div>
+                    <div class="wizard-theme-preview-body">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+                  <div class="wizard-theme-title">Light</div>
+                  <div class="wizard-theme-subtitle">Clareza e foco</div>
+                </button>
+                <button type="button" class="wizard-theme-card" data-theme="dark">
+                  <div class="wizard-theme-preview wizard-theme-preview-dark" aria-hidden="true">
+                    <div class="wizard-theme-preview-header"></div>
+                    <div class="wizard-theme-preview-body">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+                  <div class="wizard-theme-title">Dark</div>
+                  <div class="wizard-theme-subtitle">Conforto visual</div>
+                </button>
+              </div>
+            </div>
+
+            <div class="settings-section" data-section="visibility">
+              <div class="machine-visibility">
+                <div class="machine-visibility-title">Visibilidade de campos no supervisório:</div>
+                <div class="machine-visibility-list">
+                  <label class="machine-check">
+                    <input type="checkbox" id="checkbox-magna-ovoscopia">
+                    <span class="checkmark"></span>
+                    <span class="machine-check-text">Magna Visio/Ovoscopia</span>
+                  </label>
+                  <label class="machine-check">
+                    <input type="checkbox" id="checkbox-crack">
+                    <span class="checkmark"></span>
+                    <span class="machine-check-text">Crack</span>
+                  </label>
+                  <label class="machine-check">
+                    <input type="checkbox" id="checkbox-nebulizador">
+                    <span class="checkmark"></span>
+                    <span class="machine-check-text">Nebulizador Óleo</span>
+                  </label>
+                  <label class="machine-check">
+                    <input type="checkbox" id="checkbox-lampada-uv">
+                    <span class="checkmark"></span>
+                    <span class="machine-check-text">Lâmpada UV</span>
+                  </label>
+                  <label class="machine-check">
+                    <input type="checkbox" id="checkbox-escova">
+                    <span class="checkmark"></span>
+                    <span class="machine-check-text">Escova Manual/Auto</span>
+                  </label>
+                  <label class="machine-check">
+                    <input type="checkbox" id="checkbox-alimentador">
+                    <span class="checkmark"></span>
+                    <span class="machine-check-text">Alimentador</span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -203,15 +240,140 @@
         <div class="machine-modal-actions">
           <button id="btn-test-machine" type="button" title="Modo teste: ignora validacao de PLC/ping">Teste (ignorar validacao)</button>
           <button id="btn-confirm-machine" type="button">Confirmar</button>
+          <button id="btn-reset-factory" type="button">Restaurar de fábrica</button>
           <button id="btn-cancel-machine" type="button">Cancelar</button>
         </div>
         <div id="machine-modal-status"></div>
       </div>
     </div>
 
+    <!-- Wizard de configuração inicial -->
+    <div id="initial-setup-modal" class="wizard-modal hidden" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="wizard-surface" role="document">
+        <div class="wizard-header">
+          <div class="wizard-title">Assistente de Configuração Inicial</div>
+          <div class="wizard-subtitle">Configure o supervisório com os mesmos parâmetros já existentes, em um fluxo guiado.</div>
+          <div class="wizard-stepper" role="list">
+            <div class="wizard-stepper-item" data-step="0" role="listitem">
+              <span class="wizard-stepper-bullet">1</span>
+              <span class="wizard-stepper-label">Boas-vindas</span>
+            </div>
+            <div class="wizard-stepper-item" data-step="1" role="listitem">
+              <span class="wizard-stepper-bullet">2</span>
+              <span class="wizard-stepper-label">Tipo</span>
+            </div>
+            <div class="wizard-stepper-item" data-step="2" role="listitem">
+              <span class="wizard-stepper-bullet">3</span>
+              <span class="wizard-stepper-label">Máquina</span>
+            </div>
+            <div class="wizard-stepper-item" data-step="3" role="listitem">
+              <span class="wizard-stepper-bullet">4</span>
+              <span class="wizard-stepper-label">Embaladoras</span>
+            </div>
+            <div class="wizard-stepper-item" data-step="4" role="listitem">
+              <span class="wizard-stepper-bullet">5</span>
+              <span class="wizard-stepper-label">Visibilidade</span>
+            </div>
+            <div class="wizard-stepper-item" data-step="5" role="listitem">
+              <span class="wizard-stepper-bullet">6</span>
+              <span class="wizard-stepper-label">Tema</span>
+            </div>
+            <div class="wizard-stepper-item" data-step="6" role="listitem">
+              <span class="wizard-stepper-bullet">7</span>
+              <span class="wizard-stepper-label">Revisão</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="wizard-body">
+          <div class="wizard-step" data-step="0">
+            <div class="wizard-welcome">
+              <img class="wizard-welcome-logo" src="{{ url_for('static', filename='images/logos/00_Logo_Completo.png') }}" alt="Logo">
+              <div class="wizard-welcome-title">Bem-vindo(a)!</div>
+              <div class="wizard-welcome-subtitle">Assistente de Configuração Inicial</div>
+              <div class="wizard-step-text">
+                Este assistente guia a configuração inicial do supervisório, de forma clara e consistente.
+              </div>
+              <div class="wizard-highlight">
+                Você poderá revisar tudo antes de concluir.
+              </div>
+            </div>
+          </div>
+
+          <div class="wizard-step" data-step="1">
+            <div class="wizard-step-title">Tipo de máquina</div>
+            <div class="wizard-step-text">
+              Escolha o tipo de sistema que será configurado. A opção Alimentador ainda está em desenvolvimento.
+            </div>
+            <div class="wizard-type-grid">
+              <button type="button" class="wizard-type-card" data-type="classificadora">
+                <div class="wizard-type-title">Classificadora</div>
+                <div class="wizard-type-desc">Fluxo completo para linhas 200CX / 400CX / 700CX.</div>
+              </button>
+              <button type="button" class="wizard-type-card is-disabled" data-type="alimentador" disabled>
+                <div class="wizard-type-title">Alimentador</div>
+                <div class="wizard-type-desc">Em desenvolvimento</div>
+              </button>
+            </div>
+          </div>
+
+          <div class="wizard-step" data-step="2">
+            <div class="wizard-step-title">Seleção de máquina</div>
+            <div class="wizard-step-text">
+              Selecione a máquina instalada. Esta escolha é a mesma usada no popup Parâmetros.
+            </div>
+            <div class="wizard-settings-slot" data-slot="machine"></div>
+          </div>
+
+          <div class="wizard-step" data-step="3">
+            <div class="wizard-step-title">Quantidade de embaladoras</div>
+            <div class="wizard-step-text">
+              Defina a quantidade de embaladoras para a classificação.
+            </div>
+            <div class="wizard-settings-slot" data-slot="embaladoras"></div>
+          </div>
+
+          <div class="wizard-step" data-step="4">
+            <div class="wizard-step-title">Visibilidade de campos</div>
+            <div class="wizard-step-text">
+              Configure a visibilidade dos módulos no supervisório.
+            </div>
+            <div class="wizard-settings-slot" data-slot="visibility"></div>
+          </div>
+
+          <div class="wizard-step" data-step="5">
+            <div class="wizard-step-title">Tema visual</div>
+            <div class="wizard-step-text">
+              Escolha o tema preferido. A troca é aplicada com o mesmo controle do popup Parâmetros.
+            </div>
+            <div class="wizard-settings-slot" data-slot="theme"></div>
+          </div>
+
+          <div class="wizard-step" data-step="6">
+            <div class="wizard-step-title">Revisão e conclusão</div>
+            <div class="wizard-step-text">
+              Revise os parâmetros selecionados antes de concluir.
+            </div>
+            <div id="wizard-summary" class="wizard-summary"></div>
+            <div id="wizard-status" class="wizard-status" aria-live="polite"></div>
+          </div>
+
+          <div id="wizard-settings-parking" class="wizard-settings-parking" aria-hidden="true"></div>
+        </div>
+
+        <div class="wizard-footer">
+          <button id="wizard-back" type="button" class="wizard-btn wizard-btn-secondary">Voltar</button>
+          <div class="wizard-footer-spacer"></div>
+          <button id="wizard-next" type="button" class="wizard-btn wizard-btn-primary">Próximo</button>
+          <button id="wizard-finish" type="button" class="wizard-btn wizard-btn-primary">Concluir</button>
+        </div>
+      </div>
+    </div>
+
     
     <!-- scripts do app -->
     <script src="{{ url_for('static', filename='scripts/machine_select.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='scripts/initial_wizard.js') }}?v=20260213_wizard" defer></script>
     <script src="{{ url_for('static', filename='scripts/recipe_loader.js') }}" defer></script>
     <script src="{{ url_for('static', filename='scripts/main.js') }}?v=20260202_panels_fix" defer></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/partials/dryer.css') }}">

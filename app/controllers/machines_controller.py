@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, request, current_app, Response
 import logging
 import time
 import threading
+import os
 from ..utils import get_local_ip, find_machine_config, find_machine_by_plc_ip, detect_by_reachable_plc
 
 logger = logging.getLogger(__name__)
@@ -332,6 +333,7 @@ def test_machine():
     
     # Importa funções de teste
     from ..utils import ping_ip, _is_real_plc
+    validate_plc = os.environ.get('SUPERVISORIO_VALIDATE_PLC', '0') == '1'
     
     # Testa ping
     ping_ok = ping_ip(ip, timeout_ms=2000)
@@ -345,24 +347,25 @@ def test_machine():
             'message': f'PLC da máquina {name} ({ip}) não está respondendo ao ping'
         })
     
-    # Testa se é PLC válido
-    plc_valid = _is_real_plc(ip)
-    
-    if not plc_valid:
-        return jsonify({
-            'ok': False,
-            'connected': False,
-            'ping_ok': True,
-            'plc_valid': False,
-            'message': f'PLC da máquina {name} ({ip}) responde ao ping mas não é um PLC válido'
-        })
+    # Testa se é PLC válido (pode ser desabilitado por env)
+    plc_valid = True
+    if validate_plc:
+        plc_valid = _is_real_plc(ip)
+        if not plc_valid:
+            return jsonify({
+                'ok': False,
+                'connected': False,
+                'ping_ok': True,
+                'plc_valid': False,
+                'message': f'PLC da máquina {name} ({ip}) responde ao ping mas não é um PLC válido'
+            })
     
     return jsonify({
         'ok': True,
         'connected': True,
         'ping_ok': True,
-        'plc_valid': True,
-        'message': f'Máquina {name} ({ip}) está conectada e é um PLC válido'
+        'plc_valid': plc_valid,
+        'message': f'Máquina {name} ({ip}) está conectada e é um PLC válido' if validate_plc else f'Máquina {name} ({ip}) responde ao ping (validação de PLC desativada)'
     })
 
 @machines_bp.route('/set_machine', methods=['POST'])
@@ -380,6 +383,7 @@ def set_machine():
     # ✅ VALIDAÇÃO: Se não for detecção automática, verifica conexão antes de permitir
     if not skip_validation:
         from ..utils import ping_ip, _is_real_plc
+        validate_plc = os.environ.get('SUPERVISORIO_VALIDATE_PLC', '0') == '1'
         ip = cfg.get('default_plc_ip')
         if ip:
             ping_ok = ping_ip(ip, timeout_ms=2000)
@@ -388,12 +392,13 @@ def set_machine():
                     'ok': False, 
                     'error': f'PLC da máquina {name} ({ip}) não está respondendo ao ping'
                 }), 400
-            plc_valid = _is_real_plc(ip)
-            if not plc_valid:
-                return jsonify({
-                    'ok': False,
-                    'error': f'PLC da máquina {name} ({ip}) responde ao ping mas não é um PLC válido'
-                }), 400
+            if validate_plc:
+                plc_valid = _is_real_plc(ip)
+                if not plc_valid:
+                    return jsonify({
+                        'ok': False,
+                        'error': f'PLC da máquina {name} ({ip}) responde ao ping mas não é um PLC válido'
+                    }), 400
     
     # use PLCController attached to app
     ok, msg = current_app.plc_controller.set_active_machine(cfg)

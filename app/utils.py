@@ -35,17 +35,28 @@ def ping_ip(ip_address: str, timeout_ms: int = 1000) -> bool:
         if 'windows' in system_name:
             # -n 1 (one echo), -w timeout in ms
             result = subprocess.run(['ping', '-n', '1', '-w', str(timeout_ms), ip_address],
-                                    stdout=subprocess.DEVNULL,
-                                    stderr=subprocess.DEVNULL,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    text=True,
+                                    encoding='utf-8',
+                                    errors='ignore',
                                     timeout=timeout_ms/1000 + 5)  # Timeout adicional para o processo
         else:
             # -c 1 (one echo), -W timeout in seconds
             sec = max(1, int(timeout_ms / 1000))
             result = subprocess.run(['ping', '-c', '1', '-W', str(sec), ip_address],
-                                    stdout=subprocess.DEVNULL,
-                                    stderr=subprocess.DEVNULL,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    text=True,
+                                    encoding='utf-8',
+                                    errors='ignore',
                                     timeout=sec + 5)  # Timeout adicional para o processo
-        return result.returncode == 0
+        if result.returncode != 0:
+            return False
+        output = (result.stdout or '').lower()
+        # Em alguns Windows, "host de destino inacessível" ainda retorna code 0.
+        # Exigimos presença de TTL para considerar ping realmente OK.
+        return 'ttl=' in output
     except Exception as e:
         print(f"[PING] Erro ao fazer ping em {ip_address}: {e}")
         return False
@@ -164,6 +175,28 @@ def _is_real_plc(ip):
                     pass
                 continue
         
+        # Fallback: se a porta 102 estiver aberta, considera como PLC v?lido
+        # (evita falso negativo em CPUs que recusam o handshake Snap7, mas est?o acess?veis)
+        try:
+            port_open = False
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2.0)
+            try:
+                sock.connect((ip, 102))
+                port_open = True
+            except Exception:
+                port_open = False
+            finally:
+                try:
+                    sock.close()
+                except Exception:
+                    pass
+            if port_open:
+                print(f"[DETECT] ?? Porta 102 aberta em {ip}, mas handshake Snap7 falhou. Considerando PLC v?lido (fallback).")
+                return True
+        except Exception as e:
+            print(f"[DETECT] ?? Falha ao testar porta 102 em {ip}: {e}")
+
         print(f"[DETECT] ❌ {ip} não é um PLC válido")
         return False
         

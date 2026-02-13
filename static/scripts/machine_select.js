@@ -100,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnConfirm = document.getElementById('btn-confirm-machine');
   const btnCancel = document.getElementById('btn-cancel-machine');
   const btnTest = document.getElementById('btn-test-machine');
+  const btnResetFactory = document.getElementById('btn-reset-factory');
   const statusDiv = document.getElementById('machine-modal-status');
   const embaladoraQuantity = document.getElementById('embaladora-quantity');
   const themeToggle = document.getElementById('theme-toggle');
@@ -116,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const GRID_VISIBILITY_KEY = 'supervisor_grid_visibility';
   const EMBALADORA_QUANTITY_KEY = 'supervisor_embaladora_quantity';
   const THEME_KEY = 'supervisor_theme';
+  const INITIAL_SETUP_KEY = 'supervisor_initial_setup_done';
 
   function getCurrentTheme() {
     return localStorage.getItem(THEME_KEY) || 'dark';
@@ -141,6 +143,18 @@ document.addEventListener('DOMContentLoaded', () => {
     updateThemeLogo(safeTheme);
     try {
       document.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: safeTheme } }));
+    } catch (_) {}
+  }
+
+  function markInitialSetupDone() {
+    try {
+      localStorage.setItem(INITIAL_SETUP_KEY, '1');
+    } catch (_) {}
+  }
+
+  function clearInitialSetupDone() {
+    try {
+      localStorage.removeItem(INITIAL_SETUP_KEY);
     } catch (_) {}
   }
 
@@ -421,6 +435,53 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('[MACHINE_SELECT] ❌ Erro ao carregar configurações de visibilidade:', error);
     }
   }
+
+  async function resetFactorySettings() {
+    try {
+      const keysToClear = [
+        GRID_VISIBILITY_KEY,
+        EMBALADORA_QUANTITY_KEY,
+        THEME_KEY,
+        INITIAL_SETUP_KEY,
+        'supervisor_machine_type',
+        'supervisor_machine',
+        'supervisor_machine_initialized',
+        'supervisor_simulation_mode',
+        'alarm_circle_alimentador_hidden'
+      ];
+      keysToClear.forEach((key) => {
+        try { localStorage.removeItem(key); } catch (_) {}
+      });
+      clearInitialSetupDone();
+
+      try {
+        localStorage.setItem('supervisor_last_screen', 'grid');
+      } catch (_) {}
+      if (typeof window.showGrid === 'function') {
+        try { window.showGrid(); } catch (_) {}
+      }
+
+      applyTheme('light');
+      if (themeToggle) {
+        themeToggle.checked = false;
+      }
+
+      loadVisibilitySettings();
+      await loadMachines();
+      await loadCurrentMachine();
+      captureInitialSettings();
+
+      const openWizard = () => {
+        if (typeof window.showInitialSetupWizard === 'function') {
+          window.showInitialSetupWizard();
+        }
+      };
+      // Garante que a tela de início esteja visível antes de abrir o wizard
+      setTimeout(openWizard, 200);
+    } catch (error) {
+      console.error('[MACHINE_SELECT] ❌ Erro ao restaurar configuração de fábrica:', error);
+    }
+  }
   
   // Função para mostrar o modal (apenas abre, sem carregar dados)
   function showModal() {
@@ -547,8 +608,10 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
       }
+      return result && result.ok ? result.machine : null;
     } catch (error) {
       console.error('Erro ao obter máquina atual:', error);
+      return null;
     }
   }
 
@@ -666,6 +729,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Função auxiliar para abrir modal com todas as configurações
   async function openModalWithData() {
     console.log('[MACHINE_SELECT] Abrindo modal com dados...');
+
+    if (select) {
+      select.disabled = true;
+      select.innerHTML = '';
+      const loadingOpt = document.createElement('option');
+      loadingOpt.value = '';
+      loadingOpt.textContent = 'Carregando...';
+      select.appendChild(loadingOpt);
+    }
     
     // Primeiro abre o modal para garantir que os elementos estejam no DOM
     showModal();
@@ -677,9 +749,15 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('[MACHINE_SELECT] Carregando configurações salvas no modal...');
     loadVisibilitySettings();
     
-    // Carrega as máquinas e a máquina atual
+    // Carrega a máquina atual antes de preencher a lista para evitar flash
+    const currentMachine = await loadCurrentMachine();
     await loadMachines();
-    await loadCurrentMachine();
+    if (select) {
+      if (currentMachine) {
+        select.value = currentMachine;
+      }
+      select.disabled = false;
+    }
     
     // Aguarda mais um pouco para garantir que os valores foram aplicados
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -764,7 +842,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  async function handleConfirmClick(skipValidation = false) {
+  if (btnResetFactory) {
+    btnResetFactory.addEventListener('click', async () => {
+      const confirmed = window.confirm('Restaurar de fábrica? Isso limpará as configurações atuais e reabrirá o assistente inicial.');
+      if (!confirmed) return;
+      await resetFactorySettings();
+      hideModal(false);
+    });
+  }
+
+  async function handleConfirmClick(skipValidation = false, forceSave = false) {
     const actionLabel = skipValidation ? 'Teste' : 'Confirmar';
     console.log(`[MACHINE_SELECT] Bot?o ${actionLabel} clicado`);
     
@@ -815,7 +902,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const quantityChanged = (embaladoraQuantityEl?.value || '24') !== (initialQuantity || '24');
       
-      const hasChanges = machineChanged || settingsChanged || quantityChanged;
+      const hasChanges = forceSave || machineChanged || settingsChanged || quantityChanged;
       
       if (!hasChanges) {
         // N?o h? altera??es, apenas fecha o modal
@@ -837,6 +924,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Se a m?quina mudou, processa a mudan?a de m?quina
       if (machineChanged) {
         await setMachine(machineName, skipValidation);
+        markInitialSetupDone();
       } else {
         // Se n?o mudou a m?quina, apenas fecha o modal ap?s salvar
         if (statusDiv) {
@@ -844,6 +932,7 @@ document.addEventListener('DOMContentLoaded', () => {
           statusDiv.className = 'status success';
         }
         
+        markInitialSetupDone();
         setTimeout(() => {
           hideModal(false); // false = n?o restaurar valores (j? salvamos)
         }, 500);
@@ -857,6 +946,32 @@ document.addEventListener('DOMContentLoaded', () => {
       setActionButtonsDisabled(false);
     }
   }
+
+  window.supervisorSettings = {
+    keys: {
+      GRID_VISIBILITY_KEY,
+      EMBALADORA_QUANTITY_KEY,
+      THEME_KEY,
+      INITIAL_SETUP_KEY
+    },
+    elements: {
+      select,
+      embaladoraQuantity,
+      themeToggle
+    },
+    getCurrentTheme,
+    applyTheme,
+    loadMachines,
+    loadCurrentMachine,
+    loadVisibilitySettings,
+    saveVisibilitySettings,
+    captureInitialSettings,
+    restoreInitialSettings,
+    handleConfirmClick,
+    resetFactorySettings,
+    markInitialSetupDone,
+    clearInitialSetupDone
+  };
 
   if (btnConfirm) {
     btnConfirm.addEventListener('click', (e) => {
