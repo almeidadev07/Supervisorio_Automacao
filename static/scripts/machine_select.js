@@ -110,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const checkboxNebulizador = document.getElementById('checkbox-nebulizador');
   const checkboxLampadaUV = document.getElementById('checkbox-lampada-uv');
   const checkboxEscova = document.getElementById('checkbox-escova');
+  const checkboxAlimentador = document.getElementById('checkbox-alimentador');
   
   // Chave para localStorage
   const GRID_VISIBILITY_KEY = 'supervisor_grid_visibility';
@@ -189,6 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkboxNebulizadorEl = document.getElementById('checkbox-nebulizador');
     const checkboxLampadaUVEl = document.getElementById('checkbox-lampada-uv');
     const checkboxEscovaEl = document.getElementById('checkbox-escova');
+    const checkboxAlimentadorEl = document.getElementById('checkbox-alimentador');
     const embaladoraQuantityEl = document.getElementById('embaladora-quantity');
     
     const settings = {
@@ -197,9 +199,13 @@ document.addEventListener('DOMContentLoaded', () => {
       crack: checkboxCrackEl?.checked ?? true,
       nebulizador: checkboxNebulizadorEl?.checked ?? true,
       lampadaUV: checkboxLampadaUVEl?.checked ?? true,
-      escova: checkboxEscovaEl?.checked ?? true
+      escova: checkboxEscovaEl?.checked ?? true,
+      alimentador: checkboxAlimentadorEl?.checked ?? true
     };
     localStorage.setItem(GRID_VISIBILITY_KEY, JSON.stringify(settings));
+    try {
+      localStorage.setItem('alarm_circle_alimentador_hidden', settings.alimentador ? '0' : '1');
+    } catch (_) {}
     
       // Salva quantidade de embaladora e dispara evento
       if (embaladoraQuantityEl) {
@@ -245,6 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkboxNebulizadorEl = document.getElementById('checkbox-nebulizador');
     const checkboxLampadaUVEl = document.getElementById('checkbox-lampada-uv');
     const checkboxEscovaEl = document.getElementById('checkbox-escova');
+    const checkboxAlimentadorEl = document.getElementById('checkbox-alimentador');
     const embaladoraQuantityEl = document.getElementById('embaladora-quantity');
     const selectEl = document.getElementById('machine-select');
     
@@ -254,6 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (checkboxNebulizadorEl) checkboxNebulizadorEl.checked = initialSettings.nebulizador;
       if (checkboxLampadaUVEl) checkboxLampadaUVEl.checked = initialSettings.lampadaUV;
       if (checkboxEscovaEl) checkboxEscovaEl.checked = initialSettings.escova;
+      if (checkboxAlimentadorEl) checkboxAlimentadorEl.checked = initialSettings.alimentador;
     } else {
       // Fallback: recarrega valores salvos do localStorage
       loadVisibilitySettings();
@@ -288,6 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkboxNebulizadorEl = document.getElementById('checkbox-nebulizador');
     const checkboxLampadaUVEl = document.getElementById('checkbox-lampada-uv');
     const checkboxEscovaEl = document.getElementById('checkbox-escova');
+    const checkboxAlimentadorEl = document.getElementById('checkbox-alimentador');
     const embaladoraQuantityEl = document.getElementById('embaladora-quantity');
     const selectEl = document.getElementById('machine-select');
     
@@ -296,7 +305,8 @@ document.addEventListener('DOMContentLoaded', () => {
       crack: checkboxCrackEl?.checked ?? true,
       nebulizador: checkboxNebulizadorEl?.checked ?? true,
       lampadaUV: checkboxLampadaUVEl?.checked ?? true,
-      escova: checkboxEscovaEl?.checked ?? true
+      escova: checkboxEscovaEl?.checked ?? true,
+      alimentador: checkboxAlimentadorEl?.checked ?? true
     };
     
     initialQuantity = embaladoraQuantityEl?.value || '24';
@@ -320,6 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const checkboxNebulizadorEl = document.getElementById('checkbox-nebulizador');
       const checkboxLampadaUVEl = document.getElementById('checkbox-lampada-uv');
       const checkboxEscovaEl = document.getElementById('checkbox-escova');
+      const checkboxAlimentadorEl = document.getElementById('checkbox-alimentador');
       const embaladoraQuantityEl = document.getElementById('embaladora-quantity');
       
       console.log('[MACHINE_SELECT] Elementos encontrados:', {
@@ -328,11 +339,13 @@ document.addEventListener('DOMContentLoaded', () => {
         nebulizador: !!checkboxNebulizadorEl,
         lampadaUV: !!checkboxLampadaUVEl,
         escova: !!checkboxEscovaEl,
+        alimentador: !!checkboxAlimentadorEl,
         embaladoraQuantity: !!embaladoraQuantityEl
       });
       
       const saved = localStorage.getItem(GRID_VISIBILITY_KEY);
       const savedQuantity = localStorage.getItem(EMBALADORA_QUANTITY_KEY);
+      const alimentadorHidden = localStorage.getItem('alarm_circle_alimentador_hidden') === '1';
       
       console.log('[MACHINE_SELECT] Valores no localStorage:', {
         visibility: saved,
@@ -364,6 +377,11 @@ document.addEventListener('DOMContentLoaded', () => {
           checkboxEscovaEl.checked = settings.escova !== false;
           console.log('[MACHINE_SELECT] ✅ Escova:', checkboxEscovaEl.checked);
         }
+        if (checkboxAlimentadorEl) {
+          const visible = (typeof settings.alimentador === 'boolean') ? settings.alimentador : !alimentadorHidden;
+          checkboxAlimentadorEl.checked = visible;
+          console.log('[MACHINE_SELECT] ✅ Alimentador:', checkboxAlimentadorEl.checked);
+        }
       } else {
         // Valores padrão: todos marcados
         console.log('[MACHINE_SELECT] Nenhuma configuração salva encontrada, usando valores padrão');
@@ -372,6 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (checkboxNebulizadorEl) checkboxNebulizadorEl.checked = true;
         if (checkboxLampadaUVEl) checkboxLampadaUVEl.checked = true;
         if (checkboxEscovaEl) checkboxEscovaEl.checked = true;
+        if (checkboxAlimentadorEl) checkboxAlimentadorEl.checked = !alimentadorHidden;
       }
       
       // Carrega quantidade de embaladora
@@ -394,6 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
           nebulizador: checkboxNebulizadorEl?.checked,
           lampadaUV: checkboxLampadaUVEl?.checked,
           escova: checkboxEscovaEl?.checked,
+          alimentador: checkboxAlimentadorEl?.checked,
           quantity: embaladoraQuantityEl?.value
         });
       }, 100);
@@ -779,6 +799,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const checkboxNebulizadorEl = document.getElementById('checkbox-nebulizador');
       const checkboxLampadaUVEl = document.getElementById('checkbox-lampada-uv');
       const checkboxEscovaEl = document.getElementById('checkbox-escova');
+      const checkboxAlimentadorEl = document.getElementById('checkbox-alimentador');
       const embaladoraQuantityEl = document.getElementById('embaladora-quantity');
       
       const currentSettings = {
@@ -786,7 +807,8 @@ document.addEventListener('DOMContentLoaded', () => {
         crack: checkboxCrackEl?.checked ?? true,
         nebulizador: checkboxNebulizadorEl?.checked ?? true,
         lampadaUV: checkboxLampadaUVEl?.checked ?? true,
-        escova: checkboxEscovaEl?.checked ?? true
+        escova: checkboxEscovaEl?.checked ?? true,
+        alimentador: checkboxAlimentadorEl?.checked ?? true
       };
       const settingsChanged = !initialSettings || 
         JSON.stringify(currentSettings) !== JSON.stringify(initialSettings);

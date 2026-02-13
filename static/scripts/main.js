@@ -720,6 +720,11 @@ function showGrid(event) {
             try { window.configurarDragAndDrop(); } catch (e) { console.warn('[GRID] Erro configurarDragAndDrop:', e); }
         }
         
+        // Sincroniza o mini gráfico do grid com a tela de gráficos
+        if (typeof window.refreshMiniChartFromGraphics === 'function') {
+            try { window.refreshMiniChartFromGraphics(); } catch (_) {}
+        }
+        
         // ✅ Aplica traduções após mostrar a tela
         applyTranslationsIfAvailable();
     }, 300);

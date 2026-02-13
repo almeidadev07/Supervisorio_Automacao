@@ -174,8 +174,12 @@
 }
 
 :root {
-    --alarm-icon-red-filter: invert(22%) sepia(86%) saturate(5795%) hue-rotate(354deg) brightness(102%) contrast(108%);
+    --alarm-icon-red-filter: brightness(0) saturate(100%) invert(17%) sepia(92%) saturate(6275%) hue-rotate(355deg) brightness(96%) contrast(112%);
     --alarm-icon-white-filter: brightness(0) invert(1);
+}
+
+:root[data-theme="light"] .alarm-btn-icon {
+    filter: var(--alarm-icon-red-filter) !important;
 }
 
 @keyframes alarm-icon-blink {

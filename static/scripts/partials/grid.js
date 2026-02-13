@@ -235,7 +235,8 @@ function applyGridVisibility(settings) {
                     crack: true,
                     nebulizador: true,
                     lampadaUV: true,
-                    escova: true
+                    escova: true,
+                    alimentador: true
                 };
             }
         } catch (error) {
@@ -245,6 +246,19 @@ function applyGridVisibility(settings) {
     }
     
     console.log('🎯 Aplicando visibilidade do grid:', settings);
+
+    // ✅ Controle do círculo "Alimentador" (mantém espaço quando oculto)
+    try {
+        if (typeof settings.alimentador !== 'boolean') {
+            const hidden = localStorage.getItem('alarm_circle_alimentador_hidden') === '1';
+            settings.alimentador = !hidden;
+        }
+        const alimentadorEl = document.querySelector('.alarm-count-circle.alimentador');
+        if (alimentadorEl) {
+            alimentadorEl.setAttribute('data-visible', settings.alimentador ? 'true' : 'false');
+            try { localStorage.setItem('alarm_circle_alimentador_hidden', settings.alimentador ? '0' : '1'); } catch (_) {}
+        }
+    } catch (_) {}
     
     // 1. Esconde/mostra o botão de periféricos inteiro
     const btnPerifericos = document.querySelector('.draggable-btn[data-station="botao-9"]');
@@ -717,8 +731,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (alimentadorEl && !alimentadorEl.dataset.toggleBound) {
         alimentadorEl.addEventListener('dblclick', () => {
             const hidden = localStorage.getItem('alarm_circle_alimentador_hidden') === '1';
-            localStorage.setItem('alarm_circle_alimentador_hidden', hidden ? '0' : '1');
-            alimentadorEl.setAttribute('data-visible', hidden ? 'true' : 'false');
+            const nextHidden = !hidden;
+            localStorage.setItem('alarm_circle_alimentador_hidden', nextHidden ? '1' : '0');
+            alimentadorEl.setAttribute('data-visible', nextHidden ? 'false' : 'true');
+            try {
+                const saved = localStorage.getItem('supervisor_grid_visibility');
+                if (saved) {
+                    const settings = JSON.parse(saved);
+                    settings.alimentador = !nextHidden;
+                    localStorage.setItem('supervisor_grid_visibility', JSON.stringify(settings));
+                }
+            } catch (_) {}
         });
         alimentadorEl.dataset.toggleBound = '1';
     }
@@ -5952,7 +5975,8 @@ window.setupJogAcumuladora = setupJogAcumuladora;
 
 // ========== Resumo do Gráfico no Grid 10 ==========
 (function setupMiniClassesChart() {
-    let miniChart = null;
+let miniChart = null;
+let miniChartEventsBound = false;
 
     function ensureChartJs() {
         return new Promise((resolve, reject) => {
@@ -5976,12 +6000,29 @@ window.setupJogAcumuladora = setupJogAcumuladora;
         } catch(_) { return null; }
     }
 
+    function getGraphicsSummarySafe() {
+        try {
+            if (typeof window.getGraphicsSummary === 'function') {
+                const summary = window.getGraphicsSummary();
+                if (Array.isArray(summary)) return summary;
+            }
+        } catch (_) {}
+        return [];
+    }
+
     function getDataFromSummary(summary) {
+        const safe = Array.isArray(summary) ? summary : [];
         const plcNames = getPLCNamesOrNull();
-        const labels = plcNames || (summary || []).map(s => s.className);
-        const real = (summary || []).map(s => s.real || 0);
-        const prog = (summary || []).map(s => s.programmed || 0);
-        const colors = (summary || []).map(s => s.color || '#888');
+        const summaryLabels = safe.map(s => s.className).filter(Boolean);
+        const labels = summaryLabels.length ? summaryLabels : (plcNames || []);
+        let real = safe.map(s => (typeof s.real === 'number' ? s.real : (Number(s.real) || 0)));
+        let prog = safe.map(s => (typeof s.programmed === 'number' ? s.programmed : (Number(s.programmed) || 0)));
+        let colors = safe.map(s => s.color || '#888');
+        if (labels.length && real.length === 0) {
+            real = labels.map(() => 0);
+            prog = labels.map(() => 0);
+            colors = labels.map(() => '#888');
+        }
         return { labels, real, prog, colors };
     }
 
@@ -6037,31 +6078,46 @@ window.setupJogAcumuladora = setupJogAcumuladora;
         miniChart.update('none');
     }
 
+    function ensureMiniChart(summary) {
+        const safeSummary = Array.isArray(summary) ? summary : getGraphicsSummarySafe();
+        ensureChartJs()
+            .then(() => {
+                if (miniChart) {
+                    updateMiniChart(safeSummary);
+                } else {
+                    createMiniChart(safeSummary);
+                }
+            })
+            .catch((e) => console.warn('Mini chart: falha ao carregar Chart.js', e));
+    }
+
+    function bindMiniChartEvents() {
+        if (miniChartEventsBound) return;
+        miniChartEventsBound = true;
+        window.addEventListener('graphics-data-updated', (e) => ensureMiniChart(e && e.detail));
+        window.addEventListener('classification-labels-updated', () => {
+            try { ensureMiniChart(getGraphicsSummarySafe()); } catch(_) {}
+        });
+    }
+
     function initOnce() {
         const canvas = document.getElementById('mini-classes-chart');
         if (!canvas) return;
-        ensureChartJs().then(() => {
-            const summary = (typeof window.getGraphicsSummary === 'function') ? window.getGraphicsSummary() : [];
-            createMiniChart(summary);
-            window.addEventListener('graphics-data-updated', (e) => updateMiniChart(e && e.detail));
-            // Atualiza labels assim que a classificação fornecer nomes
-            window.addEventListener('classification-labels-updated', () => {
-                try { updateMiniChart((typeof window.getGraphicsSummary === 'function') ? window.getGraphicsSummary() : []); } catch(_) {}
-            });
-            // Clique no mini-gráfico abre a tela completa de gráficos
-            try {
-                const container = document.querySelector('.mini-classes-chart-container');
-                if (container && !container.dataset.openBind) {
-                    container.style.cursor = 'pointer';
-                    container.addEventListener('click', function() {
-                        if (typeof window.showGraphics === 'function') {
-                            window.showGraphics();
-                        }
-                    });
-                    container.dataset.openBind = '1';
-                }
-            } catch(_) { /* noop */ }
-        }).catch((e) => console.warn('Mini chart: falha ao carregar Chart.js', e));
+        bindMiniChartEvents();
+        ensureMiniChart(getGraphicsSummarySafe());
+        // Clique no mini-gráfico abre a tela completa de gráficos
+        try {
+            const container = document.querySelector('.mini-classes-chart-container');
+            if (container && !container.dataset.openBind) {
+                container.style.cursor = 'pointer';
+                container.addEventListener('click', function() {
+                    if (typeof window.showGraphics === 'function') {
+                        window.showGraphics();
+                    }
+                });
+                container.dataset.openBind = '1';
+            }
+        } catch(_) { /* noop */ }
     }
 
     if (document.readyState === 'loading') {
@@ -6069,6 +6125,10 @@ window.setupJogAcumuladora = setupJogAcumuladora;
     } else {
         setTimeout(initOnce, 0);
     }
+
+    window.refreshMiniChartFromGraphics = function() {
+        try { ensureMiniChart(getGraphicsSummarySafe()); } catch(_) {}
+    };
 })();
 
 // ✅ CRÍTICO: Função de cleanup para evitar vazamento de memória
