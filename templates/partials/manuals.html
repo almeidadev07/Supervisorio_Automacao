@@ -1,0 +1,70 @@
+<!-- partials/manuals.html -->
+<div class="manual-screen-layout">
+    <!-- Header com tÃ­tulo -->
+    <div class="manual-header-box">
+        <h2 class="manual-title">Manual Supervisório</h2>
+    </div>
+    
+    <!-- Content box -->
+    <div class="manual-content-box">
+        <div class="manual-wrapper">
+            <div class="manual-container">
+                <!-- Sidebar com botÃµes -->
+                <div class="manual-sidebar">
+                    <div class="sidebar-header">
+                        <h3>Selecione um Manual</h3>
+                    </div>
+                    <div class="manual-buttons">
+                        <button class="manual-btn" data-pdf="Manual_Inicio.pdf">Início (Grid)</button>
+                        <button class="manual-btn" data-pdf="Manual_Alarmes.pdf">Alarmes</button>
+                        <button class="manual-btn" data-pdf="Manual_Faixa_Peso.pdf">Faixa Peso</button>
+                        <button class="manual-btn" data-pdf="Manual_Balanca.pdf">Balança</button>
+                        <button class="manual-btn" data-pdf="Manual_Classificacao.pdf">Classificação</button>
+                        <button class="manual-btn" data-pdf="Manual_Graficos.pdf">Gráficos</button>
+                        <button class="manual-btn" data-pdf="Manual_Lavadora.pdf">Lavadora</button>
+                        <button class="manual-btn" data-pdf="Manual_Secadora.pdf">Secadora</button>
+                        <button class="manual-btn" data-pdf="Manual_Amostras.pdf">Amostras</button>
+                        <button class="manual-btn" data-pdf="Manual_Diagramas.pdf">Diagramas</button>
+                        <button class="manual-btn" data-pdf="Manual_Janelas.pdf">Janelas</button>
+                        <button class="manual-btn" data-pdf="Manual_Solenoides.pdf">Solenóides</button>
+                        <button class="manual-btn" data-pdf="Manual_Paineis.pdf">Painéis</button>
+                        <button class="manual-btn" data-pdf="Manual_Placas.pdf">Placas</button>
+                        <button class="manual-btn" data-pdf="Manual_Sincronismo.pdf">Sincronismo</button>
+                        <button class="manual-btn" data-pdf="Manual_Informacoes.pdf">Informações</button>
+                        <button class="manual-btn" data-pdf="Manual_Visualizador_3D.pdf">Visualizador 3D</button>
+                        <button class="manual-btn" data-pdf="Manual_Plasson_Farm.pdf">Plasson Farm</button>
+                    </div>
+                </div>
+
+                <!-- Ãrea de visualizaÃ§Ã£o do PDF -->
+                <div class="manual-viewer">
+                    <div class="viewer-header">
+                        <div class="viewer-title" id="manual-current-pdf-title">Selecione um manual para visualizar</div>
+                    </div>
+                    
+                    <!-- Container para o PDF e seus estados -->
+                    <div id="manual-pdf-container">
+                        <!-- Estado Inicial -->
+                        <div id="manual-initial-state" class="pdf-state-card">
+                            <div class="icon">ðŸ“˜</div>
+                            <div class="title">Manual do Supervisório</div>
+                            <div class="message">Selecione um manual na barra lateral para começar.</div>
+                        </div>
+                        <!-- Estado de Carregamento -->
+                        <div id="manual-loading-state" class="pdf-state-card" style="display: none;">
+                            <div class="spinner"></div>
+                            <div class="message">Carregando PDF...</div>
+                        </div>
+                        <!-- Estado de Erro -->
+                        <div id="manual-error-state" class="pdf-state-card" style="display: none;">
+                            <div class="icon">âš ï¸</div>
+                            <div class="title">Erro ao Carregar PDF</div>
+                            <div class="message" id="manual-error-message-content">Não foi possível encontrar o arquivo.</div>
+                        </div>
+                        <!-- O Iframe do PDF serÃ¡ inserido aqui pelo JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

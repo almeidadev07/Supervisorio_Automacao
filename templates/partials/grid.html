@@ -211,6 +211,15 @@
             </div>
         </div>
     </button>
-    <button class="draggable-btn" draggable="true" data-station="botao-12">12</button>
+    <button class="draggable-btn" draggable="true" data-station="botao-12" onclick="showManuals(event)">
+        <div class="unit">
+            <h2>Manual Supervisório</h2>
+            <div class="manual-grid-icon-wrap">
+                <img src="{{ url_for('static', filename='images/grid/status/Icone_Manual_Cinza.png') }}" alt="Manual" class="manual-grid-icon manual-grid-icon--light">
+                <img src="{{ url_for('static', filename='images/grid/status/Icone_Manual_Branco.png') }}" alt="Manual" class="manual-grid-icon manual-grid-icon--dark">
+            </div>
+        </div>
+    </button>
 </section>
 <div id="grid-focus-mask" class="grid-focus-mask" aria-hidden="true"></div>
+

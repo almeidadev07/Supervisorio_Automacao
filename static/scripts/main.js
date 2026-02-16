@@ -379,6 +379,8 @@ function hideAllContainers() {
         'dryer-container',
         'windows-container', // Adicionar windows-container
         'diagram-container',
+        'plasson-farm-container',
+        'manuals-container',
         'graphics-container', // Adicionar graphics-container
         'viewer3d-container', // Adicionar viewer3d-container
         'samples-container', // Adicionar samples-container
@@ -466,6 +468,15 @@ function hideAllContainers() {
             window.cleanupDiagram();
         } catch (e) {
             console.warn('Erro ao fazer cleanup da tela de diagrama:', e);
+        }
+    }
+
+    // Cleanup da tela de manuais
+    if (typeof window.cleanupManuals === 'function') {
+        try {
+            window.cleanupManuals();
+        } catch (e) {
+            console.warn('Erro ao fazer cleanup da tela de manuais:', e);
         }
     }
     
@@ -604,6 +615,7 @@ function hideAllContainers() {
     window.washerInitialized = false;
     window.dryerInitialized = false;
     window.diagramInitialized = false;
+    window.manualsInitialized = false;
     window.windowsInitialized = false;
     window.panelsInitialized = false;
     window.solenoidsInitialized = false;
@@ -1077,6 +1089,104 @@ function showDiagram(event) {
     }
 }
 
+// Função para exibir a tela Plasson Farm
+function showPlassonFarm(event) {
+    setLastScreen('plasson-farm');
+    hideAllContainers();
+    const container = document.getElementById('plasson-farm-container');
+    if (container) {
+        container.style.display = 'block';
+        container.style.visibility = 'visible';
+    }
+
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
+
+    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+    if (event && event.currentTarget && event.currentTarget.classList && event.currentTarget.classList.contains('menu-btn')) {
+        event.currentTarget.classList.add('active');
+    }
+
+    const frame = document.getElementById('plasson-farm-frame');
+    const status = document.getElementById('plasson-farm-status');
+    const showStatus = (message) => {
+        if (!status) return;
+        status.textContent = message || 'Carregando...';
+        status.classList.add('show');
+    };
+    const hideStatus = () => {
+        if (!status) return;
+        status.classList.remove('show');
+    };
+
+    showStatus('Carregando...');
+
+    const urlMap = {
+        '200CX': 'https://farm.plasson.local:3000',
+        '400CX': 'https://farm.plasson.local:3000',
+        '700CX': 'https://farm.plasson.local:3000'
+    };
+
+
+    fetch('/api/current', { cache: 'no-store' })
+        .then(response => response.json())
+        .then(result => {
+            if (!result || !result.ok || !result.machine) {
+                throw new Error('Não foi possível determinar a máquina conectada');
+            }
+            const machineName = String(result.machine).toUpperCase();
+            const url = urlMap[machineName];
+            if (!url) {
+                throw new Error(`Máquina ${machineName} não possui link configurado para Plasson Farm`);
+            }
+            if (frame) {
+                if (frame.dataset.currentUrl !== url) {
+                    frame.dataset.currentUrl = url;
+                    frame.onload = () => hideStatus();
+                    frame.src = url;
+                } else {
+                    hideStatus();
+                }
+            } else {
+                hideStatus();
+            }
+        })
+        .catch(error => {
+            console.error('[PLASSON_FARM] Erro ao carregar Plasson Farm:', error);
+            if (frame) {
+                frame.removeAttribute('src');
+                frame.dataset.currentUrl = '';
+            }
+            showStatus(error.message || 'Erro ao abrir Plasson Farm. Verifique a conexão.');
+        });
+}
+
+// Função para exibir a tela de manuais
+function showManuals(event) {
+    setLastScreen('manuals');
+    hideAllContainers();
+    const manualsContainer = document.getElementById('manuals-container');
+    if (manualsContainer) {
+        manualsContainer.style.display = 'block';
+        manualsContainer.style.visibility = 'visible';
+    }
+
+    if (window.stopAlarmAutoRefresh) {
+        window.stopAlarmAutoRefresh();
+    }
+
+    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+    if (event?.currentTarget && event.currentTarget.classList && event.currentTarget.classList.contains('menu-btn')) {
+        event.currentTarget.classList.add('active');
+    }
+
+    if (typeof window.inicializarManuais === 'function' && !window.manualsInitialized) {
+        window.inicializarManuais();
+        window.manualsInitialized = true;
+    }
+}
+
 // 1. Adicione esta função ao seu main.js
 function showWindows(event) {
     setLastScreen('windows');
@@ -1359,6 +1469,7 @@ Promise.all([
     loadScript('/static/scripts/partials/washer.js'), // ✅ Script da lavadora
     loadScript('/static/scripts/partials/dryer.js'), // ✅ Script da secadora
     loadScript('/static/scripts/partials/diagram.js'), 
+    loadScript('/static/scripts/partials/manuals.js'),
     loadScript(WINDOWS_SCRIPT_SRC),
     loadScript('/static/scripts/partials/graphics.js'),
     loadScript(VIEWER3D_SCRIPT_SRC),
@@ -1542,6 +1653,8 @@ document.addEventListener('DOMContentLoaded', function() {
         washer: showWasher,
         dryer: showDryer,
         diagram: showDiagram,
+        'plasson-farm': showPlassonFarm,
+        manuals: showManuals,
         windows: showWindows,
         viewer3d: showViewer3D,
         samples: showSamples,
@@ -1579,6 +1692,8 @@ window.showInput = showInput;
 window.showWasher = showWasher; // ✅ Exportação global da função da lavadora
 window.showDryer = showDryer;   // ✅ Exportação global da função da secadora
 window.showDiagram = showDiagram;
+window.showPlassonFarm = showPlassonFarm;
+window.showManuals = showManuals;
 window.showWindows = showWindows;
 window.showViewer3D = showViewer3D; // ✅ Exportação global da função do visualizador 3D
 window.showSamples = showSamples; // ✅ Exportação global da função de amostras

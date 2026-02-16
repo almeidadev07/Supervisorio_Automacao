@@ -7,45 +7,47 @@
         
         <!-- Content box -->
         <div class="classification-content-box">
-            <div class="embaladora-grid">
-                <div class="top-alert-area">
-                    <div id="claw-banner-green" class="claw-banner claw-banner-green"></div>
-                    <div id="claw-banner" class="claw-banner"></div>
-                    <div id="classification-alert" class="classification-alert"></div>
+            <div class="classification-panel">
+                <div class="embaladora-grid">
+                    <div class="top-alert-area">
+                        <div id="claw-banner-green" class="claw-banner claw-banner-green"></div>
+                        <div id="claw-banner" class="claw-banner"></div>
+                        <div id="classification-alert" class="classification-alert"></div>
+                    </div>
+                    <div class="grid-row" id="status-row"></div>
+                    <div class="grid-row" id="header-row"></div>
+                    <div class="grid-content" id="embaladora-grid"></div>
                 </div>
-                <div class="grid-row" id="status-row"></div>
-                <div class="grid-row" id="header-row"></div>
-                <div class="grid-content" id="embaladora-grid"></div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="classification-controls-box">
-        <div class="control-row">
-        <div class="control-left">
-            <button id="recipe-btn" class="control-btn recipe-btn" style="width:64px;height:64px;">
-                <img src="{{ url_for('static', filename='images/pages/icons/comandos/botão_elevador_baixo.png') }}" alt="Receita" />
-            </button>
 
-            <!-- Botão Liga/Desliga (imagens sobrepostas) -->
-            <div id="power-switch" style="position:relative; width:64px; height:64px; margin-left:8px; display:inline-block; vertical-align:top;">
-                <button id="power-btn-on" class="control-btn" title="Ligado" style="position:absolute; left:0; top:0; width:64px; height:64px; padding:0; display:none;">
-                    <img src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado" style="width:64px; height:64px;" />
-                </button>
-                <button id="power-btn-off" class="control-btn" title="Desligado" style="position:absolute; left:0; top:0; width:64px; height:64px; padding:0; display:none;">
-                    <img src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado" style="width:64px; height:64px;" />
-                </button>
+                <div class="classification-controls-box">
+                    <div class="control-row">
+                    <div class="control-left">
+                        <button id="recipe-btn" class="control-btn recipe-btn" style="width:64px;height:64px;">
+                            <img src="{{ url_for('static', filename='images/pages/icons/comandos/botão_elevador_baixo.png') }}" alt="Receita" />
+                        </button>
+
+                        <!-- Botão Liga/Desliga (imagens sobrepostas) -->
+                        <div id="power-switch" style="position:relative; width:64px; height:64px; margin-left:8px; display:inline-block; vertical-align:top;">
+                            <button id="power-btn-on" class="control-btn" title="Ligado" style="position:absolute; left:0; top:0; width:64px; height:64px; padding:0; display:none;">
+                                <img src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Ligado.png') }}" alt="Ligado" style="width:64px; height:64px;" />
+                            </button>
+                            <button id="power-btn-off" class="control-btn" title="Desligado" style="position:absolute; left:0; top:0; width:64px; height:64px; padding:0; display:none;">
+                                <img src="{{ url_for('static', filename='images/pages/icons/comandos/00 - Botão_Liga_Desligado.png') }}" alt="Desligado" style="width:64px; height:64px;" />
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="classes-group" id="classes-list"></div>
+                    
+                    <div class="control-right">
+                        <button id="clear-btn" class="control-btn clear-btn" style="width:64px;height:64px;">
+                            <img src="{{ url_for('static', filename='images/pages/icons/comandos/botão_lixo.png') }}" alt="Limpar" />
+                        </button>
+                    </div>
+                </div>
+                </div>
             </div>
         </div>
-        
-        <div class="classes-group" id="classes-list"></div>
-        
-        <div class="control-right">
-            <button id="clear-btn" class="control-btn clear-btn" style="width:64px;height:64px;">
-                <img src="{{ url_for('static', filename='images/pages/icons/comandos/botão_lixo.png') }}" alt="Limpar" />
-            </button>
-        </div>
-    </div>
     </div>
 </div>
 <!-- Modal para seleção de classe -->

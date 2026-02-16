@@ -10,6 +10,8 @@
 @import url('partials/input.css');
 @import url('partials/washer.css');
 @import url('partials/diagram.css');
+@import url('partials/manuals.css');
+@import url('partials/plasson_farm.css');
 @import url('partials/windows.css');
 @import url('partials/samples.css'); 
 @import url('partials/initial_wizard.css');
@@ -131,6 +133,8 @@ body {
 #input-container,
 #windows-container,
 #diagram-container,
+#plasson-farm-container,
+#manuals-container,
 #samples-container,
 #plates-container,
 #solenoids-container,
@@ -170,6 +174,61 @@ body {
     background: var(--surface) !important;
     border: 1px solid var(--border-subtle) !important;
     box-shadow: var(--shadow-lg) !important;
+}
+
+/* ========== Padronização de tamanho das telas (Alarmes/Balança/Faixa Peso) ========== */
+#alarmScreen,
+#balanceScreen,
+#weightRangeScreen {
+    padding: 20px !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* ========== Padronização de boxes (Menu Operador) ========== */
+:root {
+    --operator-header-padding: 25px;
+    --operator-content-padding: 20px;
+    --operator-box-radius: 16px;
+    --operator-layout-gap: 24px;
+}
+
+.alarm-layout,
+.weight-layout,
+.balance-layout,
+.classification-layout,
+.graphics-layout,
+.washer-screen-layout,
+.dryer-screen-layout,
+.samples-screen-layout,
+.diagram-screen-layout {
+    gap: var(--operator-layout-gap) !important;
+}
+
+.alarm-header-box,
+.weight-header-box,
+.balance-header-box,
+.classification-header-box,
+.graphics-header-box,
+.washer-header-box,
+.dryer-header-box,
+.samples-header-box,
+.diagram-header-box {
+    padding: var(--operator-header-padding) !important;
+    border-radius: var(--operator-box-radius) !important;
+}
+
+.alarm-content-box,
+.weight-content-box,
+.balance-content-box,
+.classification-content-box,
+.graphics-content-box,
+.washer-content-box,
+.dryer-content-box,
+.samples-content-box,
+.diagram-content-box {
+    padding: var(--operator-content-padding) !important;
+    border-radius: var(--operator-box-radius) !important;
 }
 
 [class$="-title"] {
@@ -295,13 +354,21 @@ body {
     color: #000000;
 }
 
+:root[data-theme="dark"] .manual-btn,
+:root[data-theme="dark"] .manual-btn.active {
+    color: #000000;
+}
+
 :root[data-theme="dark"] .diagram-viewer,
-:root[data-theme="dark"] #pdf-container {
+:root[data-theme="dark"] #pdf-container,
+:root[data-theme="dark"] .manual-viewer,
+:root[data-theme="dark"] #manual-pdf-container {
     background: #4a5568;
     border-color: rgba(255, 255, 255, 0.12);
 }
 
 :root[data-theme="dark"] .diagram-title,
+:root[data-theme="dark"] .manual-title,
 :root[data-theme="dark"] .viewer-title {
     color: #ffffff;
 }
@@ -530,6 +597,8 @@ body {
 #graphics-container,
 #washer-container,
 #dryer-container,
+#plasson-farm-container,
+#manuals-container,
 #samples-container,
 #alarm-container {
     width: 100%;

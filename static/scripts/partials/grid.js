@@ -1975,52 +1975,15 @@ function configurarBotaoPlassonFarm() {
     console.log('[GRID] 📍 Botão encontrado:', btnPlassonFarm);
     console.log('[GRID] 📍 Data-station:', btnPlassonFarm.getAttribute('data-station'));
 
-    // ✅ Função para abrir o link do Plasson Farm
-    const abrirPlassonFarm = async () => {
+    // ✅ Função para abrir a tela do Plasson Farm dentro do supervisório
+    const abrirPlassonFarm = () => {
         console.log('[GRID] 🖱️ Função abrirPlassonFarm chamada');
-
-        try {
-            // Obtém a máquina ativa via API
-            const response = await fetch('/api/current');
-            const result = await response.json();
-
-            console.log('[GRID] Resposta da API /api/current:', result);
-
-            if (!result.ok || !result.machine) {
-                console.error('[GRID] Não foi possível obter máquina ativa');
-                alert('Erro: Não foi possível determinar a máquina conectada');
-                return;
-            }
-
-            const machineName = result.machine.toUpperCase();
-            console.log(`[GRID] Máquina ativa detectada: ${machineName}`);
-
-            // Mapeia máquina para URL
-            const urlMap = {
-                '200CX': 'https://farm.plasson.local:3000',
-                '400CX': 'https://farm.plasson.local:3000',
-                '700CX': 'https://farm.plasson.local:3000'
-            };
-
-            const url = urlMap[machineName];
-            if (!url) {
-                console.error(`[GRID] Máquina ${machineName} não possui URL configurada`);
-                alert(`Máquina ${machineName} não possui link configurado para Plasson Farm`);
-                return;
-            }
-
-            console.log(`[GRID] Abrindo Plasson Farm para ${machineName}: ${url}`);
-            // Abre o link em nova aba
-            const newWindow = window.open(url, '_blank');
-            if (!newWindow) {
-                alert('Erro: Pop-up bloqueado. Permita pop-ups para este site.');
-            } else {
-                console.log('[GRID] ✅ Link aberto com sucesso');
-            }
-        } catch (error) {
-            console.error('[GRID] Erro ao abrir Plasson Farm:', error);
-            alert('Erro ao abrir Plasson Farm. Verifique a conexão.');
+        if (typeof window.showPlassonFarm === 'function') {
+            window.showPlassonFarm();
+            return;
         }
+        console.warn('[GRID] showPlassonFarm não está disponível');
+        alert('Erro ao abrir Plasson Farm. Tente novamente.');
     };
 
     // ✅ Variáveis para rastrear se foi um clique ou drag
@@ -2095,40 +2058,13 @@ function configurarBotaoPlassonFarm() {
             
             console.log('[GRID_DELEGATION] ✅ Clique no Plasson Farm detectado via delegação global');
             
-            // Chama a função para abrir o link
-            (async () => {
-                try {
-                    const response = await fetch('/api/current');
-                    const result = await response.json();
-                    
-                    if (!result.ok || !result.machine) {
-                        alert('Erro: Não foi possível determinar a máquina conectada');
-                        return;
-                    }
-                    
-                    const machineName = result.machine.toUpperCase();
-                    const urlMap = {
-                        '200CX': 'https://farm.plasson.local:3000',
-                        '400CX': 'https://farm.plasson.local:3000',
-                        '700CX': 'https://farm.plasson.local:3000'
-                    };
-                    
-                    const url = urlMap[machineName];
-                    if (!url) {
-                        alert(`Máquina ${machineName} não possui link configurado para Plasson Farm`);
-                        return;
-                    }
-                    
-                    console.log(`[GRID_DELEGATION] Abrindo Plasson Farm: ${url}`);
-                    const newWindow = window.open(url, '_blank');
-                    if (!newWindow) {
-                        alert('Erro: Pop-up bloqueado. Permita pop-ups para este site.');
-                    }
-                } catch (error) {
-                    console.error('[GRID_DELEGATION] Erro:', error);
-                    alert('Erro ao abrir Plasson Farm. Verifique a conexão.');
-                }
-            })();
+            // Chama a função para abrir a tela interna
+            if (typeof window.showPlassonFarm === 'function') {
+                window.showPlassonFarm();
+            } else {
+                console.warn('[GRID_DELEGATION] showPlassonFarm não disponível');
+                alert('Erro ao abrir Plasson Farm. Tente novamente.');
+            }
         } catch(err) {
             console.error('[GRID_DELEGATION] Erro no clique do Plasson Farm:', err);
         }
