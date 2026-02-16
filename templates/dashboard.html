@@ -140,7 +140,27 @@
             <div class="settings-section" data-section="machine">
               <div class="machine-field">
                 <label for="machine-select">Seleção de máquina:</label>
-                <select id="machine-select"></select>
+                <div class="machine-select-grid" role="radiogroup" aria-label="Seleção de máquina">
+                  <button type="button" class="machine-select-btn" data-machine="200CX" role="radio" aria-checked="false" aria-label="200CX">
+                    <span class="machine-icon-stack">
+                      <img class="machine-icon machine-icon-off" src="{{ url_for('static', filename='images/pages/icons/comandos/Icone_200CX_Cinza.png') }}" alt="">
+                      <img class="machine-icon machine-icon-on" src="{{ url_for('static', filename='images/pages/icons/comandos/Icone_200CX_Verm.png') }}" alt="">
+                    </span>
+                  </button>
+                  <button type="button" class="machine-select-btn" data-machine="400CX" role="radio" aria-checked="false" aria-label="400CX">
+                    <span class="machine-icon-stack">
+                      <img class="machine-icon machine-icon-off" src="{{ url_for('static', filename='images/pages/icons/comandos/Icone_400CX_Cinza.png') }}" alt="">
+                      <img class="machine-icon machine-icon-on" src="{{ url_for('static', filename='images/pages/icons/comandos/Icone_400CX_Verm.png') }}" alt="">
+                    </span>
+                  </button>
+                  <button type="button" class="machine-select-btn" data-machine="700CX" role="radio" aria-checked="false" aria-label="700CX">
+                    <span class="machine-icon-stack">
+                      <img class="machine-icon machine-icon-off" src="{{ url_for('static', filename='images/pages/icons/comandos/Icone_700CX_Cinza.png') }}" alt="">
+                      <img class="machine-icon machine-icon-on" src="{{ url_for('static', filename='images/pages/icons/comandos/Icone_700CX_Verm.png') }}" alt="">
+                    </span>
+                  </button>
+                </div>
+                <select id="machine-select" class="machine-select-hidden" aria-hidden="true" tabindex="-1"></select>
               </div>
             </div>
 
@@ -307,6 +327,7 @@
             </div>
             <div class="wizard-type-grid">
               <button type="button" class="wizard-type-card" data-type="classificadora">
+                <img class="wizard-type-image" src="{{ url_for('static', filename='images/pages/icons/comandos/Icone_Maquina.png') }}" alt="">
                 <div class="wizard-type-title">Classificadora</div>
                 <div class="wizard-type-desc">Fluxo completo para linhas 200CX / 400CX / 700CX.</div>
               </button>

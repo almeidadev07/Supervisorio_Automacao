@@ -104,7 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusDiv = document.getElementById('machine-modal-status');
   const embaladoraQuantity = document.getElementById('embaladora-quantity');
   const themeToggle = document.getElementById('theme-toggle');
-  
+  const machineSelectGrid = document.querySelector('.machine-select-grid');
+
   // Checkboxes de visibilidade
   const checkboxMagnaOvoscopia = document.getElementById('checkbox-magna-ovoscopia');
   const checkboxCrack = document.getElementById('checkbox-crack');
@@ -118,6 +119,44 @@ document.addEventListener('DOMContentLoaded', () => {
   const EMBALADORA_QUANTITY_KEY = 'supervisor_embaladora_quantity';
   const THEME_KEY = 'supervisor_theme';
   const INITIAL_SETUP_KEY = 'supervisor_initial_setup_done';
+
+  function getMachineButtons() {
+    return Array.from(document.querySelectorAll('.machine-select-btn'));
+  }
+
+  function ensureSelectOption(value) {
+    if (!select || !value) return;
+    const exists = Array.from(select.options).some(opt => opt.value === value);
+    if (!exists) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = value;
+      select.appendChild(option);
+    }
+  }
+
+  function syncMachineButtons(selectedValue) {
+    const value = selectedValue || select?.value || '';
+    getMachineButtons().forEach((btn) => {
+      const isSelected = btn.getAttribute('data-machine') === value;
+      btn.classList.toggle('is-selected', isSelected);
+      btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+    });
+  }
+
+  function setMachineSelectionDisabled(disabled) {
+    if (select) {
+      select.disabled = !!disabled;
+    }
+    getMachineButtons().forEach((btn) => {
+      btn.disabled = !!disabled;
+      btn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      btn.tabIndex = disabled ? -1 : 0;
+    });
+    if (machineSelectGrid) {
+      machineSelectGrid.classList.toggle('is-disabled', !!disabled);
+    }
+  }
 
   function getCurrentTheme() {
     return localStorage.getItem(THEME_KEY) || 'dark';
@@ -165,6 +204,26 @@ document.addEventListener('DOMContentLoaded', () => {
     themeToggle.addEventListener('change', () => {
       const nextTheme = themeToggle.checked ? 'dark' : 'light';
       applyTheme(nextTheme);
+    });
+  }
+
+  getMachineButtons().forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      const value = btn.getAttribute('data-machine');
+      if (!value) return;
+      ensureSelectOption(value);
+      if (select) {
+        select.value = value;
+        syncMachineButtons(value);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+  });
+
+  if (select) {
+    select.addEventListener('change', () => {
+      syncMachineButtons(select.value);
     });
   }
   
@@ -287,6 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (initialMachine && selectEl) {
       selectEl.value = initialMachine;
+      syncMachineButtons(initialMachine);
     } else {
       // Fallback: recarrega máquina atual do backend
       try { loadCurrentMachine(); } catch (_) {}
@@ -565,13 +625,23 @@ document.addEventListener('DOMContentLoaded', () => {
       const machines = await response.json();
       
       if (select) {
+        const previousValue = select.value;
         select.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '';
+        placeholder.hidden = true;
+        select.appendChild(placeholder);
         machines.forEach(machine => {
           const option = document.createElement('option');
           option.value = machine.name;
           option.textContent = machine.name;
           select.appendChild(option);
         });
+        if (previousValue) {
+          select.value = previousValue;
+        }
+        syncMachineButtons(select.value);
       }
     } catch (error) {
       console.error('Erro ao carregar máquinas:', error);
@@ -586,7 +656,9 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (result.ok && select) {
         // Seleciona a máquina atual no dropdown
+        ensureSelectOption(result.machine);
         select.value = result.machine;
+        syncMachineButtons(result.machine);
         
         // ✅ Salva o tipo de máquina atual no localStorage (para tela de balança)
         const machineTypeMatch = result.machine.match(/(200CX|400CX|700CX)/i);
@@ -731,7 +803,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('[MACHINE_SELECT] Abrindo modal com dados...');
 
     if (select) {
-      select.disabled = true;
+      setMachineSelectionDisabled(true);
       select.innerHTML = '';
       const loadingOpt = document.createElement('option');
       loadingOpt.value = '';
@@ -756,7 +828,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (currentMachine) {
         select.value = currentMachine;
       }
-      select.disabled = false;
+      syncMachineButtons(select.value);
+      setMachineSelectionDisabled(false);
     }
     
     // Aguarda mais um pouco para garantir que os valores foram aplicados
@@ -961,6 +1034,8 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     getCurrentTheme,
     applyTheme,
+    syncMachineButtons,
+    setMachineSelectionDisabled,
     loadMachines,
     loadCurrentMachine,
     loadVisibilitySettings,

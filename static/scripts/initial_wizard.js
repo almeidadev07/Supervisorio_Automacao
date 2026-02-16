@@ -259,16 +259,29 @@
     async function primeSettings() {
       const api = getSettingsApi();
       if (!api) return;
+      const keys = getSettingsKeys();
+      const setupDone = localStorage.getItem(keys.INITIAL_SETUP_KEY) === '1';
       try {
         api.loadVisibilitySettings();
       } catch (_) {}
       try {
         await api.loadMachines();
-        await api.loadCurrentMachine();
+        if (setupDone && typeof api.loadCurrentMachine === 'function') {
+          await api.loadCurrentMachine();
+        }
       } catch (_) {}
       try {
         api.captureInitialSettings();
       } catch (_) {}
+      if (!setupDone) {
+        const select = document.getElementById('machine-select');
+        if (select) {
+          select.value = '';
+        }
+        if (api && typeof api.syncMachineButtons === 'function') {
+          api.syncMachineButtons('');
+        }
+      }
     }
 
     async function attemptFinish() {
