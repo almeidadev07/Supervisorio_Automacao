@@ -1,3 +1,0 @@
-// Aguarda um pouco para garantir que o DOM está pronto
-    setTimeout(() => {
-        // Filtra embaladoras baseado na 
