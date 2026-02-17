@@ -26,8 +26,8 @@
                     <img src="{{ url_for('static', filename='images/grid/status/00_Medida_Velocimentro_Amarelo.png') }}" class="velocimetro-imagem" id="imgVelocimetroProg">
                     <img src="{{ url_for('static', filename='images/grid/status/00_Ponteiro_Velocimentro_Amarelo.png') }}" class="ponteiro" id="ponteiroProg">
                 </div>
-                <div class="velocimetro-value-container">
-                    <input type="text" id="velocidadeInput" class="velocimetro-input" value="50" readonly onclick="abrirTeclado(event)">
+                <div class="velocimetro-value-container velocidade-programada">
+                    <input type="text" id="velocidadeInput" class="velocimetro-input" value="0" readonly onclick="abrirTeclado(event)">
                     <span class="unidade-programada">Cx/h</span>
                 </div>
             </div>

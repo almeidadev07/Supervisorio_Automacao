@@ -7,6 +7,7 @@
     "4": "XLCLASS - DB4 - PRINCIPAL EMERGENCIA",
     "6": "XLCLASS - DB6 - AUXILIAR INDEXAÇÃO",
     "7": "XLCLASS - DB7 - INDEX CAP JANELAS",
+    "9": "XLCLASS - DB9 - PERIFERICOS",
     "10": "XLCLASS - DB10 - PARTIDA DIRETA",
     "101": "XLCLASS - DB101 - NAO HABILITADA",
     "103": "XLCLASS - DB103 - DRIVES CLASS",
@@ -34,23 +35,27 @@
     "365": "XLCLASS - DB365 - CONTROLE PRED VERMELHO P6",
     "366": "XLCLASS - DB366 - CONTROLE PRED VERMELHO P7",
     "400": "XLCLASS - DB400 - SOLENOIDE ALARME",
-    "450": "XLCLASS - DB450 - INFORMACOES PROCESSO",
     "699": "XLCLASS - DB699 - DADOS DATA ATUAL",
     "901": "XLCLASS - DB901 - ESTEIRA INLINE",
     "911": "XLCLASS - DB911 - DOSIFICADORA",
     "921": "XLCLASS - DB921 - ESCOVAS",
-    "2010": "XLCLASS - DB2010 - CONTROLE EIXO ACUMULADORA",
-    "2020": "XLCLASS - DB2020 - CONTROLE EIXO DOSIFICADORA",
-    "2030": "XLCLASS - DB2030 - CONTROLE EIXO ESCOVAS",
-    "2040": "XLCLASS - DB2040 - CONTROLE EIXO OVOSCOPIA",
-    "2050": "XLCLASS - DB2050 - CONTROLE EIXO CLASSIFICADORA",
-    "2060": "XLCLASS - DB2060 - CONTROLE EIXO ESTEIRA DE SAIDA",
-    "3001": "XLCLASS - DB3001 - ACUMULADORA ALARMES",
-    "3002": "XLCLASS - DB3002 - DOSIFICADORA ALARMES",
-    "3003": "XLCLASS - DB3003 - ESCOVAS ALARMES",
-    "3004": "XLCLASS - DB3004 - OVOSCOPIA ALARMES",
-    "3005": "XLCLASS - DB3005 - CLASSIFICADORA ALARMES",
-    "3006": "XLCLASS - DB3006 - ESTEIRA DE SAIDA ALARMES"
+    "2001": "XLCLASS - DB2001 - ALARMES ACUMULADORA",
+    "2002": "XLCLASS - DB2002 - ALARMES DOSIFICADORA",
+    "2003": "XLCLASS - DB2003 - ALARMES ACUMULADORA",
+    "2004": "XLCLASS - DB2004 - ALARMES OVOSCOPIA",
+    "2005": "XLCLASS - DB2005 - ALARMES CLASSIFICADORA",
+    "2006": "XLCLASS - DB2006 - ALARMES ESTEIRA DE SAIDA",
+    "2007": "XLCLASS - DB2007 - ALARMES ENCODER EXTERNO",
+    "3001": "XLCLASS - DB3001 - EIXO ACUMULADORA",
+    "3002": "XLCLASS - DB3002 - EIXO DOSIFICADORA",
+    "3008": "XLCLASS - DB3008 - EIXO ESCOVA LAVADORA",
+    "4000": "XLCLASS - DB4000 - EIXO MANUTENCAO",
+    "5001": "XLCLASS - DB5001 - CONTROLE EIXO ACUMULADORA",
+    "5002": "XLCLASS - DB5002 - CONTROLE EIXO DOSIFICADORA",
+    "5004": "XLCLASS - DB5004 - CONTROLE EIXO OVOSCOPIA",
+    "5005": "XLCLASS - DB5005 - CONTROLE EIXO CLASSIFICADORA",
+    "5007": "XLCLASS - DB5007 - CONTROLE EIXO CLASSIFICADORA",
+    "5012": "XLCLASS - DB5012 - CONTROLE EIXO ESCOVA LAVADORA"
   },
   "1": [
     {
@@ -140,12 +145,6 @@
     }
   ],
   "3": [
-    {
-      "name": "XLCLASS_DB03_PERIFERICOS_ALARMES_CMD",
-      "offset": 2,
-      "type": "WORD",
-      "description": "XLCLASS_DB03_PERIFERICOS_ALARMES_CMD"
-    },
     {
       "name": "XLCLASS_DB03_CONTROLE_DE_VELOCIDADE_DINAMICA_FLUXO_REAL_IND",
       "offset": 48,
@@ -705,6 +704,15 @@
       "description": "XLCLASS_DB07_INDEX_CAP_OFFSET_FINAL"
     }
   ],
+  "9": [
+    {
+      "name": "XLCLASS_DB09_PERIFERICOS_ALARMES_CMD",
+      "offset": 2,
+      "type": "WORD",
+      "description": "XLCLASS_DB09_PERIFERICOS_ALARMES_CMD"
+    }
+  ],
+
   "10": [
     {
       "name": "XLCLASS_DB10_PARTIDA_DIRETA_ALARMES_TERMICOS",
@@ -4317,6 +4325,30 @@
       "description": "XLCLASS_DB400_SOLENOIDE_ALARME_E22_02"
     },
     {
+      "name": "XLCLASS_DB400_SOLENOIDE_ALARME_E23_01",
+      "offset": 92,
+      "type": "WORD",
+      "description": "XLCLASS_DB400_SOLENOIDE_ALARME_E23_01"
+    },
+    {
+      "name": "XLCLASS_DB400_SOLENOIDE_ALARME_E23_02",
+      "offset": 94,
+      "type": "WORD",
+      "description": "XLCLASS_DB400_SOLENOIDE_ALARME_E23_02"
+    },
+        {
+      "name": "XLCLASS_DB400_SOLENOIDE_ALARME_E24_01",
+      "offset": 96,
+      "type": "WORD",
+      "description": "XLCLASS_DB400_SOLENOIDE_ALARME_E24_01"
+    },
+    {
+      "name": "XLCLASS_DB400_SOLENOIDE_ALARME_E24_02",
+      "offset": 98,
+      "type": "WORD",
+      "description": "XLCLASS_DB400_SOLENOIDE_ALARME_E24_02"
+    },
+    {
       "name": "XLCLASS_DB400_SOLENOIDE_COMANDO",
       "offset": 128,
       "type": "WORD",
@@ -4339,128 +4371,6 @@
       "offset": 140,
       "type": "WORD",
       "description": "XLCLASS_DB400_SOLENOIDE_ACIONAMENTO_SAIDA"
-    }
-  ],
-  "450": [
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_DESLIGA_TORRE",
-      "offset": 8,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_DESLIGA_TORRE"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_DESLIGA_FRENTE",
-      "offset": 12,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_DESLIGA_FRENTE"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_DESLIGA_BANDEJA",
-      "offset": 16,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_DESLIGA_BANDEJA"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[0]",
-      "offset": 32,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[0]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[1]",
-      "offset": 34,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[1]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[2]",
-      "offset": 36,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[2]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[3]",
-      "offset": 38,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[3]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[4]",
-      "offset": 40,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[4]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[5]",
-      "offset": 42,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[5]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[6]",
-      "offset": 44,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[6]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[7]",
-      "offset": 46,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[7]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[8]",
-      "offset": 48,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[8]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[9]",
-      "offset": 50,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[9]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[10]",
-      "offset": 52,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[10]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[11]",
-      "offset": 54,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[11]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[12]",
-      "offset": 56,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[12]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[13]",
-      "offset": 58,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[13]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[14]",
-      "offset": 60,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[14]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[15]",
-      "offset": 62,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_RECEITA[15]"
-    },
-    {
-      "name": "XLCLASS_DB450_INFORMACOES_PROCESSO_EMB_NAO_HABILITADA",
-      "offset": 94,
-      "type": "WORD",
-      "description": "XLCLASS_DB450_INFORMACOES_PROCESSO_EMB_NAO_HABILITADA"
     }
   ],
   "699": [
@@ -4555,322 +4465,321 @@
       "description": "XLCLASS_DB921_ESCOVAS_VELOCIDADE_PROPORCIONAL"
     }
   ],
-  "2010": [
+  "2001": [
     {
-      "name": "XLCLASS_DB2010_CONTROLE_EIXO_ACUMULADORA_W10",
-      "offset": 10,
-      "type": "WORD",
-      "description": "XLCLASS_DB2010_CONTROLE_EIXO_ACUMULADORA_W10"
-    },
-    {
-      "name": "XLCLASS_DB2010_CONTROLE_EIXO_ACUMULADORA_W24",
-      "offset": 24,
-      "type": "WORD",
-      "description": "XLCLASS_DB2010_CONTROLE_EIXO_ACUMULADORA_W24"
-    },
-    {
-      "name": "XLCLASS_DB2010_CONTROLE_EIXO_ACUMULADORA_W26",
-      "offset": 26,
-      "type": "WORD",
-      "description": "XLCLASS_DB2010_CONTROLE_EIXO_ACUMULADORA_W26"
-    }
-  ],
-  "2020": [
-    {
-      "name": "XLCLASS_DB2020_CONTROLE_EIXO_DOSIFICADORA_W10",
-      "offset": 10,
-      "type": "WORD",
-      "description": "XLCLASS_DB2020_CONTROLE_EIXO_DOSIFICADORA_W10"
-    },
-    {
-      "name": "XLCLASS_DB2020_CONTROLE_EIXO_DOSIFICADORA_W24",
-      "offset": 24,
-      "type": "WORD",
-      "description": "XLCLASS_DB2020_CONTROLE_EIXO_DOSIFICADORA_W24"
-    },
-    {
-      "name": "XLCLASS_DB2020_CONTROLE_EIXO_DOSIFICADORA_W26",
-      "offset": 26,
-      "type": "WORD",
-      "description": "XLCLASS_DB2020_CONTROLE_EIXO_DOSIFICADORA_W26"
-    }
-  ],
-  "2030": [
-    {
-      "name": "XLCLASS_DB2030_CONTROLE_EIXO_ESCOVAS_W10",
-      "offset": 10,
-      "type": "WORD",
-      "description": "XLCLASS_DB2030_CONTROLE_EIXO_ESCOVAS_W10"
-    },
-    {
-      "name": "XLCLASS_DB2030_CONTROLE_EIXO_ESCOVAS_W24",
-      "offset": 24,
-      "type": "WORD",
-      "description": "XLCLASS_DB2030_CONTROLE_EIXO_ESCOVAS_W24"
-    },
-    {
-      "name": "XLCLASS_DB2030_CONTROLE_EIXO_ESCOVAS_W26",
-      "offset": 26,
-      "type": "WORD",
-      "description": "XLCLASS_DB2030_CONTROLE_EIXO_ESCOVAS_W26"
-    }
-  ],
-  "2040": [
-    {
-      "name": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W8",
+      "name": "XLCLASS_DB2001_ACUMULADORA_ALARMES_W8",
       "offset": 8,
       "type": "WORD",
-      "description": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W8"
+      "description": "XLCLASS_DB2001_ACUMULADORA_ALARMES_W8"
     },
     {
-      "name": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W10",
+      "name": "XLCLASS_DB2001_ACUMULADORA_ALARMES_W10",
       "offset": 10,
       "type": "WORD",
-      "description": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W10"
+      "description": "XLCLASS_DB2001_ACUMULADORA_ALARMES_W10"
     },
     {
-      "name": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W12",
+      "name": "XLCLASS_DB2001_ACUMULADORA_ALARMES_W12",
       "offset": 12,
       "type": "WORD",
-      "description": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W12"
-    },
-    {
-      "name": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W14",
-      "offset": 14,
-      "type": "WORD",
-      "description": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W14"
-    },
-    {
-      "name": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W22",
-      "offset": 22,
-      "type": "WORD",
-      "description": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W22"
-    },
-    {
-      "name": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W24",
-      "offset": 24,
-      "type": "WORD",
-      "description": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W24"
-    },
-    {
-      "name": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W26",
-      "offset": 26,
-      "type": "WORD",
-      "description": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W26"
-    },
-    {
-      "name": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W28",
-      "offset": 28,
-      "type": "WORD",
-      "description": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W28"
-    },
-    {
-      "name": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W36",
-      "offset": 36,
-      "type": "WORD",
-      "description": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W36"
-    },
-    {
-      "name": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W38",
-      "offset": 38,
-      "type": "WORD",
-      "description": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W38"
-    },
-    {
-      "name": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W104",
-      "offset": 104,
-      "type": "WORD",
-      "description": "XLCLASS_DB2040_CONTROLE_EIXO_OVOSCOPIA_W104"
+      "description": "XLCLASS_DB2001_ACUMULADORA_ALARMES_W12"
     }
   ],
-  "2050": [
+  "2002": [
     {
-      "name": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W10",
-      "offset": 10,
+      "name": "XLCLASS_DB2002_DOSIFICADORA_ALARMES_W8",
+      "offset": 8,
       "type": "WORD",
-      "description": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W10"
+      "description": "XLCLASS_DB2002_DOSIFICADORA_ALARMES_W8"
     },
     {
-      "name": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W12",
+      "name": "XLCLASS_DB2002_DOSIFICADORA_ALARMES_W10",
+      "offset": 10,
+      "type": "WORD",
+      "description": "XLCLASS_DB2002_DOSIFICADORA_ALARMES_W10"
+    },
+    {
+      "name": "XLCLASS_DB2002_DOSIFICADORA_ALARMES_W12",
       "offset": 12,
       "type": "WORD",
-      "description": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W12"
-    },
-    {
-      "name": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W14",
-      "offset": 14,
-      "type": "WORD",
-      "description": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W14"
-    },
-    {
-      "name": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W24",
-      "offset": 24,
-      "type": "WORD",
-      "description": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W24"
-    },
-    {
-      "name": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W26",
-      "offset": 26,
-      "type": "WORD",
-      "description": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W26"
-    },
-    {
-      "name": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W28",
-      "offset": 28,
-      "type": "WORD",
-      "description": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W28"
-    },
-    {
-      "name": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W38",
-      "offset": 38,
-      "type": "WORD",
-      "description": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W38"
-    },
-    {
-      "name": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W104",
-      "offset": 104,
-      "type": "WORD",
-      "description": "XLCLASS_DB2050_CONTROLE_EIXO_CLASSIFICADORA_W104"
+      "description": "XLCLASS_DB2002_DOSIFICADORA_ALARMES_W12"
     }
   ],
-  "2060": [
+  "2003": [
     {
-      "name": "XLCLASS_DB2060_CONTROLE_EIXO_ESTEIRA_DE_SAIDA_W10",
+      "name": "XLCLASS_DB2003_ESCOVAS_ALARMES_W8",
+      "offset": 8,
+      "type": "WORD",
+      "description": "XLCLASS_DB2003_ESCOVAS_ALARMES_W8"
+    },
+    {
+      "name": "XLCLASS_DB2003_ESCOVAS_ALARMES_W10",
       "offset": 10,
       "type": "WORD",
-      "description": "XLCLASS_DB2060_CONTROLE_EIXO_ESTEIRA_DE_SAIDA_W10"
+      "description": "XLCLASS_DB2003_ESCOVAS_ALARMES_W10"
     },
     {
-      "name": "XLCLASS_DB2060_CONTROLE_EIXO_ESTEIRA_DE_SAIDA_W24",
-      "offset": 24,
+      "name": "XLCLASS_DB2003_ESCOVAS_ALARMES_W12",
+      "offset": 12,
       "type": "WORD",
-      "description": "XLCLASS_DB2060_CONTROLE_EIXO_ESTEIRA_DE_SAIDA_W24"
-    },
-    {
-      "name": "XLCLASS_DB2060_CONTROLE_EIXO_ESTEIRA_DE_SAIDA_W26",
-      "offset": 26,
-      "type": "WORD",
-      "description": "XLCLASS_DB2060_CONTROLE_EIXO_ESTEIRA_DE_SAIDA_W26"
+      "description": "XLCLASS_DB2003_ESCOVAS_ALARMES_W12"
     }
   ],
+  "2004": [
+    {
+      "name": "XLCLASS_DB2004_OVOSCOPIA_ALARMES_W6",
+      "offset": 6,
+      "type": "WORD",
+      "description": "XLCLASS_DB2004_OVOSCOPIA_ALARMES_W6"
+    },
+    {
+      "name": "XLCLASS_DB2004_OVOSCOPIA_ALARMES_W8",
+      "offset": 8,
+      "type": "WORD",
+      "description": "XLCLASS_DB2004_OVOSCOPIA_ALARMES_W8"
+    },
+    {
+      "name": "XLCLASS_DB2004_OVOSCOPIA_ALARMES_W10",
+      "offset": 10,
+      "type": "WORD",
+      "description": "XLCLASS_DB2004_OVOSCOPIA_ALARMES_W10"
+    },
+    {
+      "name": "XLCLASS_DB2004_OVOSCOPIA_ALARMES_W12",
+      "offset": 12,
+      "type": "WORD",
+      "description": "XLCLASS_DB2004_OVOSCOPIA_ALARMES_W12"
+    }
+  ],
+  "2005": [
+    {
+      "name": "XLCLASS_DB2005_CLASSIFICADORA_ALARMES_W6",
+      "offset": 6,
+      "type": "WORD",
+      "description": "XLCLASS_DB2005_CLASSIFICADORA_ALARMES_W6"
+    },
+    {
+      "name": "XLCLASS_DB2005_CLASSIFICADORA_ALARMES_W8",
+      "offset": 8,
+      "type": "WORD",
+      "description": "XLCLASS_DB2005_CLASSIFICADORA_ALARMES_W8"
+    },
+    {
+      "name": "XLCLASS_DB2005_CLASSIFICADORA_ALARMES_W10",
+      "offset": 10,
+      "type": "WORD",
+      "description": "XLCLASS_DB2005_CLASSIFICADORA_ALARMES_W10"
+    },
+    {
+      "name": "XLCLASS_DB2005_CLASSIFICADORA_ALARMES_W12",
+      "offset": 12,
+      "type": "WORD",
+      "description": "XLCLASS_DB2005_CLASSIFICADORA_ALARMES_W12"
+    }
+  ],
+  "2006": [
+    {
+      "name": "XLCLASS_DB2006_ESTEIRA_DE_SAIDA_ALARMES_W8",
+      "offset": 8,
+      "type": "WORD",
+      "description": "XLCLASS_DB2006_ESTEIRA_DE_SAIDA_ALARMES_W8"
+    },
+    {
+      "name": "XLCLASS_DB2006_ESTEIRA_DE_SAIDA_ALARMES_W10",
+      "offset": 10,
+      "type": "WORD",
+      "description": "XLCLASS_DB2006_ESTEIRA_DE_SAIDA_ALARMES_W10"
+    },
+    {
+      "name": "XLCLASS_DB2006_ESTEIRA_DE_SAIDA_ALARMES_W12",
+      "offset": 12,
+      "type": "WORD",
+      "description": "XLCLASS_DB2006_ESTEIRA_DE_SAIDA_ALARMES_W12"
+    }
+  ],
+  "2007": [
+    {
+      "name": "XLCLASS_DB2007_ENCODER_EXTERNO_ALARMES_W4",
+      "offset": 4,
+      "type": "WORD",
+      "description": "XLCLASS_DB2007_ENCODER_EXTERNO_ALARMES_W4"
+    }
+  ],
+
   "3001": [
     {
-      "name": "XLCLASS_DB3001_ACUMULADORA_ALARMES_W12",
-      "offset": 12,
+      "name": "XLCLASS_DB3001_ACUMULADORA_W8",
+      "offset": 8,
       "type": "WORD",
-      "description": "XLCLASS_DB3001_ACUMULADORA_ALARMES_W12"
+      "description": "XLCLASS_DB3001_ACUMULADORA_W8"
     },
     {
-      "name": "XLCLASS_DB3001_ACUMULADORA_ALARMES_W14",
+      "name": "XLCLASS_DB3001_EIXO_ACUMULADORA_F14",
       "offset": 14,
-      "type": "WORD",
-      "description": "XLCLASS_DB3001_ACUMULADORA_ALARMES_W14"
-    },
-    {
-      "name": "XLCLASS_DB3001_ACUMULADORA_ALARMES_W16",
-      "offset": 16,
-      "type": "WORD",
-      "description": "XLCLASS_DB3001_ACUMULADORA_ALARMES_W16"
+      "type": "REAL",
+      "description": "XLCLASS_DB3001_EIXO_ACUMULADORA_F14"
     }
   ],
   "3002": [
     {
-      "name": "XLCLASS_DB3002_DOSIFICADORA_ALARMES_W12",
+      "name": "XLCLASS_DB3002_EIXO_DOSIFICADORA_F12",
       "offset": 12,
-      "type": "WORD",
-      "description": "XLCLASS_DB3002_DOSIFICADORA_ALARMES_W12"
-    },
-    {
-      "name": "XLCLASS_DB3002_DOSIFICADORA_ALARMES_W14",
-      "offset": 14,
-      "type": "WORD",
-      "description": "XLCLASS_DB3002_DOSIFICADORA_ALARMES_W14"
-    },
-    {
-      "name": "XLCLASS_DB3002_DOSIFICADORA_ALARMES_W16",
-      "offset": 16,
-      "type": "WORD",
-      "description": "XLCLASS_DB3002_DOSIFICADORA_ALARMES_W16"
+      "type": "REAL",
+      "description": "XLCLASS_DB3002_EIXO_DOSIFICADORA_F12"
     }
   ],
-  "3003": [
+  "3008": [
     {
-      "name": "XLCLASS_DB3003_ESCOVAS_ALARMES_W12",
+      "name": "XLCLASS_DB3008_EIXO_ESCOVA_LAVADORA_F12",
       "offset": 12,
-      "type": "WORD",
-      "description": "XLCLASS_DB3003_ESCOVAS_ALARMES_W12"
-    },
-    {
-      "name": "XLCLASS_DB3003_ESCOVAS_ALARMES_W14",
-      "offset": 14,
-      "type": "WORD",
-      "description": "XLCLASS_DB3003_ESCOVAS_ALARMES_W14"
-    },
-    {
-      "name": "XLCLASS_DB3003_ESCOVAS_ALARMES_W16",
-      "offset": 16,
-      "type": "WORD",
-      "description": "XLCLASS_DB3003_ESCOVAS_ALARMES_W16"
+      "type": "REAL",
+      "description": "XLCLASS_DB3008_EIXO_ESCOVA_LAVADORA_F12"
     }
   ],
-  "3004": [
+  "4000": [
     {
-      "name": "XLCLASS_DB3004_OVOSCOPIA_ALARMES_W12",
-      "offset": 12,
+      "name": "XLCLASS_DB4000_MANUTENCAO_W0",
+      "offset": 0,
       "type": "WORD",
-      "description": "XLCLASS_DB3004_OVOSCOPIA_ALARMES_W12"
+      "description": "XLCLASS_DB4000_MANUTENCAO_W0"
     },
     {
-      "name": "XLCLASS_DB3004_OVOSCOPIA_ALARMES_W14",
-      "offset": 14,
-      "type": "WORD",
-      "description": "XLCLASS_DB3004_OVOSCOPIA_ALARMES_W14"
+      "name": "XLCLASS_DB4000_MANUTENCAO_F4",
+      "offset": 4,
+      "type": "REAL",
+      "description": "XLCLASS_DB4000_MANUTENCAO_F4"
     },
     {
-      "name": "XLCLASS_DB3004_OVOSCOPIA_ALARMES_W16",
-      "offset": 16,
-      "type": "WORD",
-      "description": "XLCLASS_DB3004_OVOSCOPIA_ALARMES_W16"
+      "name": "XLCLASS_DB4000_MANUTENCAO_F8",
+      "offset": 8,
+      "type": "REAL",
+      "description": "XLCLASS_DB4000_MANUTENCAO_F8"
     }
   ],
-  "3005": [
+  "5001": [
     {
-      "name": "XLCLASS_DB3005_CLASSIFICADORA_ALARMES_W12",
-      "offset": 12,
+      "name": "XLCLASS_DB5001_CONTROLE_EIXO_ACUMULADORA_W130",
+      "offset": 130,
       "type": "WORD",
-      "description": "XLCLASS_DB3005_CLASSIFICADORA_ALARMES_W12"
-    },
-    {
-      "name": "XLCLASS_DB3005_CLASSIFICADORA_ALARMES_W14",
-      "offset": 14,
-      "type": "WORD",
-      "description": "XLCLASS_DB3005_CLASSIFICADORA_ALARMES_W14"
-    },
-    {
-      "name": "XLCLASS_DB3005_CLASSIFICADORA_ALARMES_W16",
-      "offset": 16,
-      "type": "WORD",
-      "description": "XLCLASS_DB3005_CLASSIFICADORA_ALARMES_W16"
+      "description": "XLCLASS_DB5001_CONTROLE_EIXO_ACUMULADORA_W130"
     }
   ],
-  "3006": [
+  "5002": [
     {
-      "name": "XLCLASS_DB3006_ESTEIRA_DE_SAIDA_ALARMES_W12",
-      "offset": 12,
+      "name": "XLCLASS_DB5002_CONTROLE_EIXO_DOSIFICADORA_W130",
+      "offset": 130,
       "type": "WORD",
-      "description": "XLCLASS_DB3006_ESTEIRA_DE_SAIDA_ALARMES_W12"
-    },
-    {
-      "name": "XLCLASS_DB3006_ESTEIRA_DE_SAIDA_ALARMES_W14",
-      "offset": 14,
-      "type": "WORD",
-      "description": "XLCLASS_DB3006_ESTEIRA_DE_SAIDA_ALARMES_W14"
-    },
-    {
-      "name": "XLCLASS_DB3006_ESTEIRA_DE_SAIDA_ALARMES_W16",
-      "offset": 16,
-      "type": "WORD",
-      "description": "XLCLASS_DB3006_ESTEIRA_DE_SAIDA_ALARMES_W16"
+      "description": "XLCLASS_DB5002_CONTROLE_EIXO_DOSIFICADORA_W130"
     }
+  ],
+  "5004": [
+    {
+      "name": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_W130",
+      "offset": 130,
+      "type": "WORD",
+      "description": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_W130"
+    },
+    {
+      "name": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_W134",
+      "offset": 134,
+      "type": "WORD",
+      "description": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_W134"
+    },
+    {
+      "name": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_W144",
+      "offset": 144,
+      "type": "WORD",
+      "description": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_W144"
+    },
+    {
+      "name": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_W164",
+      "offset": 164,
+      "type": "WORD",
+      "description": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_W164"
+    },
+    {
+      "name": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_W172",
+      "offset": 172,
+      "type": "WORD",
+      "description": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_W172"
+    },
+    {
+      "name": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_W178",
+      "offset": 178,
+      "type": "WORD",
+      "description": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_W178"
+    },
+    {
+      "name": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_W182",
+      "offset": 182,
+      "type": "WORD",
+      "description": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_W182"
+    },
+    {
+      "name": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_F416",
+      "offset": 416,
+      "type": "REAL",
+      "description": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_F416"
+    },
+    {
+      "name": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_F420",
+      "offset": 420,
+      "type": "REAL",
+      "description": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_F420"
+    },
+    {
+      "name": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_F620",
+      "offset": 620,
+      "type": "REAL",
+      "description": "XLCLASS_DB5004_CONTROLE_EIXO_OVOSCOPIA_F620"
+    }
+  ],
+  "5005": [
+    {
+      "name": "XLCLASS_DB5005_CONTROLE_EIXO_CLASSIFICADORA_W130",
+      "offset": 130,
+      "type": "WORD",
+      "description": "XLCLASS_DB5005_CONTROLE_EIXO_CLASSIFICADORA_W130"
+    },
+    {
+      "name": "XLCLASS_DB5005_CONTROLE_EIXO_CLASSIFICADORA_W134",
+      "offset": 134,
+      "type": "WORD",
+      "description": "XLCLASS_DB5005_CONTROLE_EIXO_CLASSIFICADORA_W134"
+    },
+    {
+      "name": "XLCLASS_DB5005_CONTROLE_EIXO_CLASSIFICADORA_W164",
+      "offset": 164,
+      "type": "WORD",
+      "description": "XLCLASS_DB5005_CONTROLE_EIXO_CLASSIFICADORA_W164"
+    },
+    {
+      "name": "XLCLASS_DB5005_CONTROLE_EIXO_CLASSIFICADORA_W182",
+      "offset": 182,
+      "type": "WORD",
+      "description": "XLCLASS_DB5005_CONTROLE_EIXO_CLASSIFICADORA_W182"
+    }
+  ],
+  "5007": [
+    {
+      "name": "XLCLASS_DB5007_CONTROLE_EIXO_CLASSIFICADORA_F620",
+      "offset": 620,
+      "type": "REAL",
+      "description": "XLCLASS_DB5007_CONTROLE_EIXO_CLASSIFICADORA_F620"
+    }
+  ],
+  "5012": [
+    {
+      "name": "XLCLASS_DB5012_CONTROLE_EIXO_ESCOVA_LAVADORA_W130",
+      "offset": 130,
+      "type": "WORD",
+      "description": "XLCLASS_DB5012_CONTROLE_EIXO_ESCOVA_LAVADORA_W130"
+    },
+    {
+      "name": "XLCLASS_DB5012_CONTROLE_EIXO_ESCOVA_LAVADORA_F316",
+      "offset": 316,
+      "type": "REAL",
+      "description": "XLCLASS_DB5012_CONTROLE_EIXO_ESCOVA_LAVADORA_F316"
+    }   
   ]
 }

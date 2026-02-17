@@ -48,32 +48,63 @@ class AlarmProcessor:
 
                 for raw_line in content.split('\n'):
                     line = raw_line.strip()
-                    if not (line.startswith('// [') and ']' in line and '=' in line):
+                    if not line.startswith('//'):
+                        continue
+                    if line.lower().startswith('// bits:'):
                         continue
 
-                    try:
-                        # Índice entre colchetes // [ xx]
-                        idx_start = line.find('[') + 1
-                        idx_end = line.find(']')
-                        index = int(line[idx_start:idx_end].strip())
+                    # Formato antigo: // [ 0] TAG_BOOL[0] = DESCR
+                    if line.startswith('// [') and ']' in line and '=' in line:
+                        try:
+                            # Índice entre colchetes // [ xx]
+                            idx_start = line.find('[') + 1
+                            idx_end = line.find(']')
+                            index = int(line[idx_start:idx_end].strip())
 
-                        # Após o marcador, esperamos algo como SOME_BOOL[xx] = DESCR
-                        after_marker = line[idx_end+1:].strip()
+                            # Após o marcador, esperamos algo como SOME_BOOL[xx] = DESCR
+                            after_marker = line[idx_end+1:].strip()
 
-                        # Extrai o nome do array BOOL (até o primeiro '[')
-                        bool_name_end = after_marker.find('[')
-                        bool_name = after_marker[:bool_name_end].strip()
-                        base_name = bool_name.replace('_BOOL', '')
+                            # Extrai o nome do array BOOL (até o primeiro '[')
+                            bool_name_end = after_marker.find('[')
+                            bool_name = after_marker[:bool_name_end].strip()
+                            base_name = bool_name.replace('_BOOL', '').replace('_BIT', '')
 
-                        # Descrição após '='
-                        desc_start = line.find('=') + 1
-                        description = line[desc_start:].strip()
+                            # Descrição após '='
+                            desc_start = line.find('=') + 1
+                            description = line[desc_start:].strip()
 
-                        if base_name not in bases:
-                            bases[base_name] = {}
-                        bases[base_name][index] = description
-                    except Exception:
+                            if base_name not in bases:
+                                bases[base_name] = {}
+                            bases[base_name][index] = description
+                        except Exception:
+                            continue
                         continue
+
+                    # Formato novo: // TAG.B0 = DESCR
+                    if '=' in line and '.B' in line:
+                        try:
+                            body = line[2:].strip()
+                            left, description = body.split('=', 1)
+                            left = left.strip()
+                            description = description.strip()
+                            if '.B' not in left:
+                                continue
+                            base_part, bit_part = left.rsplit('.B', 1)
+                            bit_digits = ""
+                            for ch in bit_part:
+                                if ch.isdigit():
+                                    bit_digits += ch
+                                else:
+                                    break
+                            if not bit_digits:
+                                continue
+                            index = int(bit_digits)
+                            base_name = base_part.strip().replace('_BOOL', '').replace('_BIT', '')
+                            if base_name not in bases:
+                                bases[base_name] = {}
+                            bases[base_name][index] = description
+                        except Exception:
+                            continue
 
                 # Caso não haja marcadores por-base, assume base pelo filename (modo antigo)
                 if not bases:
@@ -435,46 +466,9 @@ class AlarmProcessor:
     def _create_alarm_info(self, var_name: str, bit_index: int, base_name: str, machine: str) -> Optional[Dict[str, Any]]:
         """Cria informações do alarme com descrição"""
         try:
-            # Converte índice de bit do WORD para índice do array BOOL quando aplicável
-            # Nos arquivos de matemática/descrições, o BOOL[0..7] mapeia os bits 8..15
-            # e o BOOL[8..15] mapeia os bits 0..7 do WORD. Precisamos alinhar isso
-            # para que o índice da descrição corresponda ao índice BOOL.
-            def _word_bit_to_bool_index(idx: int, base: str) -> int:
-                b = (base or "").upper()
-                # Aplicar para DBs que seguem o padrão dos arquivos (DB1/DB04/DB06/DB10/DB104)
-                if (
-                    b.startswith("DB1_") or
-                    b.startswith("DB01_") or
-                    b.startswith("DB04_") or
-                    b.startswith("DB06_") or
-                    b.startswith("DB10_") or
-                    b.startswith("DB104_") or
-                    b.startswith("DB210_") or
-                    b.startswith("DB211_") or
-                    b.startswith("DB212_") or
-                    b.startswith("DB213_") or
-                    b.startswith("DB214_") or
-                    b.startswith("DB215_") or
-                    b.startswith("DB216_") or
-                    b.startswith("DB217_") or
-                    b.startswith("DB218_") or
-                    b.startswith("DB229_") or
-                    b.startswith("DB400_") or
-                    b.startswith("DB360_") or
-                    b.startswith("DB361_") or
-                    b.startswith("DB362_") or
-                    b.startswith("DB363_") or
-                    b.startswith("DB364_") or
-                    b.startswith("DB365_") or
-                    b.startswith("DB366_")
-                ):
-                    if 0 <= idx <= 7:
-                        return idx + 8
-                    if 8 <= idx <= 15:
-                        return idx - 8
-                return idx
-
-            desc_index = _word_bit_to_bool_index(bit_index, base_name)
+            # Usa diretamente o índice do bit do WORD para buscar descrições/overrides.
+            # As descrições na pasta alarmes/ devem corresponder ao bit real (0-15).
+            desc_index = bit_index
 
             # Busca a descrição do alarme usando o índice ajustado
             description = self._get_alarm_description(base_name, desc_index)
@@ -487,14 +481,14 @@ class AlarmProcessor:
                     return None
             
             # Determina prioridade (com override por bit se configurado)
-            # Usa o índice ajustado (BOOL) para casar com tipos_overrides.json
+            # Usa o índice do bit para casar com tipos_overrides.json
             priority = self._get_priority_with_overrides(base_name, desc_index)
             if not priority:
                 # Classifica pela descrição do índice (não pelo nome da tag)
                 priority = self._determine_priority_from_description(description)
 
             # Determina type independente (não depende do nome da tag nem descrição se override existir)
-            # Determina type com overrides usando índice ajustado (BOOL)
+            # Determina type com overrides usando índice do bit
             alarm_type = self._get_type_with_overrides(base_name, desc_index)
             if not alarm_type:
                 # Se não houver type específico, usa a mesma lógica de prioridade como fallback

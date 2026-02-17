@@ -4,7 +4,7 @@ from typing import Dict
 
 ROOT = Path(__file__).resolve().parents[1] / 'alarmes'
 
-ARRAY_RE = re.compile(r"^//\s*\[(\d+)\]\s*([A-Z0-9_]+?)(?:_(?:BOOL|BIT))?\[(\d+)\]\s*=\s*(.*)$")
+ARRAY_RE = re.compile(r"^//\s*\[\s*(\d+)\s*\]\s*([A-Z0-9_]+?)(?:_(?:BOOL|BIT))?\s*\[\s*(\d+)\s*\]\s*=\s*(.*)$")
 BIT_RE   = re.compile(r"^//\s*([A-Z0-9_\.]+)\.B(\d+)\s*=\s*(.*)$")
 
 
@@ -41,26 +41,48 @@ def convert_file(path: Path) -> bool:
     if not mapping:
         return False
 
-    # Reescreve removendo linhas antigas e cabeçalhos `Array:`
+    # Reescreve removendo linhas antigas e cabeçalhos `Array:`/índice
     out = []
-    for line in lines:
+    skip_example = False
+    for i, line in enumerate(lines):
         s = line.strip()
+        if not skip_example and s.startswith('// ========================================'):
+            next_line = lines[i + 1].strip() if i + 1 < len(lines) else ''
+            if next_line.lower().startswith('// exemplo de uso'):
+                skip_example = True
+                continue
+        if s.lower().startswith('// exemplo de uso'):
+            skip_example = True
+            continue
+        if skip_example:
+            if s.startswith('// ========================================'):
+                skip_example = False
+            continue
         if ARRAY_RE.match(s):
             continue
         if BIT_RE.match(s):
             continue
         if s.lower().startswith('// array:'):
             continue
+        if s.lower().startswith('// bits:'):
+            continue
+        if s.lower().startswith('// cada índice') or s.lower().startswith('// cada indice'):
+            continue
+        # Ajusta cabeçalho, se existir
+        if "DESCRIÇÕES DOS ÍNDICES" in line:
+            line = line.replace("DESCRIÇÕES DOS ÍNDICES", "DESCRIÇÕES DOS BITS")
+        if "DESCRICOES DOS INDICES" in line:
+            line = line.replace("DESCRICOES DOS INDICES", "DESCRICOES DOS BITS")
         out.append(line)
 
     if out and out[-1].strip() != '':
         out.append('')
 
-    # Ordem rotacionária: B8..B15, B0..B7
+    # Ordem direta: B0..B15
     for base in order:
         bits = mapping.get(base, {})
         out.append(f"// Bits: {base}.B0 .. {base}.B15")
-        for i in list(range(8, 16)) + list(range(0, 8)):
+        for i in range(0, 16):
             if i in bits:
                 out.append(f"// {base}.B{i} = {bits[i]}")
         out.append('')
@@ -87,5 +109,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-

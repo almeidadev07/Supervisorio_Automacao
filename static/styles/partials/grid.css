@@ -245,6 +245,7 @@
     font-size: clamp(14px, 2vw, 22px);
     font-weight: bold;
     color: yellow;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.473), 0 0 6px rgba(0, 0, 0, 0.473);
     pointer-events: none;
     margin-left: 4px;
     align-self: center;
@@ -260,6 +261,7 @@
     font-weight: bold;
     text-align: right;
     color: yellow;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.473), 0 0 6px rgba(0, 0, 0, 0.473);
     background: transparent;
     border: none;
     outline: none;
@@ -286,6 +288,19 @@
     margin-top: 5px;
     height: 35%;
     width: 100%;
+}
+
+.velocimetro-value-container.velocidade-programada {
+    align-items: center;
+    column-gap: 6px;
+}
+
+.velocimetro-value-container.velocidade-programada .velocimetro-input {
+    width: 100%;
+}
+
+.velocimetro-value-container.velocidade-programada .unidade-programada {
+    top: -4px;
 }
 
 .manual-grid-icon-wrap {
@@ -365,6 +380,7 @@ body[data-theme="dark"] .manual-grid-icon--light {
     font-size: clamp(28px, 5vw, 56px);
     font-weight: bold;
     color: #00ff00;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.473), 0 0 6px rgba(0, 0, 0, 0.473);
     line-height: 1;
     margin-top: -2px;
 }
@@ -375,6 +391,7 @@ body[data-theme="dark"] .manual-grid-icon--light {
     color: #00ff00;
     position: relative;
     margin-left: 4px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.473), 0 0 6px rgba(0, 0, 0, 0.473);
     top: -6px;
     line-height: 1;
     align-self: center;
