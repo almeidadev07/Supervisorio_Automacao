@@ -9,6 +9,7 @@
     "7": "XLCLASS - DB7 - INDEX CAP JANELAS",
     "9": "XLCLASS - DB9 - PERIFERICOS",
     "10": "XLCLASS - DB10 - PARTIDA DIRETA",
+    "11": "XLCLASS - DB11 - PARTIDA DIRETA ESTEIRAS INTELIGENTES",
     "101": "XLCLASS - DB101 - NAO HABILITADA",
     "103": "XLCLASS - DB103 - DRIVES CLASS",
     "104": "XLCLASS - DB104 - INFO DISPOSITIVOS",
@@ -725,6 +726,14 @@
       "offset": 2,
       "type": "WORD",
       "description": "XLCLASS_DB10_PARTIDA_DIRETA_COMANDOS"
+    }
+  ],
+  "11": [
+    {
+      "name": "XLCLASS_DB11_PARTIDA_DIRETA_EST_INTELIGENTE_ALARMES_ALTO",
+      "offset": 0,
+      "type": "WORD",
+      "description": "XLCLASS_DB11_PARTIDA_DIRETA_EST_INTELIGENTE_ALARMES_ALTO"
     }
   ],
   "101": [
